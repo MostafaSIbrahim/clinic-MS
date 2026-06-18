@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "ZCfqMESQN3c=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Admin\\OneDrive\\Documents\\MyDevwork\\Safya-Clinic\\SafyaClinic\\SafyaClinic.Domain\\SafyaClinic.Domain.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Admin\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\8.0.28\\microsoft.entityframeworkcore.abstractions.8.0.28.nupkg.sha512"
+  ],
+  "logs": []
+}
