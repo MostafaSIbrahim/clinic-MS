@@ -1,0 +1,55 @@
+@model RequestAnalysisBatchRequest
+@{
+    ViewData["Title"] = "Request Analysis";
+    var types = ViewBag.AnalysisTypes as IEnumerable<AnalysisTypeDto> ?? Enumerable.Empty<AnalysisTypeDto>();
+}
+
+<div class="card" style="max-width:700px;">
+    <div class="card-header"><i class="bi bi-clipboard2-plus me-2"></i>Request Medical Analysis</div>
+    <div class="card-body">
+        <form asp-action="Request" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <input type="hidden" asp-for="PatientId" />
+            <input type="hidden" asp-for="DoctorId" />
+            <input type="hidden" asp-for="RecordId" />
+
+            <label class="form-label">Analysis Types * <small class="text-muted">(select all that apply)</small></label>
+            @if (!types.Any())
+            {
+                <p class="text-muted small">No analysis types configured.</p>
+            }
+            else
+            {
+                <div class="border rounded p-2 mb-3" style="max-height:320px;overflow-y:auto;">
+                    @foreach (var t in types)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="AnalysisTypeIds"
+                                   value="@t.Id" id="type_@t.Id" />
+                            <label class="form-check-label" for="type_@t.Id">
+                                @t.TypeName @(t.DefaultCost != null ? $"({t.DefaultCost:C})" : "")
+                                @if (!string.IsNullOrWhiteSpace(t.PreparationInstructions))
+                                {
+                                    <span class="text-muted small d-block">@t.PreparationInstructions</span>
+                                }
+                            </label>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="form-check mb-3">
+                <input asp-for="IsUrgent" class="form-check-input" />
+                <label asp-for="IsUrgent" class="form-check-label">Mark as urgent</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Request Selected Analyses</button>
+            <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

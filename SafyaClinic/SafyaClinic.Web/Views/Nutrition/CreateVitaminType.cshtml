@@ -1,0 +1,38 @@
+@model CreateVitaminTypeDto
+@{
+    ViewData["Title"] = "Add Vitamin Type";
+}
+
+<div class="card" style="max-width:600px;">
+    <div class="card-header"><i class="bi bi-capsule me-2"></i>Add Vitamin Type</div>
+    <div class="card-body">
+        <form asp-action="CreateVitaminType" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+            <div class="mb-3">
+                <label asp-for="VitaminName" class="form-label">Name *</label>
+                <input asp-for="VitaminName" class="form-control" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Formulation" class="form-label">Formulation <small class="text-muted">(Injectable, Oral, IV...)</small></label>
+                <input asp-for="Formulation" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Unit" class="form-label">Unit *</label>
+                <input asp-for="Unit" class="form-control" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+            <a asp-action="VitaminTypes" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

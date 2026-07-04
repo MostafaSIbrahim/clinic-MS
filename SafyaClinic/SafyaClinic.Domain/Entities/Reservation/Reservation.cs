@@ -26,6 +26,6 @@ namespace SafyaClinic.Domain.Entities.Reservation
         public virtual User Doctor { get; set; } = null!;
         public virtual ReservationStatus Status { get; set; } = null!;
         public virtual PatientRecord? PatientRecord { get; set; }
-        public virtual ICollection<PaymentMethodEnum> Payments { get; set; } = new List<Payment>();
+        public virtual ICollection<Payment.Payment> Payments { get; set; } = new List<Payment.Payment>();
     }
 }

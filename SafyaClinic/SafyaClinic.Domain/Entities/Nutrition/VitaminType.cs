@@ -8,7 +8,7 @@ namespace SafyaClinic.Domain.Entities.Nutrition
         public string VitaminName { get; set; } = string.Empty;
         public string? Formulation { get; set; }                    // Injectable, Oral, IV
         public string Unit { get; set; } = string.Empty;
-        public string? Description { get; set; };
+        public string? Description { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

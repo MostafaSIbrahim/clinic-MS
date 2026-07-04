@@ -1,0 +1,168 @@
+@model RecordFollowUpDto
+@{
+    ViewData["Title"] = "Record Weekly Follow-Up";
+    var enrollmentId = Model.FollowUpId;
+}
+
+<div class="card" style="max-width:800px;">
+    <div class="card-header"><i class="bi bi-clipboard2-pulse me-2"></i>Record Weekly Follow-Up</div>
+    <div class="card-body">
+        <form asp-action="RecordFollowUp" asp-route-enrollmentId="@enrollmentId" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <input type="hidden" asp-for="FollowUpId" />
+
+            <!-- NEW: Follow-up Date -->
+            <div class="mb-3">
+                <label asp-for="FollowUpDate" class="form-label">Follow-Up Date *</label>
+                <input asp-for="FollowUpDate" type="date" class="form-control" required />
+            </div>
+
+            <h6 class="text-muted text-uppercase small mb-3">Vitals & Measurements</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label asp-for="WeightKg" class="form-label">Weight (kg)</label>
+                    <input asp-for="WeightKg" type="number" step="0.1" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="HeightCm" class="form-label">Height (cm)</label>
+                    <input asp-for="HeightCm" type="number" step="0.1" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="BodyFatPercent" class="form-label">Body Fat %</label>
+                    <input asp-for="BodyFatPercent" type="number" step="0.1" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="MuscleMassKg" class="form-label">Muscle Mass (kg)</label>
+                    <input asp-for="MuscleMassKg" type="number" step="0.1" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="WaistCircumferenceCm" class="form-label">Waist (cm)</label>
+                    <input asp-for="WaistCircumferenceCm" type="number" step="0.1" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="BloodPressureSys" class="form-label">BP Sys</label>
+                    <input asp-for="BloodPressureSys" type="number" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="BloodPressureDia" class="form-label">BP Dia</label>
+                    <input asp-for="BloodPressureDia" type="number" class="form-control" />
+                </div>
+            </div>
+
+            <h6 class="text-muted text-uppercase small mb-3">Clinical Notes</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label asp-for="DietCompliance" class="form-label">Diet Compliance</label>
+                    <select asp-for="DietCompliance" class="form-select">
+                        <option value="">— Select —</option>
+                        <option value="Excellent">Excellent</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                        <option value="Poor">Poor</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="SideEffects" class="form-label">Side Effects</label>
+                    <input asp-for="SideEffects" class="form-control" />
+                </div>
+                <div class="col-12">
+                    <label asp-for="LabResultsSummary" class="form-label">Lab Results Summary</label>
+                    <textarea asp-for="LabResultsSummary" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <label asp-for="DoctorNotes" class="form-label">Doctor's Notes</label>
+                    <textarea asp-for="DoctorNotes" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <label asp-for="NextWeekAdjustments" class="form-label">Next Week Adjustments</label>
+                    <textarea asp-for="NextWeekAdjustments" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+
+            <h6 class="text-muted text-uppercase small mb-3">Administered Items</h6>
+            <div id="items-container">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-4">
+                        <input type="number" name="AdministeredItems[0].PackageItemId" class="form-control form-control-sm" placeholder="Package Item ID" />
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" step="0.01" name="AdministeredItems[0].ActualQuantity" class="form-control form-control-sm" placeholder="Actual Qty" />
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" name="AdministeredItems[0].Notes" class="form-control form-control-sm" placeholder="Notes" />
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="add-item" class="btn btn-sm btn-outline-secondary mb-4">
+                <i class="bi bi-plus"></i> Add Item
+            </button>
+
+            <h6 class="text-muted text-uppercase small mb-3">Lab Results</h6>
+            <div id="labs-container">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-3">
+                        <input type="number" name="LabResults[0].AnalysisTypeId" class="form-control form-control-sm" placeholder="Analysis Type ID" />
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" name="LabResults[0].ResultValue" class="form-control form-control-sm" placeholder="Result" />
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" name="LabResults[0].ReferenceRange" class="form-control form-control-sm" placeholder="Reference Range" />
+                    </div>
+                    <div class="col-md-3">
+                        <select name="LabResults[0].IsNormal" class="form-select form-select-sm">
+                            <option value="">Normal?</option>
+                            <option value="true">Normal</option>
+                            <option value="false">Abnormal</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="add-lab" class="btn btn-sm btn-outline-secondary mb-4">
+                <i class="bi bi-plus"></i> Add Lab Result
+            </button>
+
+            <div>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Follow-Up</button>
+                <a asp-action="EnrollmentDetails" asp-route-id="@enrollmentId" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        let itemIdx = 1, labIdx = 1;
+        document.getElementById('add-item').addEventListener('click', function () {
+            const c = document.getElementById('items-container');
+            const row = document.createElement('div');
+            row.className = 'row g-2 mb-2';
+            row.innerHTML = `
+                <div class="col-md-4"><input type="number" name="AdministeredItems[${itemIdx}].PackageItemId" class="form-control form-control-sm" placeholder="Package Item ID" /></div>
+                <div class="col-md-3"><input type="number" step="0.01" name="AdministeredItems[${itemIdx}].ActualQuantity" class="form-control form-control-sm" placeholder="Actual Qty" /></div>
+                <div class="col-md-5"><input type="text" name="AdministeredItems[${itemIdx}].Notes" class="form-control form-control-sm" placeholder="Notes" /></div>`;
+            c.appendChild(row);
+            itemIdx++;
+        });
+        document.getElementById('add-lab').addEventListener('click', function () {
+            const c = document.getElementById('labs-container');
+            const row = document.createElement('div');
+            row.className = 'row g-2 mb-2';
+            row.innerHTML = `
+                <div class="col-md-3"><input type="number" name="LabResults[${labIdx}].AnalysisTypeId" class="form-control form-control-sm" placeholder="Analysis Type ID" /></div>
+                <div class="col-md-3"><input type="text" name="LabResults[${labIdx}].ResultValue" class="form-control form-control-sm" placeholder="Result" /></div>
+                <div class="col-md-3"><input type="text" name="LabResults[${labIdx}].ReferenceRange" class="form-control form-control-sm" placeholder="Reference Range" /></div>
+                <div class="col-md-3">
+                    <select name="LabResults[${labIdx}].IsNormal" class="form-select form-select-sm">
+                        <option value="">Normal?</option><option value="true">Normal</option><option value="false">Abnormal</option>
+                    </select>
+                </div>`;
+            c.appendChild(row);
+            labIdx++;
+        });
+    </script>
+}

@@ -1,0 +1,66 @@
+@model IEnumerable<VitaminTypeDto>
+@{
+    ViewData["Title"] = "Vitamin Types";
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-capsule me-2"></i>Vitamin Types</span>
+        <a asp-action="CreateVitaminType" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add Vitamin Type
+        </a>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-capsule fs-1 d-block mb-2 opacity-50"></i>
+                No vitamin types yet.
+            </div>
+        }
+        else
+        {
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr><th>Name</th><th>Formulation</th><th>Unit</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@v.VitaminName</td>
+                            <td>@(v.Formulation ?? "—")</td>
+                            <td>@v.Unit</td>
+                            <td>
+                                @if (v.IsActive)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactive</span>
+                                }
+                                @if (v.IsInUse)
+                                {
+                                    <span class="badge bg-info text-dark ms-1">In use</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="EditVitaminType" asp-route-id="@v.Id" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form asp-action="DeleteVitaminType" asp-route-id="@v.Id" method="post" class="d-inline"
+                                      onsubmit="return confirm('Delete this vitamin type?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

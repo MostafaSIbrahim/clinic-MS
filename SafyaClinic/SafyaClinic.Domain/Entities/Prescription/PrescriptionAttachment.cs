@@ -8,8 +8,8 @@ namespace SafyaClinic.Domain.Entities.Prescription
         public int PrescriptionId { get; set; }
         public string FileName { get; set; } = string.Empty;
         public string FilePath { get; set; } = string.Empty;
-        public string? FileType { get; set; }
-        public int? FileSize { get; set; }
+        public string? ContentType { get; set; }
+        public long? FileSizeBytes { get; set; }
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
         public int UploadedBy { get; set; }
 

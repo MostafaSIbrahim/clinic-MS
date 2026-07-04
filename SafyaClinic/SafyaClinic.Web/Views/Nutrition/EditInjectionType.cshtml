@@ -1,0 +1,52 @@
+@model UpdateInjectionTypeDto
+@{
+    ViewData["Title"] = "Edit Injection Type";
+    int id = (int)ViewBag.Id;
+    bool isInUse = ViewBag.IsInUse ?? false;
+}
+
+<div class="card" style="max-width:600px;">
+    <div class="card-header"><i class="bi bi-syringe me-2"></i>Edit Injection Type</div>
+    <div class="card-body">
+        @if (isInUse)
+        {
+            <div class="alert alert-warning py-2 small">
+                <i class="bi bi-info-circle me-1"></i>
+                This injection type is used by one or more nutrition packages. It can be
+                deactivated but not permanently deleted while in use.
+            </div>
+        }
+        <form asp-action="EditInjectionType" asp-route-id="@id" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+            <div class="mb-3">
+                <label asp-for="InjectionName" class="form-label">Name *</label>
+                <input asp-for="InjectionName" class="form-control" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Unit" class="form-label">Unit *</label>
+                <input asp-for="Unit" class="form-control" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="DefaultDosage" class="form-label">Default Dosage</label>
+                <input asp-for="DefaultDosage" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-check mb-3">
+                <input asp-for="IsActive" class="form-check-input" />
+                <label asp-for="IsActive" class="form-check-label">Active</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+            <a asp-action="InjectionTypes" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SafyaClinic.Domain.Entities.MedicalRecord;
+using SafyaClinic.Domain.Identity;
 
 namespace SafyaClinic.Infrastructure.Data.Configurations
 {
@@ -29,6 +30,11 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.HasOne(pr => pr.Doctor)
                    .WithMany(u => u.DoctorRecords)
                    .HasForeignKey(pr => pr.DoctorId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne<User>()
+                   .WithMany()
+                   .HasForeignKey(pr => pr.CreatedBy)
                    .OnDelete(DeleteBehavior.Restrict);
         }
     }

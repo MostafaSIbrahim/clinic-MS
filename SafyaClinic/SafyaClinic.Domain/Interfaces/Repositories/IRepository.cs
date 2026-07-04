@@ -10,12 +10,19 @@ namespace SafyaClinic.Domain.Interfaces.Repositories
 {
     public interface IRepository<T> where T : BaseEntity
     {
-        Task<T> GetByIdAsync(Guid id);
+        //Queries
+        Task<T> GetByIdAsync(int id);
         Task<IEnumerable<T>> GetAllAsync();
         Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
-        Task AddAsync(T entity);
-        Task UpdateAsync(T entity);
-        Task DeleteAsync(Guid id);
+        Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate);
         Task<bool> ExistsAsync(int id);
+        Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null);
+
+        //commands
+        Task AddAsync(T entity);
+        Task AddRangeAsync(IEnumerable<T> entities);
+        void Update(T entity);
+        void Delete(T entity);
+        void DeleteRange(IEnumerable<T> entities);
     }
 }

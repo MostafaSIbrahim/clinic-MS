@@ -1,0 +1,90 @@
+@model CreateEnrollmentDto
+@using SafyaClinic.Application.DTOs.Patient
+@{
+    ViewData["Title"] = "Enroll Patient";
+    var packages = ViewBag.Packages as IEnumerable<NutritionPackageDto> ?? Enumerable.Empty<NutritionPackageDto>();
+    var doctors  = ViewBag.Doctors as IEnumerable<UserDto> ?? Enumerable.Empty<UserDto>();
+}
+
+<div class="card" style="max-width:600px;">
+    <div class="card-header"><i class="bi bi-capsule me-2"></i>Enroll Patient in Nutrition Package</div>
+    <div class="card-body">
+        <form asp-action="Enroll" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <input type="hidden" asp-for="PatientId" />
+
+            <div class="mb-3">
+                <label asp-for="PackageId" class="form-label">Package *</label>
+                <select asp-for="PackageId" class="form-select" required id="packageSelect">
+                    <option value="">— Select Package —</option>
+                    @foreach (var p in packages)
+                    {
+                        <option value="@p.Id" data-price="@p.BasePrice" data-maxdiscount="@p.MaxDiscountPercent">
+                            @p.PackageName (@p.BasePrice.ToString("C")) — max @p.MaxDiscountPercent% off
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DoctorId" class="form-label">Supervising Doctor *</label>
+                <select asp-for="DoctorId" class="form-select" required>
+                    <option value="">— Select —</option>
+                    @foreach (var d in doctors)
+                    {
+                        <option value="@d.Id">@d.FullName</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="StartDate" class="form-label">Start Date *</label>
+                <input asp-for="StartDate" type="date" class="form-control" required />
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DiscountPercent" class="form-label">Discount % <span id="maxDiscountHint" class="text-muted small"></span></label>
+                <input asp-for="DiscountPercent" type="number" step="0.1" class="form-control" id="discountInput" value="0" />
+            </div>
+
+            <div class="alert alert-light border d-flex justify-content-between" id="pricePreview" style="display:none;">
+                <span>Final Price</span>
+                <strong id="finalPriceText">—</strong>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Notes" class="form-label">Notes</label>
+                <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enroll Patient</button>
+            <a asp-action="PatientEnrollments" asp-route-patientId="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script>
+        const pkgSelect   = document.getElementById('packageSelect');
+        const discount    = document.getElementById('discountInput');
+        const preview     = document.getElementById('pricePreview');
+        const priceText   = document.getElementById('finalPriceText');
+        const maxHint     = document.getElementById('maxDiscountHint');
+
+        function recalc() {
+            const opt = pkgSelect.options[pkgSelect.selectedIndex];
+            if (!opt || !opt.value) { preview.style.display = 'none'; return; }
+            const price = parseFloat(opt.dataset.price);
+            const max   = parseFloat(opt.dataset.maxdiscount);
+            maxHint.textContent = `(max ${max}%)`;
+            let d = parseFloat(discount.value) || 0;
+            const final = price * (1 - d / 100);
+            priceText.textContent = final.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+            preview.style.display = 'flex';
+        }
+        pkgSelect.addEventListener('change', recalc);
+        discount.addEventListener('input', recalc);
+    </script>
+}

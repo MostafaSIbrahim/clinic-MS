@@ -1,0 +1,121 @@
+@model IEnumerable<UserDto>
+@{
+    ViewData["Title"] = "Users";
+    var allRoles = new[]
+    {
+        (Id: 1, Name: "Admin"),
+        (Id: 2, Name: "Doctor"),
+        (Id: 3, Name: "Reception"),
+        (Id: 4, Name: "Patient"),
+        (Id: 5, Name: "Nutritionist")
+    };
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person-gear me-2"></i>System Users</span>
+        <a asp-action="Create" class="btn btn-sm btn-primary">
+            <i class="bi bi-person-plus me-1"></i>Add User
+        </a>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-people fs-1 d-block mb-2 opacity-50"></i>
+                No users found.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Specialization</th>
+                            <th>Roles</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@u.FullName</td>
+                                <td>@u.PhoneNumber</td>
+                                <td>@(u.Email ?? "—")</td>
+                                <td>@(u.Specialization ?? "—")</td>
+                                <td>
+                                    @foreach (var r in u.Roles)
+                                    {
+                                        <span class="badge bg-light text-dark border me-1 mb-1">
+                                            @r
+                                            <form asp-action="RemoveRole" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="userId" value="@u.Id" />
+                                                <input type="hidden" name="roleId" value="@allRoles.FirstOrDefault(x => x.Name == r).Id" />
+                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1"
+                                                        style="font-size:.75rem;" onclick="return confirm('Remove this role?')">×</button>
+                                            </form>
+                                        </span>
+                                    }
+                                    <div class="dropdown d-inline">
+                                        <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-plus-circle text-primary"></i>
+                                        </button>
+                                        <ul class="dropdown-menu p-2" style="min-width:180px;">
+                                            @foreach (var role in allRoles.Where(r => !u.Roles.Contains(r.Name)))
+                                            {
+                                                <li>
+                                                    <form asp-action="AssignRole" method="post">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="userId" value="@u.Id" />
+                                                        <input type="hidden" name="roleId" value="@role.Id" />
+                                                        <button type="submit" class="dropdown-item small">@role.Name</button>
+                                                    </form>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (u.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    }
+                                </td>
+                                <td class="small text-muted">@(u.LastLoginAt?.ToString("dd MMM yyyy HH:mm") ?? "Never")</td>
+                                <td class="text-end">
+                                    <form asp-action="ToggleActive" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@u.Id" />
+                                        <input type="hidden" name="isActive" value="@(!u.IsActive)" />
+                                        <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-outline-danger" : "btn-outline-success")">
+                                            @if (u.IsActive)
+                                            {
+                                                <text><i class="bi bi-slash-circle"></i> Deactivate</text>
+                                            }
+                                            else
+                                            {
+                                                <text><i class="bi bi-check-circle"></i> Activate</text>
+                                            }
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

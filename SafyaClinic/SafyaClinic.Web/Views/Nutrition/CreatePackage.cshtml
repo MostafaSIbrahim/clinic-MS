@@ -1,0 +1,141 @@
+@model CreateNutritionPackageDto
+@{
+    ViewData["Title"] = "Create Nutrition Package";
+    var injections = ViewBag.InjectionTypes as IEnumerable<InjectionTypeDto> ?? Enumerable.Empty<InjectionTypeDto>();
+    var vitamins = ViewBag.VitaminTypes as IEnumerable<VitaminTypeDto> ?? Enumerable.Empty<VitaminTypeDto>();
+}
+
+<div class="card" style="max-width:900px;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-capsule me-2"></i>Create Nutrition Package</span>
+        <div class="d-flex gap-2">
+            <a asp-action="InjectionTypes" class="btn btn-sm btn-outline-secondary">Manage Injection Types</a>
+            <a asp-action="VitaminTypes" class="btn btn-sm btn-outline-secondary">Manage Vitamin Types</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <form asp-action="CreatePackage" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="PackageName" class="form-label">Package Name *</label>
+                    <input asp-for="PackageName" class="form-control" required />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="BasePrice" class="form-label">Base Price *</label>
+                    <input asp-for="BasePrice" type="number" step="0.01" class="form-control" required />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="MaxDiscountPercent" class="form-label">Max Discount %</label>
+                    <input asp-for="MaxDiscountPercent" type="number" step="0.1" class="form-control" value="20" />
+                </div>
+                <div class="col-12">
+                    <label asp-for="Description" class="form-label">Description</label>
+                    <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+
+            <hr class="my-4" />
+            <h6 class="text-muted text-uppercase small mb-3">Weekly Items</h6>
+            <p class="small text-muted">Add at least one injection or vitamin item per week (weeks 1–4).</p>
+
+            @if (!injections.Any() && !vitamins.Any())
+            {
+                <div class="alert alert-warning small">
+                    No injection or vitamin types are configured yet. Add some first via
+                    <a asp-action="InjectionTypes">Injection Types</a> or <a asp-action="VitaminTypes">Vitamin Types</a>.
+                </div>
+            }
+
+            <div id="items-container">
+                <div class="row g-2 mb-2 item-row">
+                    <div class="col-md-2">
+                        <select name="Items[0].WeekNumber" class="form-select form-select-sm">
+                            <option value="1">Week 1</option>
+                            <option value="2">Week 2</option>
+                            <option value="3">Week 3</option>
+                            <option value="4">Week 4</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="Items[0].InjectionId" class="form-select form-select-sm">
+                            <option value="">— No injection —</option>
+                            @foreach (var inj in injections)
+                            {
+                                <option value="@inj.Id">@inj.InjectionName (@inj.Unit)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="Items[0].VitaminId" class="form-select form-select-sm">
+                            <option value="">— No vitamin —</option>
+                            @foreach (var vit in vitamins)
+                            {
+                                <option value="@vit.Id">@vit.VitaminName (@vit.Unit)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <input type="number" step="0.01" name="Items[0].Quantity" class="form-control form-control-sm" placeholder="Qty" value="1" />
+                    </div>
+                    <div class="col-md-1">
+                        <input type="text" name="Items[0].Unit" class="form-control form-control-sm" placeholder="Unit" />
+                    </div>
+                    <div class="col-md-2">
+                        <input type="text" name="Items[0].Notes" class="form-control form-control-sm" placeholder="Notes" />
+                    </div>
+                </div>
+            </div>
+            <button type="button" id="add-item" class="btn btn-sm btn-outline-secondary mb-3">
+                <i class="bi bi-plus"></i> Add Another Item
+            </button>
+
+            <div class="alert alert-light border small">
+                <i class="bi bi-info-circle me-1"></i>
+                Choose either an injection <em>or</em> a vitamin per row (not both) — names are shown here,
+                but the underlying ID is what gets saved.
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Create Package</button>
+                <a asp-action="Packages" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script>
+        const injectionOptions = `<option value="">— No injection —</option>@Html.Raw(string.Join("", injections.Select(i => $"<option value=\"{i.Id}\">{System.Net.WebUtility.HtmlEncode(i.InjectionName)} ({System.Net.WebUtility.HtmlEncode(i.Unit)})</option>")))`;
+        const vitaminOptions = `<option value="">— No vitamin —</option>@Html.Raw(string.Join("", vitamins.Select(v => $"<option value=\"{v.Id}\">{System.Net.WebUtility.HtmlEncode(v.VitaminName)} ({System.Net.WebUtility.HtmlEncode(v.Unit)})</option>")))`;
+
+        let itemIndex = 1;
+        document.getElementById('add-item').addEventListener('click', function () {
+            const container = document.getElementById('items-container');
+            const row = document.createElement('div');
+            row.className = 'row g-2 mb-2 item-row';
+            row.innerHTML = `
+                <div class="col-md-2">
+                    <select name="Items[${itemIndex}].WeekNumber" class="form-select form-select-sm">
+                        <option value="1">Week 1</option><option value="2">Week 2</option>
+                        <option value="3">Week 3</option><option value="4">Week 4</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="Items[${itemIndex}].InjectionId" class="form-select form-select-sm">${injectionOptions}</select>
+                </div>
+                <div class="col-md-3">
+                    <select name="Items[${itemIndex}].VitaminId" class="form-select form-select-sm">${vitaminOptions}</select>
+                </div>
+                <div class="col-md-1"><input type="number" step="0.01" name="Items[${itemIndex}].Quantity" class="form-control form-control-sm" placeholder="Qty" value="1" /></div>
+                <div class="col-md-1"><input type="text" name="Items[${itemIndex}].Unit" class="form-control form-control-sm" placeholder="Unit" /></div>
+                <div class="col-md-2"><input type="text" name="Items[${itemIndex}].Notes" class="form-control form-control-sm" placeholder="Notes" /></div>
+            `;
+            container.appendChild(row);
+            itemIndex++;
+        });
+    </script>
+}

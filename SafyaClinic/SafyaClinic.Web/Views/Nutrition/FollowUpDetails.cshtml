@@ -1,0 +1,118 @@
+@model WeeklyFollowUpDto
+@{
+    ViewData["Title"] = $"Week {Model.WeekNumber} Follow-Up";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h4 class="mb-0">Week @Model.WeekNumber Follow-Up</h4>
+        <small class="text-muted">@Model.FollowUpDate.ToString("dd MMM yyyy")</small>
+    </div>
+    @if (!Model.IsCompleted)
+    {
+        <form asp-action="CompleteFollowUp" asp-route-id="@Model.Id" asp-route-enrollmentId="@Model.EnrollmentId" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg me-1"></i>Mark Completed</button>
+        </form>
+    }
+    else
+    {
+        <span class="badge bg-success fs-6">Completed</span>
+    }
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-speedometer2 me-2"></i>Vitals & Measurements</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-6 text-muted">Weight</dt>
+                    <dd class="col-6">@(Model.WeightKg != null ? $"{Model.WeightKg} kg" : "—")</dd>
+                    <dt class="col-6 text-muted">BMI</dt>
+                    <dd class="col-6">@(Model.BMI != null ? Model.BMI.Value.ToString("0.0") : "—")</dd>
+                    <dt class="col-6 text-muted">Body Fat %</dt>
+                    <dd class="col-6">@(Model.BodyFatPercent != null ? $"{Model.BodyFatPercent}%" : "—")</dd>
+                    <dt class="col-6 text-muted">Muscle Mass</dt>
+                    <dd class="col-6">@(Model.MuscleMassKg != null ? $"{Model.MuscleMassKg} kg" : "—")</dd>
+                    <dt class="col-6 text-muted">Waist</dt>
+                    <dd class="col-6">@(Model.WaistCircumferenceCm != null ? $"{Model.WaistCircumferenceCm} cm" : "—")</dd>
+                    <dt class="col-6 text-muted">Blood Pressure</dt>
+                    <dd class="col-6">@(Model.BloodPressure ?? "—")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-journal-text me-2"></i>Doctor's Notes</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Diet Compliance</dt>
+                    <dd class="col-7">@(Model.DietCompliance ?? "—")</dd>
+                    <dt class="col-5 text-muted">Side Effects</dt>
+                    <dd class="col-7">@(Model.SideEffects ?? "None reported")</dd>
+                    <dt class="col-5 text-muted">Notes</dt>
+                    <dd class="col-7">@(Model.DoctorNotes ?? "—")</dd>
+                    <dt class="col-5 text-muted">Next Week Adjustments</dt>
+                    <dd class="col-7">@(Model.NextWeekAdjustments ?? "—")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-syringe me-2"></i>Administered Items</div>
+            <div class="card-body">
+                @if (!Model.AdministeredItems.Any())
+                {
+                    <p class="text-muted small mb-0">No items recorded.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var a in Model.AdministeredItems)
+                        {
+                            <li class="list-group-item px-0">
+                                <strong>@a.ItemName</strong> — @a.ActualQuantity
+                                <div class="small text-muted">
+                                    @(a.AdministeredByName ?? "—") • @a.AdministeredAt.ToString("dd MMM yyyy HH:mm")
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-clipboard2-pulse me-2"></i>Lab Results</div>
+            <div class="card-body">
+                @if (!Model.LabResults.Any())
+                {
+                    <p class="text-muted small mb-0">@(Model.LabResultsSummary ?? "No lab results recorded.")</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var l in Model.LabResults)
+                        {
+                            <li class="list-group-item px-0 d-flex justify-content-between">
+                                <div>
+                                    <strong>@l.AnalysisTypeName</strong>
+                                    <div class="small text-muted">@(l.ResultValue ?? "—") @(l.ReferenceRange != null ? $"(ref: {l.ReferenceRange})" : "")</div>
+                                </div>
+                                @if (l.IsNormal.HasValue)
+                                {
+                                    <span class="badge @(l.IsNormal == true ? "bg-success" : "bg-danger")">
+                                        @(l.IsNormal == true ? "Normal" : "Abnormal")
+                                    </span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>

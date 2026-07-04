@@ -1,0 +1,68 @@
+@model PatientFinancialSummaryDto
+@{
+    ViewData["Title"] = "Payment Summary";
+}
+
+<div class="mb-3">
+    <h4 class="mb-0">@Model.PatientName</h4>
+    <small class="text-muted">Financial Summary</small>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card bg-primary-soft">
+            <div class="small opacity-75">Total Charged</div>
+            <div class="fs-3 fw-bold">@Model.TotalCharged.ToString("C")</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card bg-teal-soft">
+            <div class="small opacity-75">Total Paid</div>
+            <div class="fs-3 fw-bold">@Model.TotalPaid.ToString("C")</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card @(Model.Balance > 0 ? "bg-rose-soft" : "bg-teal-soft")">
+            <div class="small opacity-75">Balance Due</div>
+            <div class="fs-3 fw-bold">@Model.Balance.ToString("C")</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-receipt me-2"></i>Payment History</span>
+        <a asp-action="Collect" asp-route-patientId="@Model.PatientId" class="btn btn-sm btn-success">
+            <i class="bi bi-cash-coin me-1"></i>Collect Payment
+        </a>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.Payments.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-receipt-cutoff fs-1 d-block mb-2 opacity-50"></i>
+                No payments recorded.
+            </div>
+        }
+        else
+        {
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr><th>Date</th><th>Amount</th><th>Method</th><th>Collected By</th><th>Reference</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Payments)
+                    {
+                        <tr>
+                            <td>@p.PaymentDate.ToString("dd MMM yyyy HH:mm")</td>
+                            <td class="fw-semibold">@p.Amount.ToString("C")</td>
+                            <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
+                            <td>@p.CollectorName</td>
+                            <td>@(p.ReferenceNumber ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

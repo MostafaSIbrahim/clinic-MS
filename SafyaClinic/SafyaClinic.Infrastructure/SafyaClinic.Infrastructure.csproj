@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SafyaClinic.Application\SafyaClinic.Application.csproj" />
     <ProjectReference Include="..\SafyaClinic.Domain\SafyaClinic.Domain.csproj" />
   </ItemGroup>
 

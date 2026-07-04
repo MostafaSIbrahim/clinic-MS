@@ -1,4 +1,8 @@
-﻿using SafyaClinic.Domain.Entities.Common;
+﻿using SafyaClinic.Domain.Entities.Analysis;
+using SafyaClinic.Domain.Entities.Common;
+using SafyaClinic.Domain.Entities.MedicalRecord;
+using SafyaClinic.Domain.Entities.Patient;
+using SafyaClinic.Domain.Entities.Reservation;
 
 
 namespace SafyaClinic.Domain.Identity
@@ -18,5 +22,7 @@ namespace SafyaClinic.Domain.Identity
         public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public virtual ICollection<Patient> CreatedPatients { get; set; } = new List<Patient>();
         public virtual ICollection<Reservation> DoctorReservations { get; set; } = new List<Reservation>();
+        public virtual ICollection<PatientRecord> DoctorRecords { get; set; } = new List<PatientRecord>();
+        public virtual ICollection<MedicalAnalysis> DoctorAnalyses { get; set; } = new List< MedicalAnalysis > ();
     }
 }
