@@ -15,6 +15,6 @@ namespace SafyaClinic.Domain.Entities.Nutrition
         // Navigation properties
         public virtual WeeklyFollowUp FollowUp { get; set; } = null!;
         public virtual PackageItem PackageItem { get; set; } = null!;
-        public virtual User Administerer { get; set; } = null!;
+        public virtual User AdministerByUser { get; set; } = null!;
     }
 }

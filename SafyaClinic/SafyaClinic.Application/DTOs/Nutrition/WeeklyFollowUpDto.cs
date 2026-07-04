@@ -13,6 +13,7 @@ namespace SafyaClinic.Application.DTOs.Nutrition
         public int WeekNumber { get; set; }
         public DateTime FollowUpDate { get; set; }
         public decimal? WeightKg { get; set; }
+        public decimal? HeightCm { get; set; }
         public decimal? BMI { get; set; }
         public decimal? BodyFatPercent { get; set; }
         public decimal? MuscleMassKg { get; set; }
@@ -48,6 +49,7 @@ namespace SafyaClinic.Application.DTOs.Nutrition
     public class RecordFollowUpDto
     {
         public int FollowUpId { get; set; }
+        public DateTime FollowUpDate { get; set; } = DateTime.Now;
         public decimal? WeightKg { get; set; }
         public decimal? HeightCm { get; set; }
         public decimal? BodyFatPercent { get; set; }
@@ -66,14 +68,14 @@ namespace SafyaClinic.Application.DTOs.Nutrition
 
     public class RecordAdministeredItemDto
     {
-        public int PackageItemId { get; set; }
-        public decimal ActualQuantity { get; set; }
+        public int? PackageItemId { get; set; }
+        public decimal? ActualQuantity { get; set; }
         public string? Notes { get; set; }
     }
 
     public class RecordLabResultDto
     {
-        public int AnalysisTypeId { get; set; }
+        public int? AnalysisTypeId { get; set; }
         public string? ResultValue { get; set; }
         public string? ReferenceRange { get; set; }
         public bool? IsNormal { get; set; }

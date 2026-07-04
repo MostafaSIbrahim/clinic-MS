@@ -13,8 +13,9 @@ using SafyaClinic.Domain.Identity;
 
 namespace SafyaClinic.Infrastructure.Data
 {
-    internal class SafyaDbContext: DbContext
+    public class SafyaDbContext: DbContext
     {
+       
         public SafyaDbContext(DbContextOptions<SafyaDbContext> options) : base(options)
         {
         }
@@ -70,7 +71,7 @@ namespace SafyaClinic.Infrastructure.Data
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(SafyaDbContext).Assembly);
 
             // Seed data
-            SeedData(modelBuilder);
+            //SeedData(modelBuilder);
         }
 
         private void SeedData(ModelBuilder modelBuilder)

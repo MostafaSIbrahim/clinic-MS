@@ -1,0 +1,51 @@
+@model IEnumerable<PaymentDto>
+@{
+    ViewData["Title"] = "Payment Report";
+}
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Payment Report</div>
+    <div class="card-body">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <input type="date" name="from" value="@(((DateTime)ViewBag.From).ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="to" value="@(((DateTime)ViewBag.To).ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+            </div>
+        </form>
+
+        <div class="alert alert-info d-flex justify-content-between">
+            <span>Total for period</span>
+            <strong>@(((decimal)ViewBag.Total).ToString("C"))</strong>
+        </div>
+
+        @if (!Model.Any())
+        {
+            <div class="text-center text-muted py-5">No payments in this period.</div>
+        }
+        else
+        {
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr><th>Date</th><th>Patient</th><th>Amount</th><th>Method</th><th>Collected By</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model)
+                    {
+                        <tr>
+                            <td>@p.PaymentDate.ToString("dd MMM yyyy HH:mm")</td>
+                            <td>@p.PatientName</td>
+                            <td class="fw-semibold">@p.Amount.ToString("C")</td>
+                            <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
+                            <td>@p.CollectorName</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

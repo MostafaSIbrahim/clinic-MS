@@ -1,0 +1,98 @@
+@model PagedResult<MedicalAnalysisDto>
+@{
+    ViewData["Title"] = "Analyses";
+    var statuses = new[] { "Requested", "InProgress", "Completed", "Cancelled" };
+}
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-clipboard2-pulse me-2"></i>Medical Analyses
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control"
+                       placeholder="Search by patient name or analysis type..." />
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    @foreach (var s in statuses)
+                    {
+                        <option value="@s" selected="@(ViewBag.Status == s)">@s</option>
+                    }
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search me-1"></i>Search</button>
+            </div>
+        </form>
+
+        @if (Model == null || !Model.Items.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-clipboard-x fs-1 d-block mb-2 opacity-50"></i>
+                No analyses found. Open a patient's record to request one.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Urgent</th>
+                            <th>Requested</th>
+                            <th>Result Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var a in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@a.PatientId">@a.PatientName</a>
+                                </td>
+                                <td>@a.AnalysisTypeName</td>
+                                <td>
+                                    @{
+                                        var cls = a.Status switch
+                                        {
+                                            "Completed" => "bg-success",
+                                            "InProgress" => "bg-warning text-dark",
+                                            "Cancelled" => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @cls">@a.Status</span>
+                                </td>
+                                <td>@(a.IsUrgent ? "🔴" : "—")</td>
+                                <td>@a.RequestDate.ToString("dd MMM yyyy")</td>
+                                <td>@(a.ResultDate?.ToString("dd MMM yyyy") ?? "—")</td>
+                                <td class="text-end">
+                                    <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (Model != null && Model.TotalPages > 1)
+        {
+            ViewData["PaginationAction"] = "Index";
+            var paginationModel = new PagedResult<object>
+            {
+                TotalCount = Model.TotalCount,
+                Page = Model.Page,
+                PageSize = Model.PageSize
+            };
+            @await Html.PartialAsync("_Pagination", paginationModel)
+        }
+    </div>
+</div>

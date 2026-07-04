@@ -6,12 +6,14 @@ namespace SafyaClinic.Domain.Entities.Nutrition
 {
     public class WeeklyFollowUp: BaseEntity
     {
+        public int UpdatedBy;
+        public DateTime? UpdatedAt;
         public int EnrollmentId { get; set; }
         public int WeekNumber { get; set; }                         // 1, 2, 3, 4
         public DateTime FollowUpDate { get; set; }
         public decimal? WeightKg { get; set; }
         public decimal? HeightCm { get; set; }
-        public decimal? BMI => HeightCm > 0 ? WeightKg / ((HeightCm / 100) * (HeightCm / 100)) : null;
+        public decimal? BMI {  get; private set; }
         public decimal? BodyFatPercent { get; set; }
         public decimal? MuscleMassKg { get; set; }
         public decimal? WaistCircumferenceCm { get; set; }
@@ -26,6 +28,7 @@ namespace SafyaClinic.Domain.Entities.Nutrition
         public DateTime? CompletedAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int CreatedBy { get; set; }
+
 
         // Navigation properties
         public virtual PatientNutritionEnrollment Enrollment { get; set; } = null!;

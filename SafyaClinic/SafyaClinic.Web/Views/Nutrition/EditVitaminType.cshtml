@@ -1,0 +1,52 @@
+@model UpdateVitaminTypeDto
+@{
+    ViewData["Title"] = "Edit Vitamin Type";
+    int id = (int)ViewBag.Id;
+    bool isInUse = ViewBag.IsInUse ?? false;
+}
+
+<div class="card" style="max-width:600px;">
+    <div class="card-header"><i class="bi bi-capsule me-2"></i>Edit Vitamin Type</div>
+    <div class="card-body">
+        @if (isInUse)
+        {
+            <div class="alert alert-warning py-2 small">
+                <i class="bi bi-info-circle me-1"></i>
+                This vitamin type is used by one or more nutrition packages. It can be
+                deactivated but not permanently deleted while in use.
+            </div>
+        }
+        <form asp-action="EditVitaminType" asp-route-id="@id" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+            <div class="mb-3">
+                <label asp-for="VitaminName" class="form-label">Name *</label>
+                <input asp-for="VitaminName" class="form-control" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Formulation" class="form-label">Formulation</label>
+                <input asp-for="Formulation" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Unit" class="form-label">Unit *</label>
+                <input asp-for="Unit" class="form-control" required />
+            </div>
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-check mb-3">
+                <input asp-for="IsActive" class="form-check-input" />
+                <label asp-for="IsActive" class="form-check-label">Active</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+            <a asp-action="VitaminTypes" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

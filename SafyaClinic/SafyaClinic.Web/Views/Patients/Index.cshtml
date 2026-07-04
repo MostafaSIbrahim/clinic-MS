@@ -1,0 +1,82 @@
+@model PagedResult<PatientSummaryDto>
+@{
+    ViewData["Title"] = "Patients";
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people me-2"></i>Patients</span>
+        <a asp-action="Create" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Register Patient
+        </a>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control"
+                       placeholder="Search by Phone Number or name or national ID..." />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search me-1"></i>Search
+                </button>
+            </div>
+        </form>
+
+        @if (Model == null || !Model.Items.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-person-x fs-1 d-block mb-2 opacity-50"></i>
+                No patients found.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>National ID</th>
+                            <th>Phone</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Registered</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.Items)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@p.FullName</td>
+                                <td>@(p.NationalId ?? "—")</td>
+                                <td>@(p.PrimaryPhone ?? "—")</td>
+                                <td>@(p.Age?.ToString() ?? "—")</td>
+                                <td>@(p.Gender ?? "—")</td>
+                                <td>@p.CreatedAt.ToString("dd MMM yyyy")</td>
+                                <td class="text-end">
+                                    <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (Model != null && Model.TotalPages > 1)
+        {
+            ViewData["PaginationAction"] = "Index";
+            var paginationModel = new PagedResult<object>
+            {
+                TotalCount = Model.TotalCount,
+                Page = Model.Page,
+                PageSize = Model.PageSize
+            };
+            @await Html.PartialAsync("_Pagination", paginationModel)
+        }
+    </div>
+</div>

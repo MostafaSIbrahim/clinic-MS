@@ -1,0 +1,201 @@
+@model PatientDto
+@{
+    ViewData["Title"] = Model.FullName;
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h4 class="mb-0">@Model.FullName</h4>
+        <small class="text-muted">Patient ID: #@Model.Id @(Model.NationalId != null ? $" • National ID: {Model.NationalId}" : "")</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="EditBasic" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil me-1"></i>Edit Basic Info
+        </a>
+        @if (IsDoctor() || IsAdmin())
+        {
+            <a asp-action="EditMedical" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-pencil-square me-1"></i>Edit Medical Info
+            </a>
+        }
+        <a asp-controller="Reservations" asp-action="Create" asp-route-patientId="@Model.Id" class="btn btn-primary btn-sm">
+            <i class="bi bi-calendar-plus me-1"></i>Book Reservation
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- ── Medical Info ── -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-heart-pulse me-2"></i>Medical Information</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Date of Birth</dt>
+                    <dd class="col-7">@(Model.DateOfBirth?.ToString("dd MMM yyyy") ?? "—") @(Model.Age != null ? $"({Model.Age} yrs)" : "")</dd>
+
+                    <dt class="col-5 text-muted">Gender</dt>
+                    <dd class="col-7">@(Model.Gender ?? "—")</dd>
+
+                    <dt class="col-5 text-muted">Blood Type</dt>
+                    <dd class="col-7">@(Model.BloodType ?? "—")</dd>
+
+                    <dt class="col-5 text-muted">Height</dt>
+                    <dd class="col-7">@(Model.HeightCm != null ? $"{Model.HeightCm} cm" : "—")</dd>
+
+                    <dt class="col-5 text-muted">Weight</dt>
+                    <dd class="col-7">@(Model.Weight != null ? $"{Model.Weight} kg" : "—")</dd>
+
+                    <dt class="col-5 text-muted">Allergies</dt>
+                    <dd class="col-7">@(Model.Allergies ?? "None recorded")</dd>
+
+                    <dt class="col-5 text-muted">Chronic Diseases</dt>
+                    <dd class="col-7">@(Model.ChronicDiseases ?? "None recorded")</dd>
+
+                    <dt class="col-5 text-muted">Notes</dt>
+                    <dd class="col-7">@(Model.Notes ?? "—")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Contact Info ── -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-telephone me-2"></i>Contact Information</div>
+            <div class="card-body">
+                <h6 class="text-muted small text-uppercase">Phone Numbers</h6>
+                @if (!Model.Phones.Any())
+                {
+                    <p class="text-muted small">No phone numbers added.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush mb-3">
+                        @foreach (var ph in Model.Phones)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>
+                                    @ph.PhoneNumber
+                                    <span class="badge bg-light text-dark border ms-1">@ph.PhoneType</span>
+                                    @if (ph.IsPrimary)
+                                    {
+                                        <span class="badge bg-primary ms-1">Primary</span>
+                                    }
+                                </span>
+                                <form asp-action="RemovePhone" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="patientId" value="@Model.Id" />
+                                    <input type="hidden" name="phoneId" value="@ph.Id" />
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0" onclick="return confirm('Remove this phone?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                }
+                <form asp-action="AddPhone" method="post" class="row g-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="patientId" value="@Model.Id" />
+                    <div class="col-6">
+                        <input type="text" name="PhoneNumber" class="form-control form-control-sm" placeholder="Phone number" required />
+                    </div>
+                    <div class="col-4">
+                        <select name="PhoneType" class="form-select form-select-sm">
+                            <option value="Mobile">Mobile</option>
+                            <option value="Home">Home</option>
+                            <option value="Work">Work</option>
+                        </select>
+                    </div>
+                    <div class="col-2">
+                        <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus"></i></button>
+                    </div>
+                </form>
+
+                <hr />
+
+                <h6 class="text-muted small text-uppercase">Addresses</h6>
+                @if (!Model.Addresses.Any())
+                {
+                    <p class="text-muted small">No addresses added.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush mb-3">
+                        @foreach (var a in Model.Addresses)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span class="small">@a.Street, @a.City @(a.Governorate != null ? $", {a.Governorate}" : "")</span>
+                                <form asp-action="RemoveAddress" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="patientId" value="@Model.Id" />
+                                    <input type="hidden" name="addressId" value="@a.Id" />
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0" onclick="return confirm('Remove this address?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                }
+                <form asp-action="AddAddress" method="post" class="row g-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="patientId" value="@Model.Id" />
+                    <div class="col-4"><input type="text" name="Street" class="form-control form-control-sm" placeholder="Street" /></div>
+                    <div class="col-4"><input type="text" name="City" class="form-control form-control-sm" placeholder="City" required /></div>
+                    <div class="col-3"><input type="text" name="Governorate" class="form-control form-control-sm" placeholder="Governorate" /></div>
+                    <div class="col-1"><button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus"></i></button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Quick links ── -->
+<div class="row g-3 mt-1">
+    @if (IsDoctor() || IsAdmin())
+    {
+        <div class="col-md-3">
+            <a asp-controller="MedicalRecords" asp-action="PatientRecords" asp-route-patientId="@Model.Id" class="card text-decoration-none h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-medical fs-2 text-primary"></i>
+                    <div class="mt-2 fw-semibold">Medical Records</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3">
+            <a asp-controller="Analysis" asp-action="PatientAnalyses" asp-route-patientId="@Model.Id" class="card text-decoration-none h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-clipboard2-pulse fs-2 text-info"></i>
+                    <div class="mt-2 fw-semibold">Analyses</div>
+                </div>
+            </a>
+        </div>
+    }
+    @if (IsAdmin() || IsNutritionist())
+    {
+        <div class="col-md-3">
+            <a asp-controller="Nutrition" asp-action="PatientEnrollments" asp-route-patientId="@Model.Id" class="card text-decoration-none h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-capsule fs-2 text-success"></i>
+                    <div class="mt-2 fw-semibold">Nutrition Enrollments</div>
+                </div>
+            </a>
+        </div>
+    }
+    <div class="col-md-3">
+        <a asp-controller="Payments" asp-action="PatientSummary" asp-route-patientId="@Model.Id" class="card text-decoration-none h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-cash-coin fs-2 text-warning"></i>
+                <div class="mt-2 fw-semibold">Payments</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+@functions {
+    bool IsDoctor()       => ViewContext.HttpContext.User.IsInRole("Doctor");
+    bool IsAdmin()        => ViewContext.HttpContext.User.IsInRole("Admin");
+    bool IsNutritionist() => ViewContext.HttpContext.User.IsInRole("Nutritionist");
+}

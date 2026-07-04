@@ -1,0 +1,74 @@
+@model NutritionPackageDto
+@{
+    ViewData["Title"] = Model.PackageName;
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h4 class="mb-0">@Model.PackageName</h4>
+        <small class="text-muted">@Model.Description</small>
+    </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <form asp-action="DeactivatePackage" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Deactivate this package?')">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-slash-circle me-1"></i>Deactivate</button>
+        </form>
+    }
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="stat-card bg-primary-soft">
+            <div class="small opacity-75">Base Price</div>
+            <div class="fs-4 fw-bold">@Model.BasePrice.ToString("C")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-teal-soft">
+            <div class="small opacity-75">Max Discount</div>
+            <div class="fs-4 fw-bold">@Model.MaxDiscountPercent%</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card bg-amber-soft">
+            <div class="small opacity-75">Duration</div>
+            <div class="fs-4 fw-bold">@Model.DurationWeeks weeks</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><i class="bi bi-calendar-week me-2"></i>Weekly Schedule</div>
+    <div class="card-body">
+        @for (int week = 1; week <= Model.DurationWeeks; week++)
+        {
+            var weekItems = Model.Items.Where(i => i.WeekNumber == week);
+            <h6 class="text-muted text-uppercase small mt-2">Week @week</h6>
+            @if (!weekItems.Any())
+            {
+                <p class="small text-muted">No items scheduled.</p>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush mb-3">
+                    @foreach (var item in weekItems)
+                    {
+                        <li class="list-group-item px-0">
+                            @if (item.InjectionName != null)
+                            {
+                                <span class="badge bg-info me-1">Injection</span> @item.InjectionName
+                            }
+                            else if (item.VitaminName != null)
+                            {
+                                <span class="badge bg-success me-1">Vitamin</span> @item.VitaminName
+                            }
+                            — @item.Quantity @item.Unit
+                            @if (item.Notes != null) { <span class="text-muted small"> (@item.Notes)</span> }
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </div>
+</div>

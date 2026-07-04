@@ -1,0 +1,65 @@
+@model CreatePatientRecordRequest
+@{
+    ViewData["Title"] = "New Medical Record";
+}
+
+<div class="card" style="max-width:800px;">
+    <div class="card-header"><i class="bi bi-file-earmark-plus me-2"></i>Create Medical Record</div>
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <input type="hidden" asp-for="PatientId" />
+            <input type="hidden" asp-for="DoctorId" />
+            <input type="hidden" asp-for="ReservationId" />
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="Category" class="form-label">Category</label>
+                    <select asp-for="Category" class="form-select">
+                        <option value="InternalMedicine">Internal Medicine</option>
+                        <option value="Nutritional">Nutritional</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="FollowUpDate" class="form-label">Follow-up Date</label>
+                    <input asp-for="FollowUpDate" type="date" class="form-control" />
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="ChiefComplaint" class="form-label">Chief Complaint</label>
+                    <textarea asp-for="ChiefComplaint" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <label asp-for="PresentIllnessHistory" class="form-label">Present Illness History</label>
+                    <textarea asp-for="PresentIllnessHistory" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Diagnosis" class="form-label">Diagnosis</label>
+                    <textarea asp-for="Diagnosis" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <label asp-for="DifferentialDiagnosis" class="form-label">Differential Diagnosis</label>
+                    <textarea asp-for="DifferentialDiagnosis" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <label asp-for="TreatmentPlan" class="form-label">Treatment Plan</label>
+                    <textarea asp-for="TreatmentPlan" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label">Notes</label>
+                    <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Create Record</button>
+                <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

@@ -12,7 +12,9 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.HasKey(w => w.Id);
             builder.Property(w => w.WeightKg).HasPrecision(5, 2);
             builder.Property(w => w.HeightCm).HasPrecision(5, 2);
-            builder.Property(w => w.BMI).HasPrecision(5, 2);
+            builder.Property(w => w.BMI)
+           .HasComputedColumnSql("CASE WHEN HeightCm > 0 THEN WeightKg / ((HeightCm/100.0) * (HeightCm/100.0)) END")
+           .HasPrecision(5, 2);
             builder.Property(w => w.BodyFatPercent).HasPrecision(5, 2);
             builder.Property(w => w.MuscleMassKg).HasPrecision(5, 2);
             builder.Property(w => w.WaistCircumferenceCm).HasPrecision(5, 2);

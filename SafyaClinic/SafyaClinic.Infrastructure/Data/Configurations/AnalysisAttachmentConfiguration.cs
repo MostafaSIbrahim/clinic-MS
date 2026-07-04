@@ -17,7 +17,7 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.HasKey(aa => aa.Id);
             builder.Property(aa => aa.FileName).IsRequired().HasMaxLength(255);
             builder.Property(aa => aa.FilePath).IsRequired().HasMaxLength(500);
-            builder.Property(aa => aa.FileType).HasMaxLength(50);
+            builder.Property(aa => aa.ContentType).HasMaxLength(50);
 
             builder.HasOne(aa => aa.Analysis)
                    .WithMany(ma => ma.Attachments)

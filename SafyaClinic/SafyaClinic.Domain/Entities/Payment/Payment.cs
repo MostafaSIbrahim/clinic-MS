@@ -1,6 +1,7 @@
 ﻿using SafyaClinic.Domain.Entities.Common;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Identity;
+using System.ComponentModel.DataAnnotations.Schema;
 
 
 namespace SafyaClinic.Domain.Entities.Payment
@@ -10,6 +11,7 @@ namespace SafyaClinic.Domain.Entities.Payment
         public int? ReservationId { get; set; }
         public int PatientId { get; set; }
         public int? EnrollmentId { get; set; }              // NEW: For nutrition package payments
+        [ForeignKey("Collector")]
         public int CollectedBy { get; set; }
         public decimal Amount { get; set; }
         public PaymentMethodEnum PaymentMethod { get; set; }

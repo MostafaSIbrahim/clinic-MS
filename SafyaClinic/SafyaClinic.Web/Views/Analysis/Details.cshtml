@@ -1,0 +1,111 @@
+@model MedicalAnalysisDto
+@{
+    ViewData["Title"] = "Analysis Details";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-start">
+    <div>
+        <h4 class="mb-0">@Model.AnalysisTypeName</h4>
+        <small class="text-muted">@Model.PatientName • Requested @Model.RequestDate.ToString("dd MMM yyyy")</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Analysis" asp-action="PatientAnalyses" asp-route-patientId="@Model.PatientId" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-list-ul me-1"></i>All Analyses
+        </a>
+        @if (Model.RecordId != null)
+        {
+            <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@Model.RecordId" class="btn btn-sm btn-outline-info">
+                <i class="bi bi-file-medical me-1"></i>View Medical Record
+            </a>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>Details</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-4 text-muted">Doctor</dt>
+                    <dd class="col-8">@Model.DoctorName</dd>
+                    <dt class="col-4 text-muted">Status</dt>
+                    <dd class="col-8"><span class="badge bg-secondary">@Model.Status</span></dd>
+                    <dt class="col-4 text-muted">Urgent</dt>
+                    <dd class="col-8">@(Model.IsUrgent ? "🔴 Yes" : "No")</dd>
+                    <dt class="col-4 text-muted">Result Date</dt>
+                    <dd class="col-8">@(Model.ResultDate?.ToString("dd MMM yyyy") ?? "—")</dd>
+                    <dt class="col-4 text-muted">Result Notes</dt>
+                    <dd class="col-8">@(Model.ResultNotes ?? "—")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header"><i class="bi bi-paperclip me-2"></i>Attachments</div>
+            <div class="card-body">
+                @if (!Model.Attachments.Any())
+                {
+                    <p class="text-muted small mb-3">No files uploaded.</p>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush mb-3">
+                        @foreach (var a in Model.Attachments)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <a asp-action="DownloadAttachment" asp-route-attachmentId="@a.Id" target="_blank">
+                                    <i class="bi bi-file-earmark me-1"></i>@a.FileName
+                                </a>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <form asp-action="DeleteAttachment" method="post" onsubmit="return confirm('Delete this attachment?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="attachmentId" value="@a.Id" />
+                                        <input type="hidden" name="analysisId" value="@Model.Id" />
+                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                <form asp-action="UploadAttachment" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="analysisId" value="@Model.Id" />
+                    <input type="file" name="file" class="form-control form-control-sm" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-upload"></i> Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-arrow-repeat me-2"></i>Update Status / Result</div>
+            <div class="card-body">
+                <form asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-2">
+                        <label class="form-label small">Status</label>
+                        <select name="Status" class="form-select form-select-sm">
+                            <option value="Requested" selected="@(Model.Status == "Requested")">Requested</option>
+                            <option value="InProgress" selected="@(Model.Status == "InProgress")">InProgress</option>
+                            <option value="Completed" selected="@(Model.Status == "Completed")">Completed</option>
+                            <option value="Cancelled" selected="@(Model.Status == "Cancelled")">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Result Date</label>
+                        <input type="date" name="ResultDate" class="form-control form-control-sm" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Result Notes</label>
+                        <textarea name="ResultNotes" class="form-control form-control-sm" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
