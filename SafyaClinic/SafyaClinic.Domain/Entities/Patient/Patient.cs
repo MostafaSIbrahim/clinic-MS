@@ -12,6 +12,7 @@ namespace SafyaClinic.Domain.Entities.Patient
     public class Patient : AuditableEntity
     {
         public int? UserId { get; set; }
+        public int? PatientSourceId { get; set; }              // Where this patient came from (Vezeeta, Instagram, ...)
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public DateTime? DateOfBirth { get; set; }
@@ -27,6 +28,7 @@ namespace SafyaClinic.Domain.Entities.Patient
 
         // Navigation properties
         public virtual User? User { get; set; }
+        public virtual Settings.PatientSource? PatientSource { get; set; }
         public virtual ICollection<PatientPhone> Phones { get; set; } = new List<PatientPhone>();
         public virtual ICollection<PatientAddress> Addresses { get; set; } = new List<PatientAddress>();
         public virtual ICollection<Reservation.Reservation> Reservations { get; set; } = new List<Reservation.Reservation>();

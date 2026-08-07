@@ -54,8 +54,9 @@
                         @foreach (var a in Model.Attachments)
                         {
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <a asp-action="DownloadAttachment" asp-route-attachmentId="@a.Id" target="_blank">
-                                    <i class="bi bi-file-earmark me-1"></i>@a.FileName
+                                <a href="javascript:void(0)"
+                                   onclick="showAttachmentPreview('@Url.Action("ViewAttachment", new { attachmentId = a.Id })', '@Url.Action("DownloadAttachment", new { attachmentId = a.Id })', '@a.FileName')">
+                                    <i class="bi bi-eye me-1"></i>@a.FileName
                                 </a>
                                 @if (User.IsInRole("Admin"))
                                 {
@@ -109,3 +110,5 @@
         </div>
     </div>
 </div>
+
+@await Html.PartialAsync("_AttachmentPreviewModal")

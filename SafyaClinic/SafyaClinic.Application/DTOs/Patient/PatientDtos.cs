@@ -5,6 +5,8 @@
 public class PatientDto
 {
     public int Id { get; init; }
+    public int? PatientSourceId { get; init; }
+    public string? PatientSourceName { get; init; }
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
     public string FullName => $"{FirstName} {LastName}";
@@ -50,6 +52,7 @@ public class PatientSummaryDto
 {
     public int Id { get; init; }
     public string FullName { get; init; } = string.Empty;
+    public string? PatientSourceName { get; init; }
     public string? NationalId { get; init; }
     public string? PrimaryPhone { get; init; }
     public int? Age { get; init; }
@@ -61,6 +64,7 @@ public class PatientSummaryDto
 
 public class CreatePatientRequest
 {
+    public int? PatientSourceId { get; init; }
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
     public DateTime? DateOfBirth { get; init; }
@@ -100,6 +104,7 @@ public class UpdatePatientBasicRequest
     public string FirstName { get; init; } = string.Empty;
     public string LastName { get; init; } = string.Empty;
     public string? NationalId { get; init; }
+    public int? PatientSourceId { get; init; }
 }
 
 public class UpdatePatientMedicalRequest

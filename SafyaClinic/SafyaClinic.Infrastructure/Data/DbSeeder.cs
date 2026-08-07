@@ -4,6 +4,7 @@ using SafyaClinic.Domain.Entities.Analysis;
 using SafyaClinic.Domain.Entities.MedicalRecord;
 using SafyaClinic.Domain.Entities.Nutrition;
 using SafyaClinic.Domain.Entities.Reservation;
+using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Identity;
 
@@ -20,6 +21,8 @@ public static class DbSeeder
         await SeedInjectionTypesAsync(context);
         await SeedVitaminTypesAsync(context);
         await SeedReservationStatusesAsync(context);
+        await SeedClinicsAsync(context);
+        await SeedPatientSourcesAsync(context);
 
     }
 
@@ -180,6 +183,42 @@ public static class DbSeeder
         };
 
         await context.ReservationStatuses.AddRangeAsync(statuses);
+        await context.SaveChangesAsync();
+    }
+
+    // ── Clinics ────────────────────────────────────────────────
+
+    private static async Task SeedClinicsAsync(SafyaDbContext context)
+    {
+        if (await context.Clinics.AnyAsync()) return;
+
+        await context.Clinics.AddAsync(new Clinic
+        {
+            Name = "Main Clinic",
+            Address = string.Empty,
+            IsActive = true
+        });
+
+        await context.SaveChangesAsync();
+    }
+
+    // ── Patient Sources ───────────────────────────────────────
+
+    private static async Task SeedPatientSourcesAsync(SafyaDbContext context)
+    {
+        if (await context.PatientSources.AnyAsync()) return;
+
+        var sources = new[]
+        {
+            new PatientSource { Name = "Walk-in", Description = "Patient came directly with no referral", DefaultDeductionPercentage = 0m },
+            new PatientSource { Name = "Vezeeta", Description = "Booked via Vezeeta platform", DefaultDeductionPercentage = 20m },
+            new PatientSource { Name = "Ekshef", Description = "Booked via Ekshef platform", DefaultDeductionPercentage = 20m },
+            new PatientSource { Name = "Instagram", Description = "Came via Instagram", DefaultDeductionPercentage = 10m },
+            new PatientSource { Name = "Facebook", Description = "Came via Facebook", DefaultDeductionPercentage = 10m },
+            new PatientSource { Name = "Marketing Campaign", Description = "Came via a paid marketing campaign", DefaultDeductionPercentage = 15m }
+        };
+
+        await context.PatientSources.AddRangeAsync(sources);
         await context.SaveChangesAsync();
     }
 

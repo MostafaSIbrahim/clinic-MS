@@ -20,6 +20,8 @@ public class ReservationService : IReservationService
             return ServiceResult<ReservationDto>.Failure("Patient not found.");
         if (!await _uow.Users.ExistsAsync(request.DoctorId))
             return ServiceResult<ReservationDto>.Failure("Doctor not found.");
+        if (!await _uow.Clinics.ExistsAsync(request.ClinicId))
+            return ServiceResult<ReservationDto>.Failure("Clinic not found.");
         if (!Enum.TryParse<TreatmentCategory>(request.Category, out var category))
             return ServiceResult<ReservationDto>.Failure("Invalid category. Use 'InternalMedicine' or 'Nutritional'.");
 
@@ -28,6 +30,7 @@ public class ReservationService : IReservationService
         {
             PatientId = request.PatientId,
             DoctorId = request.DoctorId,
+            ClinicId = request.ClinicId,
             StatusId = 1,
             Category = category,
             ReservationDate = request.ReservationDate,
@@ -64,6 +67,8 @@ public class ReservationService : IReservationService
             all = all.Where(r => r.DoctorId == filter.DoctorId.Value);
         if (filter.PatientId.HasValue)
             all = all.Where(r => r.PatientId == filter.PatientId.Value);
+        if (filter.ClinicId.HasValue)
+            all = all.Where(r => r.ClinicId == filter.ClinicId.Value);
         if (filter.StatusId.HasValue)
             all = all.Where(r => r.StatusId == filter.StatusId.Value);
         if (!string.IsNullOrWhiteSpace(filter.Category) &&
@@ -120,6 +125,7 @@ public class ReservationService : IReservationService
         if (r is null) return ServiceResult.Failure("Reservation not found.");
 
         r.DoctorId = request.DoctorId;
+        r.ClinicId = request.ClinicId;
         r.StatusId = request.StatusId;
         r.ReservationDate = request.ReservationDate;
         r.ReservationTime = request.ReservationTime;
@@ -179,6 +185,7 @@ public class ReservationService : IReservationService
     {
         var patient = await _uow.Patients.GetByIdAsync(r.PatientId);
         var doctor = await _uow.Users.GetByIdAsync(r.DoctorId);
+        var clinic = await _uow.Clinics.GetByIdAsync(r.ClinicId);
         var status = await _uow.ReservationStatuses.GetByIdAsync(r.StatusId);
 
         return new ReservationDto
@@ -188,6 +195,8 @@ public class ReservationService : IReservationService
             PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
             DoctorId = r.DoctorId,
             DoctorName = doctor?.FullName ?? "",
+            ClinicId = r.ClinicId,
+            ClinicName = clinic?.Name ?? "",
             StatusName = status?.StatusName ?? "",
             StatusColor = status?.ColorCode ?? "#6c757d",
             Category = r.Category.ToString(),
@@ -206,6 +215,7 @@ public class ReservationService : IReservationService
     {
         var patient = await _uow.Patients.GetByIdAsync(r.PatientId);
         var doctor = await _uow.Users.GetByIdAsync(r.DoctorId);
+        var clinic = await _uow.Clinics.GetByIdAsync(r.ClinicId);
         var status = await _uow.ReservationStatuses.GetByIdAsync(r.StatusId);
 
         return new ReservationSummaryDto
@@ -213,6 +223,7 @@ public class ReservationService : IReservationService
             Id = r.Id,
             PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
             DoctorName = doctor?.FullName ?? "",
+            ClinicName = clinic?.Name ?? "",
             ReservationDate = r.ReservationDate,
             ReservationTime = r.ReservationTime,
             StatusName = status?.StatusName ?? "",

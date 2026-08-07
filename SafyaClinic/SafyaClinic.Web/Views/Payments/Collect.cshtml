@@ -1,6 +1,8 @@
 @model CollectPaymentRequest
+@using SafyaClinic.Application.DTOs.Settings
 @{
     ViewData["Title"] = "Collect Payment";
+    var clinics = ViewBag.Clinics as IEnumerable<ClinicDto> ?? Enumerable.Empty<ClinicDto>();
 }
 
 <div class="card" style="max-width:600px;">
@@ -12,11 +14,28 @@
             <input type="hidden" asp-for="PatientId" />
             <input type="hidden" asp-for="ReservationId" />
             <input type="hidden" asp-for="EnrollmentId" />
-@*             <input type="hidden" asp-for="CollectedBy" />
- *@
+
+            <div class="mb-3">
+                <label asp-for="ClinicId" class="form-label">Clinic *</label>
+                <select asp-for="ClinicId" class="form-select" required>
+                    <option value="">— Select Clinic —</option>
+                    @foreach (var c in clinics)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+                <small class="text-muted">
+                    If this is the patient's first visit, the clinic + patient source agreement will
+                    automatically determine the deduction applied to this payment.
+                </small>
+            </div>
+
             <div class="mb-3">
                 <label asp-for="Amount" class="form-label">Amount *</label>
                 <input asp-for="Amount" type="number" step="0.01" class="form-control" required />
+                <small class="text-muted">
+                    Pre-filled with the current due balance — adjust it for a partial or flexible payment.
+                </small>
             </div>
 
             <div class="mb-3">

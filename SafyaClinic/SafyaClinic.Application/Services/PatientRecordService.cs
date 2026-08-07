@@ -269,6 +269,43 @@ public class PatientRecordService : IPatientRecordService
         });
     }
 
+    public async Task<ServiceResult<PrescriptionPrintDto>> GetPrescriptionForPrintAsync(int prescriptionId)
+    {
+        var prescription = await _uow.Prescriptions.GetByIdAsync(prescriptionId);
+        if (prescription is null)
+            return ServiceResult<PrescriptionPrintDto>.Failure("Prescription not found.");
+
+        var record = await _uow.PatientRecords.GetByIdAsync(prescription.RecordId);
+        if (record is null)
+            return ServiceResult<PrescriptionPrintDto>.Failure("Medical record not found.");
+
+        var patient = await _uow.Patients.GetByIdAsync(record.PatientId);
+        var doctor = await _uow.Users.GetByIdAsync(record.DoctorId);
+
+        return ServiceResult<PrescriptionPrintDto>.Success(new PrescriptionPrintDto
+        {
+            Id = prescription.Id,
+            MedicationName = prescription.MedicationName,
+            Dosage = prescription.Dosage,
+            Frequency = prescription.Frequency,
+            Duration = prescription.Duration,
+            RouteOfAdministration = prescription.RouteOfAdministration,
+            Instructions = prescription.Instructions,
+            CreatedAt = prescription.CreatedAt,
+            RecordId = record.Id,
+            Diagnosis = record.Diagnosis,
+            PatientId = record.PatientId,
+            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
+            PatientAge = patient?.DateOfBirth.HasValue == true
+                ? (int)((DateTime.Today - patient.DateOfBirth!.Value).TotalDays / 365.25)
+                : null,
+            PatientGender = patient?.Gender?.ToString(),
+            DoctorName = doctor?.FullName ?? "",
+            DoctorSpecialization = doctor?.Specialization,
+            DoctorLicenseNumber = doctor?.LicenseNumber
+        });
+    }
+
     // ── Mapper ────────────────────────────────────────────────
 
     private async Task<PatientRecordDto> BuildRecordDtoAsync(PatientRecord record)

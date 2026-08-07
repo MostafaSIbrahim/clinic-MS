@@ -10,15 +10,18 @@ namespace SafyaClinic.Web.Controllers
     public class AnalysisController : BaseController
     {
         private readonly IAnalysisService _analysisService;
+        private readonly IPatientService _patientService;
         private readonly IConfiguration _config;
         private readonly IWebHostEnvironment _env;
 
         public AnalysisController(
             IAnalysisService analysisService,
+            IPatientService patientService,
             IConfiguration config,
             IWebHostEnvironment env)
         {
             _analysisService = analysisService;
+            _patientService = patientService;
             _config = config;
             _env = env;
         }
@@ -93,7 +96,7 @@ namespace SafyaClinic.Web.Controllers
             return RedirectToAction(nameof(PrintRequestSlip), new { ids });
         }
 
-        // ── Printable request slip for one or more freshly-requested analyses ──
+        // ── Printable request slip for one or more analyses ────────────
         [HttpGet]
         public async Task<IActionResult> PrintRequestSlip(string ids)
         {
@@ -112,7 +115,30 @@ namespace SafyaClinic.Web.Controllers
             }
 
             if (!analyses.Any()) return RedirectToAction("Index", "Patients");
+
+            var patientResult = await _patientService.GetPatientByIdAsync(analyses.First().PatientId);
+            ViewBag.Patient = patientResult.IsSuccess ? patientResult.Data : null;
+
             return View(analyses);
+        }
+
+        // ── Reprint a request slip for a patient's already-requested analyses ──
+        [HttpGet]
+        public async Task<IActionResult> PrintPatientRequests(int patientId, string status = "Requested")
+        {
+            var result = await _analysisService.GetPatientAnalysesAsync(patientId);
+            var ids = result.IsSuccess
+                ? result.Data!.Where(a => string.IsNullOrEmpty(status) || a.Status == status)
+                    .Select(a => a.Id)
+                : Enumerable.Empty<int>();
+
+            if (!ids.Any())
+            {
+                Error($"No analyses with status '{status}' to print.");
+                return RedirectToAction(nameof(PatientAnalyses), new { patientId });
+            }
+
+            return RedirectToAction(nameof(PrintRequestSlip), new { ids = string.Join(",", ids) });
         }
 
         [HttpPost]
@@ -148,27 +174,37 @@ namespace SafyaClinic.Web.Controllers
             return RedirectToAction(nameof(Details), new { id = analysisId });
         }
 
-        // ── View / download a result attachment ───────────────────────────
+        // ── View (inline, for the pop-up preview) vs Download (forced) ────
+        [HttpGet]
+        public async Task<IActionResult> ViewAttachment(int attachmentId)
+        {
+            var (bytes, contentType, _) = await LoadAttachmentBytesAsync(attachmentId);
+            if (bytes is null) return NotFound();
+            // No fileDownloadName here → no Content-Disposition: attachment header,
+            // so the browser renders it inline inside the modal's <img>/<iframe>.
+            return File(bytes, contentType!);
+        }
+
         [HttpGet]
         public async Task<IActionResult> DownloadAttachment(int attachmentId)
         {
+            var (bytes, contentType, fileName) = await LoadAttachmentBytesAsync(attachmentId);
+            if (bytes is null) return NotFound();
+            return File(bytes, contentType!, fileName);
+        }
+
+        private async Task<(byte[]? bytes, string? contentType, string fileName)> LoadAttachmentBytesAsync(
+            int attachmentId)
+        {
             var result = await _analysisService.GetAttachmentAsync(attachmentId);
-            if (!result.IsSuccess)
-            {
-                Error("Attachment not found.");
-                return RedirectToAction("Index", "Patients");
-            }
+            if (!result.IsSuccess) return (null, null, string.Empty);
 
             var attachment = result.Data!;
             var fullPath = Path.IsPathRooted(attachment.FilePath)
                 ? attachment.FilePath
                 : Path.Combine(_env.ContentRootPath, attachment.FilePath);
 
-            if (!System.IO.File.Exists(fullPath))
-            {
-                Error("The attachment file could not be found on disk.");
-                return RedirectToAction("Index", "Patients");
-            }
+            if (!System.IO.File.Exists(fullPath)) return (null, null, string.Empty);
 
             var contentType = attachment.ContentType;
             if (string.IsNullOrWhiteSpace(contentType))
@@ -179,9 +215,7 @@ namespace SafyaClinic.Web.Controllers
             }
 
             var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            // inline lets images/PDFs render straight in the browser; anything
-            // else (e.g. .docx) still downloads with its original file name.
-            return File(bytes, contentType, attachment.FileName);
+            return (bytes, contentType, attachment.FileName);
         }
 
         [HttpPost]

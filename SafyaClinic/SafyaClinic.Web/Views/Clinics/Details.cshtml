@@ -1,0 +1,79 @@
+@model ClinicDto
+@{
+    ViewData["Title"] = Model.Name;
+    var sources = ViewBag.Sources as IEnumerable<PatientSourceDto> ?? Enumerable.Empty<PatientSourceDto>();
+    var agreedSourceIds = Model.Agreements.Select(a => a.PatientSourceId).ToHashSet();
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h4 class="mb-0">@Model.Name</h4>
+        <small class="text-muted">@(Model.Address ?? "No address on file") @(Model.Phone != null ? $" • {Model.Phone}" : "")</small>
+    </div>
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Edit Clinic</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-percent me-2"></i>Patient Source Deduction Agreements</div>
+    <div class="card-body">
+        <p class="text-muted small">
+            Each row defines how much is deducted from a patient's payment on their <strong>first visit</strong>
+            when they came from that source and were treated at this clinic. If a source has no row here,
+            the source's default deduction % is used instead.
+        </p>
+
+        <table class="table table-sm align-middle mb-4">
+            <thead><tr><th>Source</th><th>Deduction %</th><th>Notes</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var a in Model.Agreements)
+                {
+                    <tr>
+                        <td>@a.PatientSourceName</td>
+                        <td class="fw-semibold">@a.DeductionPercentage.ToString("0.##")%</td>
+                        <td>@(a.Notes ?? "—")</td>
+                        <td>
+                            <form asp-action="RemoveAgreement" method="post" class="d-inline"
+                                  onsubmit="return confirm('Remove this agreement? The source default % will apply instead.');">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="agreementId" value="@a.Id" />
+                                <input type="hidden" name="clinicId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Agreements.Any())
+                {
+                    <tr><td colspan="4" class="text-center text-muted py-3">No custom agreements yet — all sources use their default %.</td></tr>
+                }
+            </tbody>
+        </table>
+
+        <h6 class="text-muted text-uppercase small mb-2">Add / Update Agreement</h6>
+        <form asp-action="SaveAgreement" method="post" class="row g-2 align-items-end">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ClinicId" value="@Model.Id" />
+            <div class="col-md-4">
+                <label class="form-label">Patient Source</label>
+                <select name="PatientSourceId" class="form-select" required>
+                    <option value="">— Select Source —</option>
+                    @foreach (var s in sources)
+                    {
+                        <option value="@s.Id">@s.Name (default @s.DefaultDeductionPercentage.ToString("0.##")%)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Deduction %</label>
+                <input type="number" name="DeductionPercentage" step="0.01" min="0" max="100" class="form-control" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Notes</label>
+                <input type="text" name="Notes" class="form-control" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-lg me-1"></i>Save</button>
+            </div>
+        </form>
+    </div>
+</div>

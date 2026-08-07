@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Payment;
 using SafyaClinic.Application.Interfaces.Services;
-using System.Security.Claims;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -10,9 +9,13 @@ namespace SafyaClinic.Web.Controllers;
 public class PaymentsController : BaseController
 {
     private readonly IPaymentService _paymentService;
+    private readonly IClinicService _clinicService;
 
-    public PaymentsController(IPaymentService paymentService) =>
+    public PaymentsController(IPaymentService paymentService, IClinicService clinicService)
+    {
         _paymentService = paymentService;
+        _clinicService = clinicService;
+    }
 
     public async Task<IActionResult> PatientSummary(int patientId)
     {
@@ -30,19 +33,37 @@ public class PaymentsController : BaseController
         var result = await _paymentService.GetPaymentsByDateRangeAsync(f, t);
         ViewBag.From = f;
         ViewBag.To = t;
-        ViewBag.Total = result.IsSuccess ? result.Data!.Sum(p => p.Amount) : 0m;
+        ViewBag.Total = result.IsSuccess ? result.Data!.Where(p => p.Status == "Active").Sum(p => p.Amount) : 0m;
         return View(result.IsSuccess ? result.Data : Enumerable.Empty<PaymentDto>());
     }
 
+    // ── Dashboard ───────────────────────────────────────────────
+
     [HttpGet]
-    public IActionResult Collect(int patientId, int? reservationId, int? enrollmentId)
+    public async Task<IActionResult> Dashboard(DateTime? from, DateTime? to)
     {
+        var result = await _paymentService.GetPaymentDashboardAsync(from, to);
+        ViewBag.From = from;
+        ViewBag.To = to;
+        return View(result.IsSuccess ? result.Data : new PaymentDashboardDto());
+    }
+
+    // ── Collect ─────────────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> Collect(int patientId, int? reservationId, int? enrollmentId)
+    {
+        var clinics = await _clinicService.GetAllAsync(includeInactive: false);
+        ViewBag.Clinics = clinics.Data;
+
+        var dueResult = await _paymentService.GetDueAmountAsync(patientId, reservationId, enrollmentId);
+
         return View(new CollectPaymentRequest
         {
             PatientId = patientId,
             ReservationId = reservationId,
             EnrollmentId = enrollmentId,
-           // CollectedBy = CurrentUserId
+            Amount = dueResult.IsSuccess ? dueResult.Data : 0m
         });
     }
 
@@ -50,27 +71,79 @@ public class PaymentsController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Collect(CollectPaymentRequest model)
     {
-
-        /*var nameId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var currentId = CurrentUserId;
-        ModelState.AddModelError("", $"DEBUG — NameIdentifier: '{nameId}', CurrentUserId: {currentId}");*/
-
-        /*System.Diagnostics.Debug.WriteLine($"NameIdentifier raw: {nameId}");
-        System.Diagnostics.Debug.WriteLine($"CurrentUserId parsed: {CurrentUserId}");
-        System.Diagnostics.Debug.WriteLine($"All claims: {string.Join(", ", allClaims)}");*/
-        if (CurrentUserId<= 0)
+        if (CurrentUserId <= 0)
         {
             Error("Session expired. Please login again.");
             return RedirectToAction("Login", "Auth");
         }
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid)
+        {
+            ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+            return View(model);
+        }
 
         var result = await _paymentService.CollectPaymentAsync(model, CurrentUserId);
-        if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+            return View(model);
+        }
+
+        var message = result.Data!.IsFirstVisitDeduction
+            ? $"Payment of {result.Data.Amount:C} collected. First-visit source deduction of {result.Data.SourceDeductionAmount:C} ({result.Data.DeductionPercentage}%) applied."
+            : $"Payment of {result.Data.Amount:C} collected.";
 
         return RedirectWithSuccess(
-            $"Payment of {result.Data!.Amount:C} collected.",
+            message,
             nameof(PatientSummary),
             routeValues: new { patientId = model.PatientId });
+    }
+
+    // ── Cancel ──────────────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> Cancel(int paymentId)
+    {
+        var result = await _paymentService.GetPaymentByIdAsync(paymentId);
+        if (!result.IsSuccess) { Error("Payment not found."); return RedirectToAction(nameof(Report)); }
+        return View(new CancelPaymentRequest { PaymentId = paymentId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(CancelPaymentRequest model)
+    {
+        if (!ModelState.IsValid) return View(model);
+        var result = await _paymentService.CancelPaymentAsync(model, CurrentUserId);
+        if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+        return RedirectWithSuccess(
+            "Payment cancelled.",
+            nameof(PatientSummary),
+            routeValues: new { patientId = result.Data!.PatientId });
+    }
+
+    // ── Change amount ───────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> ChangeAmount(int paymentId)
+    {
+        var result = await _paymentService.GetPaymentByIdAsync(paymentId);
+        if (!result.IsSuccess) { Error("Payment not found."); return RedirectToAction(nameof(Report)); }
+        ViewBag.CurrentAmount = result.Data!.Amount;
+        return View(new ChangePaymentAmountRequest { PaymentId = paymentId, NewAmount = result.Data.Amount });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeAmount(ChangePaymentAmountRequest model)
+    {
+        if (!ModelState.IsValid) return View(model);
+        var result = await _paymentService.ChangePaymentAmountAsync(model, CurrentUserId);
+        if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+        return RedirectWithSuccess(
+            "Payment amount updated.",
+            nameof(PatientSummary),
+            routeValues: new { patientId = result.Data!.PatientId });
     }
 }

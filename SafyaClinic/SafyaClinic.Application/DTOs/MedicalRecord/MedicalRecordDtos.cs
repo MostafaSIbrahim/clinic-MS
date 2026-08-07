@@ -100,6 +100,32 @@ public class PrescriptionDto
     public IEnumerable<AttachmentDto> Attachments { get; init; } = Enumerable.Empty<AttachmentDto>();
 }
 
+// Everything the printable prescription form needs in one shape, so the
+// print view doesn't have to reach into three different services.
+public class PrescriptionPrintDto
+{
+    public int Id { get; init; }
+    public string MedicationName { get; init; } = string.Empty;
+    public string? Dosage { get; init; }
+    public string? Frequency { get; init; }
+    public string? Duration { get; init; }
+    public string? RouteOfAdministration { get; init; }
+    public string? Instructions { get; init; }
+    public DateTime CreatedAt { get; init; }
+
+    public int RecordId { get; init; }
+    public string? Diagnosis { get; init; }
+
+    public int PatientId { get; init; }
+    public string PatientName { get; init; } = string.Empty;
+    public int? PatientAge { get; init; }
+    public string? PatientGender { get; init; }
+
+    public string DoctorName { get; init; } = string.Empty;
+    public string? DoctorSpecialization { get; init; }
+    public string? DoctorLicenseNumber { get; init; }
+}
+
 public class AddPrescriptionRequest
 {
     public string MedicationName { get; init; } = string.Empty;

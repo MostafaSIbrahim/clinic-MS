@@ -1,6 +1,8 @@
 @model UpdatePatientBasicRequest
+@using SafyaClinic.Application.DTOs.Settings
 @{
     ViewData["Title"] = "Edit Basic Info";
+    var sources = ViewBag.Sources as IEnumerable<PatientSourceDto> ?? Enumerable.Empty<PatientSourceDto>();
 }
 
 <div class="card" style="max-width:600px;">
@@ -21,6 +23,16 @@
             <div class="mb-3">
                 <label asp-for="NationalId" class="form-label">National ID</label>
                 <input asp-for="NationalId" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label asp-for="PatientSourceId" class="form-label">Patient Source</label>
+                <select asp-for="PatientSourceId" class="form-select">
+                    <option value="">— Select Source —</option>
+                    @foreach (var s in sources)
+                    {
+                        <option value="@s.Id">@s.Name (@s.DefaultDeductionPercentage.ToString("0.##")%)</option>
+                    }
+                </select>
             </div>
 
             <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>

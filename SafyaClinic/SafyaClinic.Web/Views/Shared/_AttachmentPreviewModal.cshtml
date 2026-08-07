@@ -1,0 +1,56 @@
+<!-- Shared attachment preview modal — include once per page, then call
+     showAttachmentPreview(viewUrl, downloadUrl, fileName) from an onclick. -->
+<div class="modal fade" id="attachmentPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title text-truncate" id="attachmentPreviewTitle">Attachment</h6>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <a id="attachmentPreviewDownload" class="btn btn-sm btn-outline-secondary" href="#">
+                        <i class="bi bi-download me-1"></i>Download
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0" id="attachmentPreviewBody" style="min-height:70vh;">
+                <!-- content injected by JS -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showAttachmentPreview(viewUrl, downloadUrl, fileName) {
+        const ext = (fileName.split('.').pop() || '').toLowerCase();
+        const body = document.getElementById('attachmentPreviewBody');
+        const title = document.getElementById('attachmentPreviewTitle');
+        const download = document.getElementById('attachmentPreviewDownload');
+
+        title.textContent = fileName;
+        download.href = downloadUrl;
+
+        const imageExts = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
+        const iframeExts = ['pdf', 'txt'];
+
+        if (imageExts.includes(ext)) {
+            body.innerHTML = `<div class="d-flex justify-content-center align-items-center h-100 p-3">
+                <img src="${viewUrl}" alt="${fileName}" style="max-width:100%;max-height:75vh;object-fit:contain;" />
+            </div>`;
+        } else if (iframeExts.includes(ext)) {
+            body.innerHTML = `<iframe src="${viewUrl}" style="width:100%;height:75vh;border:0;"></iframe>`;
+        } else {
+            body.innerHTML = `<div class="text-center text-muted py-5">
+                <i class="bi bi-file-earmark-x fs-1 d-block mb-2 opacity-50"></i>
+                A preview isn't available for this file type (.${ext}).<br />
+                <a href="${downloadUrl}" class="btn btn-sm btn-primary mt-3"><i class="bi bi-download me-1"></i>Download to view</a>
+            </div>`;
+        }
+
+        const modalEl = document.getElementById('attachmentPreviewModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        // Clear the iframe/img when closed so it stops loading/playing.
+        modalEl.addEventListener('hidden.bs.modal', () => { body.innerHTML = ''; }, { once: true });
+    }
+</script>
