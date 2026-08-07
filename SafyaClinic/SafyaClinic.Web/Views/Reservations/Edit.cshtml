@@ -1,8 +1,10 @@
 @model UpdateReservationRequest
 @using SafyaClinic.Application.DTOs.Patient
+@using SafyaClinic.Application.DTOs.Settings
 @{
     ViewData["Title"] = "Edit Reservation";
     var doctors = ViewBag.Doctors as IEnumerable<UserDto> ?? Enumerable.Empty<UserDto>();
+    var clinics = ViewBag.Clinics as IEnumerable<ClinicDto> ?? Enumerable.Empty<ClinicDto>();
 }
 
 <div class="card" style="max-width:700px;">
@@ -19,6 +21,15 @@
                         @foreach (var d in doctors)
                         {
                             <option value="@d.Id">@d.FullName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ClinicId" class="form-label">Clinic *</label>
+                    <select asp-for="ClinicId" class="form-select" required>
+                        @foreach (var c in clinics)
+                        {
+                            <option value="@c.Id">@c.Name</option>
                         }
                     </select>
                 </div>

@@ -21,10 +21,16 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
 
             builder.HasIndex(p => p.NationalId).IsUnique();
             builder.HasIndex(p => p.UserId);
+            builder.HasIndex(p => p.PatientSourceId);
 
             builder.HasOne(p => p.User)
                    .WithMany(u => u.CreatedPatients)
                    .HasForeignKey(p => p.UserId)
+                   .OnDelete(DeleteBehavior.SetNull);
+
+            builder.HasOne(p => p.PatientSource)
+                   .WithMany(s => s.Patients)
+                   .HasForeignKey(p => p.PatientSourceId)
                    .OnDelete(DeleteBehavior.SetNull);
         }
     }

@@ -31,6 +31,9 @@
             <div class="card-header"><i class="bi bi-heart-pulse me-2"></i>Medical Information</div>
             <div class="card-body">
                 <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Patient Source</dt>
+                    <dd class="col-7">@(Model.PatientSourceName ?? "—")</dd>
+
                     <dt class="col-5 text-muted">Date of Birth</dt>
                     <dd class="col-7">@(Model.DateOfBirth?.ToString("dd MMM yyyy") ?? "—") @(Model.Age != null ? $"({Model.Age} yrs)" : "")</dd>
 

@@ -10,9 +10,13 @@ namespace SafyaClinic.Web.Controllers;
 public class PatientsController : BaseController
 {
     private readonly IPatientService _patientService;
+    private readonly IPatientSourceService _patientSourceService;
 
-    public PatientsController(IPatientService patientService) =>
+    public PatientsController(IPatientService patientService, IPatientSourceService patientSourceService)
+    {
         _patientService = patientService;
+        _patientSourceService = patientSourceService;
+    }
 
     // ── List / Search ─────────────────────────────────────────
 
@@ -37,15 +41,28 @@ public class PatientsController : BaseController
     // ── Create ────────────────────────────────────────────────
 
     [HttpGet]
-    public IActionResult Create() => View(new CreatePatientRequest());
+    public async Task<IActionResult> Create()
+    {
+        ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
+        return View(new CreatePatientRequest());
+    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreatePatientRequest model)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid)
+        {
+            ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
+            return View(model);
+        }
         var result = await _patientService.CreatePatientAsync(model, CurrentUserId);
-        if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
+            return View(model);
+        }
         return RedirectWithSuccess("Patient registered.", nameof(Details), routeValues: new { id = result.Data!.Id });
     }
 
@@ -57,11 +74,13 @@ public class PatientsController : BaseController
         var result = await _patientService.GetPatientByIdAsync(id);
         if (!result.IsSuccess) return RedirectToAction(nameof(Index));
         var p = result.Data!;
+        ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
         return View(new UpdatePatientBasicRequest
         {
             FirstName = p.FirstName,
             LastName = p.LastName,
-            NationalId = p.NationalId
+            NationalId = p.NationalId,
+            PatientSourceId = p.PatientSourceId
         });
     }
 
@@ -69,7 +88,11 @@ public class PatientsController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> EditBasic(int id, UpdatePatientBasicRequest model)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid)
+        {
+            ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
+            return View(model);
+        }
         var result = await _patientService.UpdateBasicInfoAsync(id, model);
         if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
         return RedirectWithSuccess("Patient updated.", nameof(Details), routeValues: new { id });

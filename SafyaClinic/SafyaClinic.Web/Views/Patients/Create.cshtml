@@ -1,6 +1,8 @@
 @model CreatePatientRequest
+@using SafyaClinic.Application.DTOs.Settings
 @{
     ViewData["Title"] = "Register Patient";
+    var sources = ViewBag.Sources as IEnumerable<PatientSourceDto> ?? Enumerable.Empty<PatientSourceDto>();
 }
 
 <div class="card">
@@ -18,6 +20,18 @@
                 <div class="col-md-6">
                     <label asp-for="LastName" class="form-label">Last Name *</label>
                     <input asp-for="LastName" class="form-control" required />
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="PatientSourceId" class="form-label">Patient Source</label>
+                    <select asp-for="PatientSourceId" class="form-select">
+                        <option value="">— Select Source —</option>
+                        @foreach (var s in sources)
+                        {
+                            <option value="@s.Id">@s.Name (@s.DefaultDeductionPercentage.ToString("0.##")%)</option>
+                        }
+                    </select>
+                    <small class="text-muted">Where this patient came from (Vezeeta, Instagram, Marketing…). Used to calculate the first-visit deduction.</small>
                 </div>
 
                 <div class="col-md-4">

@@ -11,13 +11,16 @@ public class ReservationsController : BaseController
 {
     private readonly IReservationService _reservationService;
     private readonly IUserService _userService;
+    private readonly IClinicService _clinicService;
 
     public ReservationsController(
         IReservationService reservationService,
-        IUserService userService)
+        IUserService userService,
+        IClinicService clinicService)
     {
         _reservationService = reservationService;
         _userService = userService;
+        _clinicService = clinicService;
     }
 
     public async Task<IActionResult> Index(
@@ -48,6 +51,8 @@ public class ReservationsController : BaseController
     {
         var doctors = await _userService.GetDoctorsAsync();
         ViewBag.Doctors = doctors.Data;
+        var clinics = await _clinicService.GetAllAsync(includeInactive: false);
+        ViewBag.Clinics = clinics.Data;
         ViewBag.PatientId = patientId;
         return View(new CreateReservationRequest
         {
@@ -65,6 +70,7 @@ public class ReservationsController : BaseController
         {
             var d = await _userService.GetDoctorsAsync();
             ViewBag.Doctors = d.Data;
+            ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
             return View(model);
         }
         var result = await _reservationService.CreateReservationAsync(model, CurrentUserId);
@@ -73,6 +79,7 @@ public class ReservationsController : BaseController
             ApplyErrors(result);
             var d = await _userService.GetDoctorsAsync();
             ViewBag.Doctors = d.Data;
+            ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
             return View(model);
         }
         return RedirectWithSuccess("Reservation booked.", nameof(Details), routeValues: new { id = result.Data!.Id });
@@ -85,10 +92,12 @@ public class ReservationsController : BaseController
         if (!result.IsSuccess) return RedirectToAction(nameof(Index));
         var doctors = await _userService.GetDoctorsAsync();
         ViewBag.Doctors = doctors.Data;
+        ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
         var r = result.Data!;
         return View(new UpdateReservationRequest
         {
             DoctorId = r.DoctorId,
+            ClinicId = r.ClinicId,
             StatusId = 1,
             ReservationDate = r.ReservationDate,
             ReservationTime = r.ReservationTime,
@@ -107,6 +116,7 @@ public class ReservationsController : BaseController
         {
             var d = await _userService.GetDoctorsAsync();
             ViewBag.Doctors = d.Data;
+            ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
             return View(model);
         }
         var result = await _reservationService.UpdateReservationAsync(id, model);

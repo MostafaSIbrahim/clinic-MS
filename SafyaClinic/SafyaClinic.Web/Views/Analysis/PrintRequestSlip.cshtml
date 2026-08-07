@@ -3,6 +3,7 @@
     ViewData["Title"] = "Analysis Request Slip";
     Layout = null;
     var first = Model.First();
+    var patient = ViewBag.Patient as PatientDto;
 }
 <!DOCTYPE html>
 <html>
@@ -30,11 +31,19 @@
 
     <dl class="row">
         <dt class="col-2">Patient</dt>
-        <dd class="col-10">@first.PatientName (#@first.PatientId)</dd>
+        <dd class="col-4">@first.PatientName (#@first.PatientId)</dd>
+        <dt class="col-2">Age / Gender</dt>
+        <dd class="col-4">@(patient?.Age?.ToString() ?? "—") / @(patient?.Gender ?? "—")</dd>
+
         <dt class="col-2">Doctor</dt>
-        <dd class="col-10">@first.DoctorName</dd>
+        <dd class="col-4">@first.DoctorName</dd>
+        <dt class="col-2">Phone</dt>
+        <dd class="col-4">@(patient?.Phones.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber ?? patient?.Phones.FirstOrDefault()?.PhoneNumber ?? "—")</dd>
+
         <dt class="col-2">Date</dt>
-        <dd class="col-10">@first.RequestDate.ToString("dd MMM yyyy")</dd>
+        <dd class="col-4">@first.RequestDate.ToString("dd MMM yyyy")</dd>
+        <dt class="col-2">National ID</dt>
+        <dd class="col-4">@(patient?.NationalId ?? "—")</dd>
     </dl>
 
     <table class="table table-bordered mt-3">

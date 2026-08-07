@@ -5,6 +5,7 @@ using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Entities.Prescription;
 using SafyaClinic.Domain.Entities.Reservation;
+using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using SafyaClinic.Infrastructure.Data;
@@ -46,6 +47,12 @@ public class UnitOfWork : IUnitOfWork
 
     // ── Payment ───────────────────────────────────────────────
     private IRepository<Payment>? _payments;
+    private IRepository<PaymentAdjustment>? _paymentAdjustments;
+
+    // ── Settings (Sources / Clinics) ────────────────────────────
+    private IRepository<PatientSource>? _patientSources;
+    private IRepository<Clinic>? _clinics;
+    private IRepository<ClinicSourceAgreement>? _clinicSourceAgreements;
 
     // ── Nutrition ─────────────────────────────────────────────
     private IRepository<InjectionType>? _injectionTypes;
@@ -84,6 +91,11 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<AnalysisAttachment> AnalysisAttachments => _analysisAttachments ??= new GenericRepository<AnalysisAttachment>(_context);
 
     public IRepository<Payment> Payments => _payments ??= new GenericRepository<Payment>(_context);
+    public IRepository<PaymentAdjustment> PaymentAdjustments => _paymentAdjustments ??= new GenericRepository<PaymentAdjustment>(_context);
+
+    public IRepository<PatientSource> PatientSources => _patientSources ??= new GenericRepository<PatientSource>(_context);
+    public IRepository<Clinic> Clinics => _clinics ??= new GenericRepository<Clinic>(_context);
+    public IRepository<ClinicSourceAgreement> ClinicSourceAgreements => _clinicSourceAgreements ??= new GenericRepository<ClinicSourceAgreement>(_context);
 
     public IRepository<InjectionType> InjectionTypes => _injectionTypes ??= new GenericRepository<InjectionType>(_context);
     public IRepository<VitaminType> VitaminTypes => _vitaminTypes ??= new GenericRepository<VitaminType>(_context);

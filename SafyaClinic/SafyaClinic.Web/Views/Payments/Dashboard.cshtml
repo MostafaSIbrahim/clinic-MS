@@ -1,0 +1,168 @@
+@model PaymentDashboardDto
+@{
+    ViewData["Title"] = "Payment Dashboard";
+}
+
+<div class="card mb-3">
+    <div class="card-header"><i class="bi bi-speedometer2 me-2"></i>Payment Dashboard</div>
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <input type="date" name="from" value="@(((DateTime?)ViewBag.From)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" placeholder="From" />
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="to" value="@(((DateTime?)ViewBag.To)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" placeholder="To" />
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card bg-rose-soft">
+            <div class="small opacity-75">Unpaid — Completed Reservations</div>
+            <div class="fs-3 fw-bold">@Model.TotalUnpaidCompleted.ToString("C")</div>
+            <div class="small">@Model.UnpaidCompletedReservations.Count() reservation(s)</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card bg-primary-soft">
+            <div class="small opacity-75">Unpaid — Pending Reservations</div>
+            <div class="fs-3 fw-bold">@Model.TotalUnpaidPending.ToString("C")</div>
+            <div class="small">@Model.UnpaidPendingReservations.Count() reservation(s)</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card bg-teal-soft">
+            <div class="small opacity-75">Fully Paid</div>
+            <div class="fs-3 fw-bold">@Model.TotalFullyPaid.ToString("C")</div>
+            <div class="small">@Model.FullyPaidPayments.Count() payment(s)</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Unpaid — Completed Reservations</div>
+            <div class="card-body p-0" style="max-height:340px; overflow:auto;">
+                @if (!Model.UnpaidCompletedReservations.Any())
+                {
+                    <div class="text-center text-muted py-4">None — all completed reservations are settled.</div>
+                }
+                else
+                {
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Patient</th><th>Clinic</th><th>Date</th><th>Written Off</th><th>Balance</th></tr></thead>
+                        <tbody>
+                            @foreach (var r in Model.UnpaidCompletedReservations)
+                            {
+                                <tr>
+                                    <td>@r.PatientName</td>
+                                    <td>@r.ClinicName</td>
+                                    <td>@r.ReservationDate.ToString("dd MMM yyyy")</td>
+                                    <td class="text-muted">@(r.WrittenOff > 0 ? r.WrittenOff.ToString("C") : "—")</td>
+                                    <td class="fw-semibold text-danger">@r.Balance.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-hourglass-split text-warning me-2"></i>Unpaid — Pending Reservations</div>
+            <div class="card-body p-0" style="max-height:340px; overflow:auto;">
+                @if (!Model.UnpaidPendingReservations.Any())
+                {
+                    <div class="text-center text-muted py-4">None pending.</div>
+                }
+                else
+                {
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Patient</th><th>Clinic</th><th>Date</th><th>Status</th><th>Written Off</th><th>Balance</th></tr></thead>
+                        <tbody>
+                            @foreach (var r in Model.UnpaidPendingReservations)
+                            {
+                                <tr>
+                                    <td>@r.PatientName</td>
+                                    <td>@r.ClinicName</td>
+                                    <td>@r.ReservationDate.ToString("dd MMM yyyy")</td>
+                                    <td><span class="badge bg-light text-dark border">@r.StatusName</span></td>
+                                    <td class="text-muted">@(r.WrittenOff > 0 ? r.WrittenOff.ToString("C") : "—")</td>
+                                    <td class="fw-semibold text-warning">@r.Balance.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-diagram-3 me-2"></i>Amount by Patient Source</div>
+            <div class="card-body p-0">
+                @if (!Model.AmountBySource.Any())
+                {
+                    <div class="text-center text-muted py-4">No data for this period.</div>
+                }
+                else
+                {
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Source</th><th># Payments</th><th>Collected</th><th>Source Deduction</th></tr></thead>
+                        <tbody>
+                            @foreach (var s in Model.AmountBySource)
+                            {
+                                <tr>
+                                    <td>@s.PatientSourceName</td>
+                                    <td>@s.PaymentCount</td>
+                                    <td class="fw-semibold">@s.TotalCollected.ToString("C")</td>
+                                    <td class="text-warning">@s.TotalSourceDeduction.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-hospital me-2"></i>Amount by Clinic</div>
+            <div class="card-body p-0">
+                @if (!Model.AmountByClinic.Any())
+                {
+                    <div class="text-center text-muted py-4">No data for this period.</div>
+                }
+                else
+                {
+                    <table class="table table-sm table-hover mb-0">
+                        <thead><tr><th>Clinic</th><th># Payments</th><th>Collected</th><th>Clinic Net</th></tr></thead>
+                        <tbody>
+                            @foreach (var c in Model.AmountByClinic)
+                            {
+                                <tr>
+                                    <td>@c.ClinicName</td>
+                                    <td>@c.PaymentCount</td>
+                                    <td class="fw-semibold">@c.TotalCollected.ToString("C")</td>
+                                    <td class="text-success">@c.TotalClinicNet.ToString("C")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>

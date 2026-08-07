@@ -1,0 +1,33 @@
+@model CancelPaymentRequest
+@{
+    ViewData["Title"] = "Cancel Payment";
+}
+
+<div class="card" style="max-width:600px;">
+    <div class="card-header bg-danger text-white"><i class="bi bi-x-circle me-2"></i>Cancel Payment</div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            Cancelling writes this payment off: the amount stops counting as collected revenue, but it
+            will <strong>not</strong> reopen as a due balance for the patient or reservation — the clinic
+            is treating it as settled/waived. This is recorded in the payment's audit trail and cannot be
+            undone from here.
+        </div>
+        <form asp-action="Cancel" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <input type="hidden" asp-for="PaymentId" />
+
+            <div class="mb-3">
+                <label asp-for="Reason" class="form-label">Cancellation Reason *</label>
+                <textarea asp-for="Reason" class="form-control" rows="3" required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-danger"><i class="bi bi-x-lg me-1"></i>Confirm Cancellation</button>
+            <a asp-action="Report" class="btn btn-outline-secondary">Back</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

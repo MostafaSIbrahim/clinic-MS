@@ -5,6 +5,7 @@ using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Entities.Prescription;
 using SafyaClinic.Domain.Entities.Reservation;
+using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Identity;
 
 namespace SafyaClinic.Domain.Interfaces.Repositories;
@@ -41,6 +42,12 @@ public interface IUnitOfWork : IDisposable
 
     // ── Payment ───────────────────────────────────────────────
     IRepository<Payment> Payments { get; }
+    IRepository<PaymentAdjustment> PaymentAdjustments { get; }
+
+    // ── Settings (Sources / Clinics) ────────────────────────────
+    IRepository<PatientSource> PatientSources { get; }
+    IRepository<Clinic> Clinics { get; }
+    IRepository<ClinicSourceAgreement> ClinicSourceAgreements { get; }
 
     // ── Nutrition ─────────────────────────────────────────────
     IRepository<InjectionType> InjectionTypes { get; }

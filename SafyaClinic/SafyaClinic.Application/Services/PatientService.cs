@@ -36,6 +36,7 @@ public class PatientService : IPatientService
 
         var patient = new Patient
         {
+            PatientSourceId = request.PatientSourceId,
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),
             DateOfBirth = request.DateOfBirth,
@@ -131,10 +132,15 @@ public class PatientService : IPatientService
                 ph => ph.PatientId == p.Id && ph.IsPrimary))
                 .FirstOrDefault()?.PhoneNumber;
 
+            var source = p.PatientSourceId.HasValue
+                ? await _uow.PatientSources.GetByIdAsync(p.PatientSourceId.Value)
+                : null;
+
             summaries.Add(new PatientSummaryDto
             {
                 Id = p.Id,
                 FullName = $"{p.FirstName} {p.LastName}",
+                PatientSourceName = source?.Name,
                 NationalId = p.NationalId,
                 PrimaryPhone = primaryPhone,
                 Age = p.DateOfBirth.HasValue
@@ -174,6 +180,7 @@ public class PatientService : IPatientService
         patient.FirstName = request.FirstName.Trim();
         patient.LastName = request.LastName.Trim();
         patient.NationalId = request.NationalId?.Trim();
+        patient.PatientSourceId = request.PatientSourceId;
         patient.UpdatedAt = DateTime.UtcNow;
 
         _uow.Patients.Update(patient);
@@ -273,12 +280,16 @@ public class PatientService : IPatientService
         
         var phones = await _uow.PatientPhones.FindAsync(ph => ph.PatientId == patient.Id);
         var addresses = await _uow.PatientAddresses.FindAsync(a => a.PatientId == patient.Id);
-        
+        var source = patient.PatientSourceId.HasValue
+            ? await _uow.PatientSources.GetByIdAsync(patient.PatientSourceId.Value)
+            : null;
 
        
         return new PatientDto
         {
             Id = patient.Id,
+            PatientSourceId = patient.PatientSourceId,
+            PatientSourceName = source?.Name,
             FirstName = patient.FirstName,
             LastName = patient.LastName,
             DateOfBirth = patient.DateOfBirth,

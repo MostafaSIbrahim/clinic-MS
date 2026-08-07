@@ -22,4 +22,5 @@ public interface IPatientRecordService
     Task<ServiceResult> AddPrescriptionAttachmentAsync(int prescriptionId, string filePath, string fileName, string contentType, long fileSize, int uploadedBy);
     Task<ServiceResult> DeleteAttachmentAsync(int attachmentId);  // Admin only
     Task<ServiceResult<AttachmentDto>> GetAttachmentAsync(int attachmentId);
+    Task<ServiceResult<PrescriptionPrintDto>> GetPrescriptionForPrintAsync(int prescriptionId);
 }

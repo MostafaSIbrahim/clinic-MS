@@ -9,19 +9,25 @@
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="stat-card bg-primary-soft">
             <div class="small opacity-75">Total Charged</div>
             <div class="fs-3 fw-bold">@Model.TotalCharged.ToString("C")</div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <div class="stat-card bg-teal-soft">
             <div class="small opacity-75">Total Paid</div>
             <div class="fs-3 fw-bold">@Model.TotalPaid.ToString("C")</div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
+        <div class="stat-card bg-amber-soft">
+            <div class="small opacity-75">Written Off (Cancelled)</div>
+            <div class="fs-3 fw-bold">@Model.TotalWrittenOff.ToString("C")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
         <div class="stat-card @(Model.Balance > 0 ? "bg-rose-soft" : "bg-teal-soft")">
             <div class="small opacity-75">Balance Due</div>
             <div class="fs-3 fw-bold">@Model.Balance.ToString("C")</div>
@@ -48,17 +54,59 @@
         {
             <table class="table table-hover mb-0 align-middle">
                 <thead>
-                    <tr><th>Date</th><th>Amount</th><th>Method</th><th>Collected By</th><th>Reference</th></tr>
+                    <tr>
+                        <th>Date</th><th>Amount</th><th>Method</th><th>Clinic</th><th>Source</th>
+                        <th>Deduction</th><th>Clinic Net</th><th>Status</th><th>Collected By</th><th></th>
+                    </tr>
                 </thead>
                 <tbody>
                     @foreach (var p in Model.Payments)
                     {
-                        <tr>
+                        <tr class="@(p.Status == "Cancelled" ? "text-muted text-decoration-line-through" : "")">
                             <td>@p.PaymentDate.ToString("dd MMM yyyy HH:mm")</td>
-                            <td class="fw-semibold">@p.Amount.ToString("C")</td>
+                            <td class="fw-semibold">
+                                @p.Amount.ToString("C")
+                                @if (p.OriginalAmount.HasValue && p.OriginalAmount.Value != p.Amount)
+                                {
+                                    <br /><small class="text-muted">was @p.OriginalAmount.Value.ToString("C")</small>
+                                }
+                            </td>
                             <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
+                            <td>@(p.ClinicName ?? "—")</td>
+                            <td>@(p.PatientSourceName ?? "—")</td>
+                            <td>
+                                @if (p.IsFirstVisitDeduction)
+                                {
+                                    <span class="badge bg-warning text-dark">@p.DeductionPercentage%  (@p.SourceDeductionAmount.ToString("C"))</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>@p.ClinicNetAmount.ToString("C")</td>
+                            <td>
+                                @if (p.Status == "Active")
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary" title="@p.CancellationReason">Cancelled</span>
+                                }
+                            </td>
                             <td>@p.CollectorName</td>
-                            <td>@(p.ReferenceNumber ?? "—")</td>
+                            <td class="text-nowrap">
+                                @if (p.Status == "Active")
+                                {
+                                    <a asp-action="ChangeAmount" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-primary" title="Change amount">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a asp-action="Cancel" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger" title="Cancel payment">
+                                        <i class="bi bi-x-lg"></i>
+                                    </a>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>

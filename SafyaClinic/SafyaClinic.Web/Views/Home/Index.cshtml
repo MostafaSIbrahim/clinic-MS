@@ -1,0 +1,334 @@
+﻿@{
+    Layout = null; // صفحة مستقلة ذات تصميم جذاب للمرضى
+    var clinicInfo = new
+    {
+        Name = "Safya Clinic",
+        Tagline = "عناية متكاملة لصحتك ولياقتك",
+        Instagram = "https://www.instagram.com/dr.enaselharouny?utm_source=qr",
+        Facebook = "https://www.facebook.com/SafyaClinic" // يمكنك تغيير الرابط
+    };
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@clinicInfo.Name - @clinicInfo.Tagline</title>
+    <!-- Google Fonts Inter & Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" />
+
+    <style>
+            :root {
+                --primary-violet: #5B21B6;
+                --primary-gradient: linear-gradient(135deg, #5B21B6 0%, #7C3AED 100%);
+                --accent-teal: #0D9488;
+                --accent-teal-hover: #0F766E;
+                --bg-light: #F8FAFC;
+                --text-dark: #1E293B;
+            }
+
+            body {
+                font-family: 'Cairo', 'Inter', sans-serif;
+                background-color: var(--bg-light);
+                color: var(--text-dark);
+            }
+
+            /* Navbar Styling */
+            .navbar-custom {
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                box-shadow: 0 4px 20px rgba(91, 33, 182, 0.08);
+            }
+
+            .brand-logo {
+                background: var(--primary-gradient);
+                color: white;
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 1.2rem;
+            }
+
+            /* Hero Section */
+            .hero-section {
+                background: linear-gradient(180deg, rgba(124, 58, 237, 0.05) 0%, rgba(248, 250, 252, 1) 100%);
+                padding: 100px 0 60px;
+            }
+
+            .hero-title {
+                color: var(--primary-violet);
+                font-weight: 800;
+                font-size: 2.8rem;
+            }
+
+            .btn-gradient {
+                background: var(--primary-gradient);
+                color: white;
+                border: none;
+                border-radius: 50px;
+                padding: 12px 30px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+            }
+
+            .btn-gradient:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
+                color: white;
+            }
+
+            .btn-outline-teal {
+                border: 2px solid var(--accent-teal);
+                color: var(--accent-teal);
+                border-radius: 50px;
+                padding: 10px 28px;
+                font-weight: 600;
+            }
+
+            .btn-outline-teal:hover {
+                background-color: var(--accent-teal);
+                color: white;
+            }
+
+            /* Cards Styling */
+            .service-card {
+                border: none;
+                border-radius: 20px;
+                background: white;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+                transition: all 0.3s ease;
+                height: 100%;
+            }
+
+            .service-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 15px 35px rgba(91, 33, 182, 0.12);
+            }
+
+            .service-icon {
+                width: 60px;
+                height: 60px;
+                border-radius: 16px;
+                background: rgba(124, 58, 237, 0.1);
+                color: var(--primary-violet);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                margin-bottom: 20px;
+            }
+
+            .badge-coming-soon {
+                background-color: rgba(13, 148, 136, 0.1);
+                color: var(--accent-teal);
+                font-size: 0.8rem;
+                padding: 6px 12px;
+                border-radius: 20px;
+            }
+
+            /* Social & Video Embeds */
+            .social-link {
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 1.2rem;
+                margin: 0 5px;
+                transition: transform 0.2s ease;
+            }
+
+            .social-link:hover { transform: scale(1.1); color: white; }
+            .bg-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+            .bg-facebook { background: #1877F2; }
+
+            .video-container {
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                background: #fff;
+            }
+
+            footer {
+                background: #0F172A;
+                color: #94A3B8;
+            }
+    </style>
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-custom fixed-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                <div class="brand-logo">S</div>
+                <span class="fw-bold text-dark">عيادة صافيا - Safya Clinic</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center gap-3">
+                    <li class="nav-item"><a class="nav-link text-dark fw-semibold" href="#services">خدماتنا</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-semibold" href="#videos">المحتوى الطبي</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-semibold" href="#contact">تواصل معنا</a></li>
+                    <!-- Portal Login for Staff & Admin -->
+                    <li class="nav-item ms-lg-3">
+                        <a href="/Auth/Login" class="btn btn-outline-teal btn-sm px-4">
+                            <i class="fa-solid fa-right-to-bracket me-1"></i> دخول الطاقم الطبي
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section text-center">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <span class="badge badge-coming-soon mb-3">رعايتكم هي أولوِيتنا</span>
+                    <h1 class="hero-title mb-4">عيادة صافيا الطبية ترحب بكم</h1>
+                    <p class="lead text-muted mb-4">نقدم أحدث الخدمات الطبية المتخصصة تحت إشراف نخبة من الأطباء لضمان صحة أفضل لك ولعائلتك.</p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="#contact" class="btn btn-gradient">تواصل معنا الآن</a>
+                        <button class="btn btn-outline-secondary rounded-pill px-4" disabled title="قريباً">
+                            حجز موعد (قريباً)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="py-5">
+        <div class="container py-4">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold text-dark">تخصصاتنا وخدماتنا</h2>
+                <p class="text-muted">تغطية طبية شاملة ومتميزة لتلبية كافة احتياجاتكم الصحية</p>
+            </div>
+            <div class="row g-4">
+                <!-- Internal Medicine -->
+                <div class="col-md-4">
+                    <div class="card service-card p-4 text-center">
+                        <div class="service-icon mx-auto"><i class="fa-solid fa-stethoscope"></i></div>
+                        <h4 class="fw-bold mb-3">الباطنة العامة</h4>
+                        <p class="text-muted">تشخيص وعلاج الأمراض المزمنة، المتابعة الدورية، والفحوصات الشاملة بأحدث التقنيات.</p>
+                    </div>
+                </div>
+                <!-- Nutrition -->
+                <div class="col-md-4">
+                    <div class="card service-card p-4 text-center">
+                        <div class="service-icon mx-auto"><i class="fa-solid fa-apple-whole"></i></div>
+                        <h4 class="fw-bold mb-3">التغذية العلاجية</h4>
+                        <p class="text-muted">برامج غذائية مخصصة لإنقاص أو زيادة الوزن، وتغذية الرياضيين والمرضى باحترافية.</p>
+                    </div>
+                </div>
+                <!-- Physio Therapy (Coming Soon) -->
+                <div class="col-md-4">
+                    <div class="card service-card p-4 text-center position-relative">
+                        <div class="service-icon mx-auto"><i class="fa-solid fa-child-reaching"></i></div>
+                        <span class="badge badge-coming-soon position-absolute top-0 end-0 m-3">قريباً</span>
+                        <h4 class="fw-bold mb-3">العلاج الطبيعي</h4>
+                        <p class="text-muted">جلسات تأهيل وإعادة حركة بأحدث الأجهزة لمساعدتك على استعادة نشاطك وصحتك البدنية.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Media & Videos Section -->
+    <section id="videos" class="py-5 bg-white">
+        <div class="container py-4">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-5">
+                    <h2 class="fw-bold mb-3">تابعوا نصائحنا الطبية على إنستغرام</h2>
+                    <p class="text-muted mb-4">نشارككم يومياً فيديوهات توعوية ونصائح طبية للحفاظ على صحتكم وإجابات على أشهر استفساراتكم.</p>
+
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <a href="@clinicInfo.Instagram" target="_blank" class="social-link bg-instagram">
+                            <i class="fa-brands fa-instagram"></i>
+                        </a>
+                        <a href="@clinicInfo.Facebook" target="_blank" class="social-link bg-facebook">
+                            <i class="fa-brands fa-facebook-f"></i>
+                        </a>
+                        <span class="fw-bold">dr.enaselharouny</span>
+                    </div>
+
+                    <a href="@clinicInfo.Instagram" target="_blank" class="btn btn-outline-teal">
+                        زيارة حساب إنستغرام <i class="fa-solid fa-arrow-left ms-2"></i>
+                    </a>
+                </div>
+
+                <!-- Instagram Embedded Reel / Video Preview -->
+                <div class="col-lg-7">
+                    <div class="video-container p-3 text-center">
+                        <!-- Instagram Embed Code -->
+                        <blockquote class="instagram-media" data-instgrm-permalink="@clinicInfo.Instagram" data-instgrm-version="14" style="background:#FFF; border:0; margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%;"></blockquote>
+                        <script async src="//www.instagram.com/embed.js"></script>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact & Message Center Section -->
+    <section id="contact" class="py-5">
+        <div class="container py-4">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card service-card p-5">
+                        <div class="text-center mb-4">
+                            <h3 class="fw-bold">مركز الرسائل والتواصل</h3>
+                            <p class="text-muted">يسعدنا استقبال استفساراتكم وملاحظاتكم وسنقوم بالرد عليكم في أقرب وقت</p>
+                        </div>
+                        <form id="contactForm" onsubmit="event.preventDefault(); alert('تم استلام رسالتكم بنجاح وسنتواصل معكم قريباً!');">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">الاسم بالكامل</label>
+                                    <input type="text" class="form-control rounded-3" required placeholder="أدخل اسمك">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">رقم الهاتف / الواتساب</label>
+                                    <input type="tel" class="form-control rounded-3" required placeholder="01xxxxxxxx">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">الرسالة</label>
+                                    <textarea class="form-control rounded-3" rows="4" required placeholder="اكتب استفسارك هنا..."></textarea>
+                                </div>
+                                <div class="col-12 text-center mt-4">
+                                    <button type="submit" class="btn btn-gradient px-5">إرسال الرسالة</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-4 text-center">
+        <div class="container">
+            <p class="mb-0">&copy; @DateTime.Now.Year Safya Clinic. جميع الحقوق محفوظة.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

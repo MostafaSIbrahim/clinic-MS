@@ -179,27 +179,35 @@ namespace SafyaClinic.Web.Controllers
             return RedirectToAction(nameof(Details), new { id = recordId });
         }
 
-        // ── View / download a prescription attachment ─────────────
+        // ── View (inline, for the pop-up preview) vs Download (forced) ────
+        [HttpGet]
+        public async Task<IActionResult> ViewAttachment(int attachmentId)
+        {
+            var (bytes, contentType, _) = await LoadAttachmentBytesAsync(attachmentId);
+            if (bytes is null) return NotFound();
+            return File(bytes, contentType!);
+        }
+
         [HttpGet]
         public async Task<IActionResult> DownloadAttachment(int attachmentId)
         {
+            var (bytes, contentType, fileName) = await LoadAttachmentBytesAsync(attachmentId);
+            if (bytes is null) return NotFound();
+            return File(bytes, contentType!, fileName);
+        }
+
+        private async Task<(byte[]? bytes, string? contentType, string fileName)> LoadAttachmentBytesAsync(
+            int attachmentId)
+        {
             var result = await _recordService.GetAttachmentAsync(attachmentId);
-            if (!result.IsSuccess)
-            {
-                Error("Attachment not found.");
-                return RedirectToAction("Index", "Patients");
-            }
+            if (!result.IsSuccess) return (null, null, string.Empty);
 
             var attachment = result.Data!;
             var fullPath = Path.IsPathRooted(attachment.FilePath)
                 ? attachment.FilePath
                 : Path.Combine(_env.ContentRootPath, attachment.FilePath);
 
-            if (!System.IO.File.Exists(fullPath))
-            {
-                Error("The attachment file could not be found on disk.");
-                return RedirectToAction("Index", "Patients");
-            }
+            if (!System.IO.File.Exists(fullPath)) return (null, null, string.Empty);
 
             var contentType = attachment.ContentType;
             if (string.IsNullOrWhiteSpace(contentType))
@@ -210,7 +218,30 @@ namespace SafyaClinic.Web.Controllers
             }
 
             var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            return File(bytes, contentType, attachment.FileName);
+            return (bytes, contentType, attachment.FileName);
+        }
+
+        // ── Printable prescription (dynamic paper size / design) ──────────
+        [HttpGet]
+        public async Task<IActionResult> PrintPrescription(
+            int prescriptionId, string paperSize = "A4", string design = "classic")
+        {
+            var result = await _recordService.GetPrescriptionForPrintAsync(prescriptionId);
+            if (!result.IsSuccess)
+            {
+                Error("Prescription not found.");
+                return RedirectToAction("Index", "Patients");
+            }
+
+            ViewBag.PaperSize = paperSize;
+            ViewBag.Design = design;
+            ViewBag.ClinicName = _config["ClinicInfo:Name"] ?? "Clinic";
+            ViewBag.ClinicTagline = _config["ClinicInfo:Tagline"];
+            ViewBag.ClinicAddress = _config["ClinicInfo:Address"];
+            ViewBag.ClinicPhone = _config["ClinicInfo:Phone"];
+            ViewBag.ClinicEmail = _config["ClinicInfo:Email"];
+
+            return View(result.Data);
         }
 
         private async Task<(string filePath, string savedName)> SaveFileAsync(
