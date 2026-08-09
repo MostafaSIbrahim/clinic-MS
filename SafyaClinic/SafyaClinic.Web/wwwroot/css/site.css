@@ -33,7 +33,61 @@
     --danger-color: #E5484D;
     --info-color: var(--brand-teal);
 }
+/* ══════════════════════════════════════════════════════════════
+   Bootstrap Icons & Sidebar Dropdown Fixes
+   ══════════════════════════════════════════════════════════════ */
 
+/* 1. Ensure Bootstrap Icons font-family is never overridden by Inter */
+i.bi, [class^="bi-"], [class*=" bi-"] {
+    font-family: 'bootstrap-icons' !important;
+    font-style: normal;
+    font-weight: normal !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    vertical-align: -0.125em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 2. Fix Dropdown Menus Inside Vertical Sidebar */
+#sidebar .dropdown-menu {
+    position: static !important;
+    transform: none !important;
+    float: none;
+    background-color: var(--brand-primary-light);
+    border: none;
+    box-shadow: none;
+    padding-left: 1rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-md);
+}
+
+#sidebar .dropdown-item {
+    color: var(--brand-ink);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius-md);
+    transition: all 0.15s ease;
+}
+
+    #sidebar .dropdown-item:hover,
+    #sidebar .dropdown-item:focus {
+        background-color: var(--surface);
+        color: var(--brand-primary) !important;
+    }
+
+    #sidebar .dropdown-item i {
+        font-size: 0.95rem;
+        color: var(--brand-primary);
+    }
+
+#sidebar .dropdown-divider {
+    border-color: var(--border-soft);
+    margin: 0.35rem 0;
+}
 * { box-sizing: border-box; }
 
 html { position: relative; min-height: 100%; }
