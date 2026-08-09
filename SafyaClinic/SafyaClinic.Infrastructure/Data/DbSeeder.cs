@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿/*using Microsoft.EntityFrameworkCore;
 using SafyaClinic.Application.Services;
 using SafyaClinic.Domain.Entities.Analysis;
 using SafyaClinic.Domain.Entities.MedicalRecord;
@@ -223,4 +223,4 @@ public static class DbSeeder
     }
 
    
-}
+}*/

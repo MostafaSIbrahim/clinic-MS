@@ -1,0 +1,54 @@
+﻿@{
+    ViewData["Title"] = "System Lookups Management";
+}
+
+<div class="container-fluid py-4">
+    <h2 class="mb-4 text-primary"><i class="bi me-2 bi-sliders"></i>System Lookup Management</h2>
+    <p class="text-muted">Select a lookup category to add or manage reference data across the application.</p>
+
+    <div class="row g-4 mt-2">
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <div class="card-body">
+                    <i class="bi bi-journal-medical display-4 text-info mb-3"></i>
+                    <h5 class="card-title">Analysis Types</h5>
+                    <p class="card-text text-muted">Manage types for laboratory and medical analyses.</p>
+                    <a asp-action="AnalysisTypes" class="btn btn-outline-info w-100">Manage</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <div class="card-body">
+                    <i class="bi bi-bandaid display-4 text-success mb-3"></i>
+                    <h5 class="card-title">Treatment Types</h5>
+                    <p class="card-text text-muted">Configure categories of medical procedures and treatments.</p>
+                    <a asp-action="TreatmentTypes" class="btn btn-outline-success w-100">Manage</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <div class="card-body">
+                    <i class="fa-solid fa-syringe display-4 text-warning mb-3"></i>
+                    <h5 class="card-title">Injection Types</h5>
+                    <p class="card-text text-muted">Define available nutrition and therapeutic injection types.</p>
+                    <a asp-action="InjectionTypes" class="btn btn-outline-warning w-100">Manage</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <div class="card-body">
+                    <i class="bi bi-capsule display-4 text-danger mb-3"></i>
+                    <h5 class="card-title">Vitamin Types</h5>
+                    <p class="card-text text-muted">Manage catalog of vitamin supplements and types.</p>
+                    <a asp-action="VitaminTypes" class="btn btn-outline-danger w-100">Manage</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
