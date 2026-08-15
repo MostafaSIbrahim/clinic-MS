@@ -56,8 +56,6 @@ public class UpdatePatientRecordRequest
 public class TreatmentDto
 {
     public int Id { get; init; }
-    public int? TreatmentTypeId { get; init; }
-    public string? TypeName { get; init; }
     public string Description { get; init; } = string.Empty;
     public decimal? Cost { get; init; }
     public DateTime PerformedDate { get; init; }
@@ -66,7 +64,6 @@ public class TreatmentDto
 
 public class AddTreatmentRequest
 {
-    public int? TreatmentTypeId { get; init; }
     public string Description { get; init; } = string.Empty;
     public decimal? Cost { get; init; }
     public DateTime PerformedDate { get; init; } = DateTime.Today;

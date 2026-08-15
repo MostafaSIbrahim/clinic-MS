@@ -31,6 +31,8 @@
                     <dd class="col-8">@Model.PatientName</dd>
                     <dt class="col-4 text-muted">Doctor</dt>
                     <dd class="col-8">@Model.DoctorName</dd>
+                    <dt class="col-4 text-muted">Treatment Type</dt>
+                    <dd class="col-8">@Model.TreatmentTypeName</dd>
                     <dt class="col-4 text-muted">Category</dt>
                     <dd class="col-8"><span class="badge bg-secondary">@Model.Category</span></dd>
                     <dt class="col-4 text-muted">Status</dt>
@@ -44,7 +46,7 @@
                     <dt class="col-4 text-muted">Amount</dt>
                     <dd class="col-8">@(Model.TotalAmount?.ToString("C") ?? "—")</dd>
                     <dt class="col-4 text-muted">Paid</dt>
-                    <dd class="col-8">@(Model.IsPaid ? "✅ Paid" : "❌ Unpaid")</dd>
+                    <dd class="col-8">@await Html.PartialAsync("_PaymentStatusToggle", (Model.Id, Model.PatientId, Model.IsPaid))</dd>
                 </dl>
             </div>
         </div>
@@ -54,32 +56,43 @@
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-arrow-repeat me-2"></i>Update Status</div>
             <div class="card-body">
+                @{ var isCompleted = Model.StatusName == "Completed"; }
                 <form asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
                     @Html.AntiForgeryToken()
-                    <select name="statusId" class="form-select form-select-sm">
-                        <option value="1">Pending</option>
-                        <option value="2">Confirmed</option>
-                        <option value="3">Completed</option>
-                        <option value="4">Cancelled</option>
-                        <option value="5">NoShow</option>
+                    <select name="statusId" class="form-select form-select-sm" disabled="@isCompleted">
+                        <option value="1" selected="@(Model.StatusName == "Pending")">Pending</option>
+                        <option value="2" selected="@(Model.StatusName == "Confirmed")">Confirmed</option>
+                        <option value="3" selected="@(Model.StatusName == "Completed")">Completed</option>
+                        <option value="4" selected="@(Model.StatusName == "Cancelled")">Cancelled</option>
+                        <option value="5" selected="@(Model.StatusName == "NoShow")">NoShow</option>
                     </select>
-                    <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                    <button type="submit" class="btn btn-sm btn-primary" disabled="@isCompleted">Update</button>
                 </form>
+                @if (isCompleted)
+                {
+                    <small class="text-muted d-block mt-2">This reservation is completed and its status can no longer be changed.</small>
+                }
             </div>
         </div>
 
-        @if (!Model.IsPaid)
-        {
-            <div class="card mb-3">
-                <div class="card-header"><i class="bi bi-cash-coin me-2"></i>Payment</div>
-                <div class="card-body d-flex gap-2">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-cash-coin me-2"></i>Payment</div>
+            <div class="card-body d-flex gap-2">
+                @if (!Model.IsPaid)
+                {
                     <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@Model.PatientId"
                        asp-route-reservationId="@Model.Id" class="btn btn-sm btn-success w-100">
                         <i class="bi bi-cash me-1"></i>Collect Payment
                     </a>
-                </div>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary w-100" disabled title="No payment required">
+                        <i class="bi bi-check-circle me-1"></i>Fully Paid — No Payment Required
+                    </button>
+                }
             </div>
-        }
+        </div>
 
         @if (User.IsInRole("Doctor") || User.IsInRole("Admin"))
         {

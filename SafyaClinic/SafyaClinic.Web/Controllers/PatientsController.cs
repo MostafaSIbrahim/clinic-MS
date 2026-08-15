@@ -125,7 +125,6 @@ public class PatientsController : BaseController
     [Authorize(Policy = "DoctorOrAdmin")]
     public async Task<IActionResult> EditMedical(int id, UpdatePatientMedicalRequest model)
     {
-        //return Content($"Action HIT. Weight in model: {model.Weight}");
         if (!ModelState.IsValid) return View(model);
         var result = await _patientService.UpdateMedicalInfoAsync(id, model);
         if (!result.IsSuccess) { ApplyErrors(result); return View(model); }

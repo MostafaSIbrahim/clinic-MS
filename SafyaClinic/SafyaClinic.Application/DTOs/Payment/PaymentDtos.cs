@@ -93,6 +93,7 @@ public class PaymentDashboardDto
 public class UnpaidReservationDto
 {
     public int ReservationId { get; init; }
+    public int PatientId { get; init; }
     public string PatientName { get; init; } = string.Empty;
     public string DoctorName { get; init; } = string.Empty;
     public string ClinicName { get; init; } = string.Empty;

@@ -1,0 +1,17 @@
+## Build results
+bin/
+obj/
+
+## Visual Studio cache/options
+.vs/
+
+## Publish output
+**/PublishProfiles/*.pubxml.user
+publish/
+
+## User-specific files
+*.user
+
+## Uploaded files (runtime content, not source)
+SafyaClinic.Web/wwwroot/uploads/*
+!SafyaClinic.Web/wwwroot/uploads/.gitkeep

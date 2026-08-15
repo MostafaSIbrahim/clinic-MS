@@ -1,6 +1,8 @@
 ﻿using SafyaClinic.Application.DTOs.Common;
+using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Domain.Entities.MedicalRecord;
 using SafyaClinic.Domain.Entities.Reservation;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
@@ -25,12 +27,21 @@ public class ReservationService : IReservationService
         if (!Enum.TryParse<TreatmentCategory>(request.Category, out var category))
             return ServiceResult<ReservationDto>.Failure("Invalid category. Use 'InternalMedicine' or 'Nutritional'.");
 
+        var treatmentType = await _uow.TreatmentTypes.GetByIdAsync(request.TreatmentTypeId);
+        if (treatmentType is null)
+            return ServiceResult<ReservationDto>.Failure("Treatment type not found.");
+
+        // The treatment type carries the price for this reservation; use the
+        // caller-supplied amount only if they explicitly overrode it.
+        var totalAmount = request.TotalAmount ?? treatmentType.DefaultCost;
+
         // Default status = Pending (ID 1)
         var reservation = new Reservation
         {
             PatientId = request.PatientId,
             DoctorId = request.DoctorId,
             ClinicId = request.ClinicId,
+            TreatmentTypeId = request.TreatmentTypeId,
             StatusId = 1,
             Category = category,
             ReservationDate = request.ReservationDate,
@@ -39,7 +50,7 @@ public class ReservationService : IReservationService
             Reason = request.Reason?.Trim(),
             Notes = request.Notes?.Trim(),
             IsPaid = false,
-            TotalAmount = request.TotalAmount,
+            TotalAmount = totalAmount,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = createdBy
         };
@@ -124,15 +135,24 @@ public class ReservationService : IReservationService
         var r = await _uow.Reservations.GetByIdAsync(reservationId);
         if (r is null) return ServiceResult.Failure("Reservation not found.");
 
+        var treatmentType = await _uow.TreatmentTypes.GetByIdAsync(request.TreatmentTypeId);
+        if (treatmentType is null) return ServiceResult.Failure("Treatment type not found.");
+
+        // If the treatment type changed and the caller didn't explicitly supply a new
+        // amount, re-derive the price from the new type instead of keeping the old one.
+        var totalAmount = request.TotalAmount
+            ?? (request.TreatmentTypeId != r.TreatmentTypeId ? treatmentType.DefaultCost : r.TotalAmount);
+
         r.DoctorId = request.DoctorId;
         r.ClinicId = request.ClinicId;
+        r.TreatmentTypeId = request.TreatmentTypeId;
         r.StatusId = request.StatusId;
         r.ReservationDate = request.ReservationDate;
         r.ReservationTime = request.ReservationTime;
         r.DurationMinutes = request.DurationMinutes;
         r.Reason = request.Reason?.Trim();
         r.Notes = request.Notes?.Trim();
-        r.TotalAmount = request.TotalAmount;
+        r.TotalAmount = totalAmount;
         r.UpdatedAt = DateTime.UtcNow;
 
         _uow.Reservations.Update(r);
@@ -140,18 +160,20 @@ public class ReservationService : IReservationService
         return ServiceResult.Success("Reservation updated.");
     }
 
-    public async Task<ServiceResult> UpdateStatusAsync(int reservationId, int statusId)
+    public async Task<ServiceResult<ReservationDto>> UpdateStatusAsync(int reservationId, int statusId)
     {
         var r = await _uow.Reservations.GetByIdAsync(reservationId);
-        if (r is null) return ServiceResult.Failure("Reservation not found.");
+        if (r is null) return ServiceResult<ReservationDto>.Failure("Reservation not found.");
         if (!await _uow.ReservationStatuses.ExistsAsync(statusId))
-            return ServiceResult.Failure("Invalid status.");
+            return ServiceResult<ReservationDto>.Failure("Invalid status.");
+        if (r.StatusId == 3) // Completed — status is locked once the visit is done
+            return ServiceResult<ReservationDto>.Failure("This reservation is completed and its status can no longer be changed.");
 
         r.StatusId = statusId;
         r.UpdatedAt = DateTime.UtcNow;
         _uow.Reservations.Update(r);
         await _uow.SaveChangesAsync();
-        return ServiceResult.Success();
+        return ServiceResult<ReservationDto>.Success(await BuildReservationDtoAsync(r));
     }
 
     public async Task<ServiceResult> MarkAsPaidAsync(int reservationId)
@@ -179,6 +201,28 @@ public class ReservationService : IReservationService
         return ServiceResult.Success("Reservation cancelled.");
     }
 
+    public async Task<ServiceResult<IEnumerable<TreatmentTypeDto>>> GetTreatmentTypesAsync(
+        string? category = null)
+    {
+        var types = await _uow.TreatmentTypes.FindAsync(t => t.IsActive);
+
+        if (!string.IsNullOrWhiteSpace(category) &&
+            Enum.TryParse<TreatmentCategory>(category, out var cat))
+            types = types.Where(t => t.Category == cat);
+
+        return ServiceResult<IEnumerable<TreatmentTypeDto>>.Success(
+            types.Select(t => new TreatmentTypeDto
+            {
+                Id = t.Id,
+                Category = t.Category.ToString(),
+                TypeName = t.TypeName,
+                Description = t.Description,
+                DefaultCost = t.DefaultCost,
+                DurationMinutes = t.DurationMinutes,
+                IsActive = t.IsActive
+            }));
+    }
+
     // ── Mappers ──────────────────────────────────────────────
 
     private async Task<ReservationDto> BuildReservationDtoAsync(Reservation r)
@@ -187,6 +231,7 @@ public class ReservationService : IReservationService
         var doctor = await _uow.Users.GetByIdAsync(r.DoctorId);
         var clinic = await _uow.Clinics.GetByIdAsync(r.ClinicId);
         var status = await _uow.ReservationStatuses.GetByIdAsync(r.StatusId);
+        var treatmentType = await _uow.TreatmentTypes.GetByIdAsync(r.TreatmentTypeId);
 
         return new ReservationDto
         {
@@ -197,6 +242,8 @@ public class ReservationService : IReservationService
             DoctorName = doctor?.FullName ?? "",
             ClinicId = r.ClinicId,
             ClinicName = clinic?.Name ?? "",
+            TreatmentTypeId = r.TreatmentTypeId,
+            TreatmentTypeName = treatmentType?.TypeName ?? "",
             StatusName = status?.StatusName ?? "",
             StatusColor = status?.ColorCode ?? "#6c757d",
             Category = r.Category.ToString(),
@@ -217,13 +264,16 @@ public class ReservationService : IReservationService
         var doctor = await _uow.Users.GetByIdAsync(r.DoctorId);
         var clinic = await _uow.Clinics.GetByIdAsync(r.ClinicId);
         var status = await _uow.ReservationStatuses.GetByIdAsync(r.StatusId);
+        var treatmentType = await _uow.TreatmentTypes.GetByIdAsync(r.TreatmentTypeId);
 
         return new ReservationSummaryDto
         {
             Id = r.Id,
+            PatientId = r.PatientId,
             PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
             DoctorName = doctor?.FullName ?? "",
             ClinicName = clinic?.Name ?? "",
+            TreatmentTypeName = treatmentType?.TypeName ?? "",
             ReservationDate = r.ReservationDate,
             ReservationTime = r.ReservationTime,
             StatusName = status?.StatusName ?? "",

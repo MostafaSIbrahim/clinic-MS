@@ -101,10 +101,19 @@
             <dt class="col-3 text-muted">Total Paid</dt>
             <dd class="col-9">@Model.TotalPaid.ToString("C")</dd>
         </dl>
-        <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@Model.PatientId"
-           asp-route-enrollmentId="@Model.Id" class="btn btn-sm btn-success mt-2">
-            <i class="bi bi-cash-coin me-1"></i>Collect Payment
-        </a>
+        @if (Model.FinalPrice - Model.TotalPaid > 0)
+        {
+            <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@Model.PatientId"
+               asp-route-enrollmentId="@Model.Id" class="btn btn-sm btn-success mt-2">
+                <i class="bi bi-cash-coin me-1"></i>Collect Payment
+            </a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" disabled title="No payment required">
+                <i class="bi bi-check-circle me-1"></i>Fully Paid
+            </button>
+        }
     </div>
 </div>
 

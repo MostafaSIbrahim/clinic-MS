@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SafyaClinic.Infrastructure.Data;
 
@@ -11,11 +12,13 @@ using SafyaClinic.Infrastructure.Data;
 namespace SafyaClinic.Infrastructure.Migrations
 {
     [DbContext(typeof(SafyaDbContext))]
-    partial class SafyaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260810120000_MoveTreatmentTypeToReservation")]
+    partial class MoveTreatmentTypeToReservation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
-#pragma warning disable 612, 618
+            #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "8.0.28")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);

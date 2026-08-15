@@ -15,6 +15,6 @@ namespace SafyaClinic.Domain.Entities.MedicalRecord
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
-        public virtual ICollection<Treatment> Treatments { get; set; } = new List<Treatment>();
+        public virtual ICollection<Reservation.Reservation> Reservations { get; set; } = new List<Reservation.Reservation>();
     }
 }

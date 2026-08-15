@@ -23,6 +23,7 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.HasIndex(r => r.ReservationDate);
             builder.HasIndex(r => r.StatusId);
             builder.HasIndex(r => r.Category);
+            builder.HasIndex(r => r.TreatmentTypeId);
 
             builder.HasOne(r => r.Patient)
                    .WithMany(p => p.Reservations)
@@ -42,6 +43,11 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.HasOne(r => r.Status)
                    .WithMany(rs => rs.Reservations)
                    .HasForeignKey(r => r.StatusId)
+                   .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(r => r.TreatmentType)
+                   .WithMany(tt => tt.Reservations)
+                   .HasForeignKey(r => r.TreatmentTypeId)
                    .OnDelete(DeleteBehavior.Restrict);
         }
     }

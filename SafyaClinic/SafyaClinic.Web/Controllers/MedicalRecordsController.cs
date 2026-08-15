@@ -47,8 +47,6 @@ namespace SafyaClinic.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(int patientId, int? reservationId)
         {
-            var types = await _recordService.GetTreatmentTypesAsync();
-            ViewBag.TreatmentTypes = types.Data;
             return View(new CreatePatientRecordRequest
             {
                 PatientId = patientId,
@@ -63,8 +61,6 @@ namespace SafyaClinic.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                var types = await _recordService.GetTreatmentTypesAsync();
-                ViewBag.TreatmentTypes = types.Data;
                 return View(model);
             }
             var result = await _recordService.CreateRecordAsync(model, CurrentUserId);

@@ -11,12 +11,12 @@ namespace SafyaClinic.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            /*migrationBuilder.AddColumn<int>(
+            migrationBuilder.AddColumn<int>(
                 name: "ClinicId",
                 table: "Reservations",
                 type: "int",
                 nullable: false,
-                defaultValue: 0);*/
+                defaultValue: 0);
 
             migrationBuilder.AddColumn<string>(
                 name: "CancellationReason",
@@ -37,11 +37,11 @@ namespace SafyaClinic.Infrastructure.Migrations
                 type: "int",
                 nullable: true);
 
-            /*migrationBuilder.AddColumn<int>(
+            migrationBuilder.AddColumn<int>(
                 name: "ClinicId",
                 table: "Payments",
                 type: "int",
-                nullable: true);*/
+                nullable: true);
 
             migrationBuilder.AddColumn<decimal>(
                 name: "ClinicNetAmount",

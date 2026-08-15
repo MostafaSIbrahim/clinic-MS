@@ -1,4 +1,4 @@
-﻿/*using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SafyaClinic.Application.Services;
 using SafyaClinic.Domain.Entities.Analysis;
 using SafyaClinic.Domain.Entities.MedicalRecord;
@@ -114,13 +114,12 @@ public static class DbSeeder
 
         var types = new[]
         {
-            new TreatmentType { Category = TreatmentCategory.InternalMedicine, TypeName = "General Consultation", Description = "Initial examination and consultation", DefaultCost = 200.00m, DurationMinutes = 30 },
-            new TreatmentType { Category = TreatmentCategory.InternalMedicine, TypeName = "Follow-up Visit", Description = "Routine follow-up examination", DefaultCost = 100.00m, DurationMinutes = 15 },
-            new TreatmentType { Category = TreatmentCategory.InternalMedicine, TypeName = "Emergency Treatment", Description = "Urgent care treatment", DefaultCost = 500.00m, DurationMinutes = 60 },
-            new TreatmentType { Category = TreatmentCategory.InternalMedicine, TypeName = "Procedure", Description = "Medical procedure", DefaultCost = 1000.00m, DurationMinutes = 90 },
-            new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Nutrition Consultation", Description = "Initial nutritional assessment", DefaultCost = 300.00m, DurationMinutes = 45 },
+            new TreatmentType { Category = TreatmentCategory.InternalMedicine, TypeName = "General Consultation", Description = "Initial examination and consultation", DefaultCost = 800.00m, DurationMinutes = 30 },
+            new TreatmentType { Category = TreatmentCategory.InternalMedicine, TypeName = "Follow-up Visit", Description = "Routine follow-up examination", DefaultCost = 200.00m, DurationMinutes = 15 },
+            new TreatmentType { Category = TreatmentCategory.InternalMedicine, TypeName = "Emergency Treatment", Description = "Urgent care treatment", DefaultCost = 1200.00m, DurationMinutes = 60 },
+            new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Nutrition Consultation", Description = "Initial nutritional assessment", DefaultCost = 600.00m, DurationMinutes = 45 },
             new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Diet Plan Review", Description = "Weekly diet plan review", DefaultCost = 150.00m, DurationMinutes = 20 },
-            new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Body Composition Analysis", Description = "InBody/body composition test", DefaultCost = 200.00m, DurationMinutes = 15 }
+            new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Body Composition Analysis", Description = "InBody/body composition test", DefaultCost = 250.00m, DurationMinutes = 15 }
         };
 
         await context.TreatmentTypes.AddRangeAsync(types);
@@ -211,7 +210,7 @@ public static class DbSeeder
         var sources = new[]
         {
             new PatientSource { Name = "Walk-in", Description = "Patient came directly with no referral", DefaultDeductionPercentage = 0m },
-            new PatientSource { Name = "Vezeeta", Description = "Booked via Vezeeta platform", DefaultDeductionPercentage = 20m },
+            new PatientSource { Name = "Vezeeta", Description = "Booked via Vezeeta platform", DefaultDeductionPercentage = 35m },
             new PatientSource { Name = "Ekshef", Description = "Booked via Ekshef platform", DefaultDeductionPercentage = 20m },
             new PatientSource { Name = "Instagram", Description = "Came via Instagram", DefaultDeductionPercentage = 10m },
             new PatientSource { Name = "Facebook", Description = "Came via Facebook", DefaultDeductionPercentage = 10m },
@@ -222,5 +221,5 @@ public static class DbSeeder
         await context.SaveChangesAsync();
     }
 
-   
-}*/
+
+}

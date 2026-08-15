@@ -1,0 +1,23 @@
+@*
+    Payment status toggle used across list/table views (Reservations Index/Today,
+    Dashboard, Payment Dashboard).
+
+    - Paid: a checked, disabled checkbox — nothing to do, no payment required.
+    - Unpaid (including partially paid / delayed): an unchecked, enabled checkbox.
+      Clicking it opens Collect Payment with the outstanding amount pre-filled
+      (Collect's GET action calls GetDueAmountAsync, which already accounts for
+      any partial payment already made).
+*@
+@model (int ReservationId, int PatientId, bool IsPaid)
+
+@if (Model.IsPaid)
+{
+    <input type="checkbox" class="form-check-input" checked disabled
+           title="Paid — no payment required" />
+}
+else
+{
+    <input type="checkbox" class="form-check-input" style="cursor:pointer"
+           title="Unpaid — click to collect payment"
+           onclick="window.location.href='@Url.Action("Collect", "Payments", new { patientId = Model.PatientId, reservationId = Model.ReservationId })'; return false;" />
+}
