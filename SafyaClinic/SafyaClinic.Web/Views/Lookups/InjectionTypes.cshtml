@@ -1,5 +1,230 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@model IEnumerable<SafyaClinic.Domain.Entities.Nutrition.InjectionType>
+
 @{
+    ViewData["Title"] = "أنواع الحقن";
+}
+
+<div class="container-fluid py-3">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">
+                <i class="bi bi-droplet-half text-primary me-2"></i>أنواع الحقن
+            </h3>
+            <p class="text-muted mb-0">إدارة وتحديد أنواع الحقن المستخدمة في برامج التغذية والعلاج</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary" id="btnCreateModal">
+                <i class="bi bi-plus-lg me-1"></i> إضافة نوع حقن جديد
+            </button>
+            <a asp-action="Index" class="btn btn-outline-secondary ms-1">
+                <i class="bi bi-arrow-right me-1"></i> رجوع للقوائم
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Table Card -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4" style="width: 80px;">#</th>
+                            <th>اسم الحقنة</th>
+                            <th>الوصف</th>
+                            <th style="width: 120px;">الحالة</th>
+                            <th class="text-end pe-4" style="width: 120px;">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            int index = 1;
+                            foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="ps-4 text-muted">@index</td>
+                                    <td class="fw-semibold">@item.InjectionName</td>
+                                    <td class="text-muted text-truncate" style="max-width: 400px;">
+                                        @(string.IsNullOrWhiteSpace(item.Description) ? "—" : item.Description)
+                                    </td>
+                                    <td>
+                                        @if (item.IsActive)
+                                        {
+                                            <span class="badge bg-success">نشط</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">غير نشط</span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-edit"
+                                                    title="تعديل"
+                                                    data-id="@item.Id"
+                                                    data-injectionname="@item.InjectionName"
+                                                    data-description="@item.Description"
+                                                    data-isactive="@item.IsActive.ToString().ToLower()">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-delete"
+                                                    title="حذف"
+                                                    data-id="@item.Id"
+                                                    data-injectionname="@item.InjectionName">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                index++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    لا توجد بيانات مسجلة لأنواع الحقن حتى الآن.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create / Edit Modal -->
+<div class="modal fade" id="injectionTypeModal" tabindex="-1" aria-labelledby="injectionTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="injectionTypeForm" method="post" asp-action="SaveInjectionType">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="injectionTypeId" name="Id" value="0" />
+
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="injectionTypeModalLabel">إضافة نوع حقن جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="injectionName" class="form-label required">اسم الحقنة</label>
+                        <input type="text" class="form-control" id="injectionName" name="InjectionName" required placeholder="مثال: حقنة حرق دهون، فيتامين د..." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="injectionDescription" class="form-label">الوصف / ملاحظات</label>
+                        <textarea class="form-control" id="injectionDescription" name="Description" rows="3" placeholder="ملاحظات تفصيلية حول الحقنة والجرعات..."></textarea>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="injectionIsActive" name="IsActive" value="true" checked />
+                        <label class="form-check-label" for="injectionIsActive">تفعيل نوع الحقنة</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i> حفظ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <form id="deleteForm" method="post" asp-action="DeleteInjectionType">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="deleteInjectionTypeId" name="id" value="" />
+                <div class="modal-body text-center p-4">
+                    <i class="bi bi-exclamation-circle text-danger display-4 mb-3 d-block"></i>
+                    <h6 class="fw-bold mb-2">تأكيد الحذف</h6>
+                    <p class="text-muted small mb-0">هل أنت متأكد من حذف "<span id="deleteInjectionTypeName" class="fw-bold text-dark"></span>"؟</p>
+                </div>
+                <div class="modal-footer justify-content-center border-0 pt-0">
+                    <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-sm btn-danger px-3">حذف</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const formModalEl = document.getElementById('injectionTypeModal');
+            const formModal = new bootstrap.Modal(formModalEl);
+
+            const deleteModalEl = document.getElementById('deleteModal');
+            const deleteModal = new bootstrap.Modal(deleteModalEl);
+
+            // Open Create Modal
+            document.getElementById('btnCreateModal').addEventListener('click', function() {
+                document.getElementById('injectionTypeModalLabel').innerText = 'إضافة نوع حقن جديد';
+                document.getElementById('injectionTypeId').value = '0';
+                document.getElementById('injectionName').value = '';
+                document.getElementById('injectionDescription').value = '';
+                document.getElementById('injectionIsActive').checked = true;
+                formModal.show();
+            });
+
+            // Open Edit Modal
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    const injectionName = this.getAttribute('data-injectionname') || '';
+                    const description = this.getAttribute('data-description') || '';
+                    const isActive = this.getAttribute('data-isactive') === 'true';
+
+                    document.getElementById('injectionTypeModalLabel').innerText = 'تعديل نوع الحقن';
+                    document.getElementById('injectionTypeId').value = id;
+                    document.getElementById('injectionName').value = injectionName;
+                    document.getElementById('injectionDescription').value = description;
+                    document.getElementById('injectionIsActive').checked = isActive;
+
+                    formModal.show();
+                });
+            });
+
+            // Open Delete Modal
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    const injectionName = this.getAttribute('data-injectionname');
+
+                    document.getElementById('deleteInjectionTypeId').value = id;
+                    document.getElementById('deleteInjectionTypeName').innerText = injectionName;
+
+                    deleteModal.show();
+                });
+            });
+        });
+    </script>
 }
