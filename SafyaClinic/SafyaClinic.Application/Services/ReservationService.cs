@@ -6,6 +6,7 @@ using SafyaClinic.Domain.Entities.MedicalRecord;
 using SafyaClinic.Domain.Entities.Reservation;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
+using System.Linq.Expressions;
 
 namespace SafyaClinic.Application.Services;
 
@@ -281,5 +282,28 @@ public class ReservationService : IReservationService
             Category = r.Category.ToString(),
             IsPaid = r.IsPaid
         };
+    }
+    //--------------------------------------//
+    public async Task<ServiceResult<List<ReservationDto>>> GetPatientReservationHistoryAsync(int patientId)
+    {
+        try
+        {
+            var all = await _uow.Reservations.GetAllAsync();
+            var patientReservations = (all ?? Enumerable.Empty<Reservation>())
+                .Where(r => r != null && r.PatientId == patientId)
+                .OrderByDescending(r => r.ReservationDate)
+                .ThenByDescending(r => r.ReservationTime)
+                .ToList();
+                        
+            var dtos = new List<ReservationDto>();
+            foreach (var r in patientReservations)
+                dtos.Add(await BuildReservationDtoAsync(r));
+
+            return ServiceResult<List<ReservationDto>>.Success(dtos);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<List<ReservationDto>>.Failure($"حدث خطأ أثناء جلب سجل الحجوزات: {ex.Message}");
+        }
     }
 }

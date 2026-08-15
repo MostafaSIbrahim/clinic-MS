@@ -1,0 +1,159 @@
+﻿@model IEnumerable<SafyaClinic.Application.DTOs.Reservation.ReservationSummaryDto>
+@{
+    Layout = null;
+    var patient = ViewBag.Patient as SafyaClinic.Application.DTOs.Patient.PatientDto;
+}
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>تقرير سجل الحجوزات - @(patient?.FullName ?? "مريض")</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #fff;
+                color: #212529;
+            }
+
+            .report-header {
+                border-bottom: 2px solid #0d6efd;
+                padding-bottom: 12px;
+                margin-bottom: 20px;
+            }
+
+            .patient-card {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 6px;
+                padding: 12px 18px;
+                margin-bottom: 20px;
+            }
+
+            @@media print {
+                .no-print {
+                    display: none !important;
+                }
+
+                body {
+                    padding: 0 !important;
+                }
+
+                .table-bordered th, .table-bordered td {
+                    border-color: #000 !important;
+                }
+            }
+    </style>
+</head>
+<body class="p-4">
+    <!-- Action Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <button onclick="window.print()" class="btn btn-primary">
+            طباعة التقرير
+        </button>
+        <button onclick="window.close()" class="btn btn-outline-secondary">
+            إغلاق
+        </button>
+    </div>
+
+    <!-- Header -->
+    <div class="report-header d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="fw-bold mb-1">عيادة صافيا - Safya Clinic</h3>
+            <h5 class="text-muted mb-0">تقرير سجل حجوزات وجلسات المريض</h5>
+        </div>
+        <div class="text-end text-muted small">
+            <div>تاريخ التقرير: @DateTime.Now.ToString("yyyy/MM/dd HH:mm")</div>
+        </div>
+    </div>
+
+    <!-- Patient Details Summary -->
+    <div class="patient-card">
+        <div class="row g-2">
+            <div class="col-4">
+                <strong>رقم المريض:</strong> #@(patient?.Id)
+            </div>
+            <div class="col-4">
+                <strong>اسم المريض:</strong> @(patient?.FullName ?? "—")
+            </div>
+            <div class="col-4">
+                <strong>رقم الهاتف:</strong>
+                @(patient?.Phones?.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber
+                  ?? patient?.Phones?.FirstOrDefault()?.PhoneNumber
+                  ?? "—")
+            </div>
+        </div>
+    </div>
+
+    <!-- Reservations Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 50px;" class="text-center">#</th>
+                    <th>تاريخ الحجز</th>
+                    <th>الوقت</th>
+                    <th>نوع العلاج / الجلسة</th>
+                    <th>العيادة</th>
+                    <th>حالة الحجز</th>
+                    <th>حالة الدفع</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    int index = 1;
+                    foreach (var res in Model.OrderByDescending(r => r.ReservationDate))
+                    {
+                        <tr>
+                            <td class="text-center">@index</td>
+                            <td>@res.ReservationDate.ToString("yyyy/MM/dd")</td>
+                            <td>@res.ReservationTime.ToString(@"hh\:mm")</td>
+                            <td class="fw-semibold">
+                                @(string.IsNullOrWhiteSpace(res.TreatmentTypeName) ? "كشف عام" : res.TreatmentTypeName)
+                            </td>
+                            <td>@(string.IsNullOrWhiteSpace(res.ClinicName) ? "العيادة الرئيسية" : res.ClinicName)</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    @(res.StatusName ?? "—")
+                                </span>
+                            </td>
+                            <td>
+                                @if (res.IsPaid)
+                                {
+                                    <span class="badge bg-success">تم الدفع</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">معلق</span>
+                                }
+                            </td>
+                        </tr>
+                        index++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            لا توجد حجوزات مسجلة لهذا المريض.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Footer Summary -->
+    @if (Model != null && Model.Any())
+    {
+        <div class="d-flex justify-content-between mt-3 text-muted small border-top pt-2">
+            <span>إجمالي عدد الحجوزات والجلسات: <strong>@Model.Count()</strong></span>
+            <span>عدد الحجوزات المسددة: <strong>@Model.Count(r => r.IsPaid)</strong></span>
+        </div>
+    }
+</body>
+</html>

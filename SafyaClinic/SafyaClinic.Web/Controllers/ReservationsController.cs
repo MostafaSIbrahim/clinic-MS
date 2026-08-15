@@ -12,15 +12,18 @@ public class ReservationsController : BaseController
     private readonly IReservationService _reservationService;
     private readonly IUserService _userService;
     private readonly IClinicService _clinicService;
+    private readonly IPatientService _patientService;
 
     public ReservationsController(
         IReservationService reservationService,
         IUserService userService,
-        IClinicService clinicService)
+        IClinicService clinicService,
+        IPatientService patientService)
     {
         _reservationService = reservationService;
         _userService = userService;
         _clinicService = clinicService;
+        _patientService = patientService;
     }
 
     public async Task<IActionResult> Index(
@@ -143,9 +146,6 @@ public class ReservationsController : BaseController
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        // StatusId 3 = Completed (see ReservationStatus seed data). Prompt reception
-        // to collect the treatment's price right away instead of leaving it to be
-        // found later on the payment dashboard.
         if (statusId == 3 && result.Data is { IsPaid: false } r)
         {
             return RedirectToAction("Collect", "Payments", new { patientId = r.PatientId, reservationId = id });
@@ -168,5 +168,31 @@ public class ReservationsController : BaseController
     {
         await _reservationService.CancelReservationAsync(id, reason);
         return RedirectWithSuccess("Reservation cancelled.", nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> PatientReservationHistoryReport(int patientId)
+    {
+        if (patientId <= 0)
+        {
+            return BadRequest("معرف المريض غير صالح.");
+        }
+
+        var patientResult = await _patientService.GetPatientByIdAsync(patientId);
+        if (patientResult == null || !patientResult.IsSuccess || patientResult.Data == null)
+        {
+            return NotFound("لم يتم العثور على بيانات المريض.");
+        }
+
+        var filter = new ReservationFilterRequest { PatientId = patientId };
+        var pagination = new PaginationRequest { Page = 1, PageSize = 1000 };
+
+        var reservationsResult = await _reservationService.GetReservationsAsync(filter, pagination);
+        var reservations = (reservationsResult != null && reservationsResult.IsSuccess && reservationsResult.Data != null)
+            ? reservationsResult.Data.Items
+            : Enumerable.Empty<ReservationSummaryDto>();
+
+        ViewBag.Patient = patientResult.Data;
+        return View(reservations);
     }
 }

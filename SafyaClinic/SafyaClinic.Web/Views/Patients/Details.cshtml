@@ -159,6 +159,13 @@
 <div class="row g-3 mt-1">
     @if (IsDoctor() || IsAdmin())
     {
+        <a asp-controller="Reservations"
+           asp-action="PatientReservationHistoryReport"
+           asp-route-patientId="@Model.Id"
+           target="_blank"
+           class="btn btn-outline-primary">
+            <i class="bi bi-printer me-1"></i> تقرير سجل الحجوزات
+        </a>
         <div class="col-md-3">
             <a asp-controller="MedicalRecords" asp-action="PatientRecords" asp-route-patientId="@Model.Id" class="card text-decoration-none h-100">
                 <div class="card-body text-center">
