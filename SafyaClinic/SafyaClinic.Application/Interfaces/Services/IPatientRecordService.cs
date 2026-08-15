@@ -14,7 +14,6 @@ public interface IPatientRecordService
     // Treatments
     Task<ServiceResult<TreatmentDto>> AddTreatmentAsync(int recordId, AddTreatmentRequest request, int createdBy);
     Task<ServiceResult> RemoveTreatmentAsync(int treatmentId);
-    Task<ServiceResult<IEnumerable<TreatmentTypeDto>>> GetTreatmentTypesAsync(string? category = null);
 
     // Prescriptions
     Task<ServiceResult<PrescriptionDto>> AddPrescriptionAsync(int recordId, AddPrescriptionRequest request, int createdBy);

@@ -12,8 +12,6 @@ public class HomeController : BaseController
         if (User.Identity != null && User.Identity?.IsAuthenticated == true)
         { return RedirectToAction("Index", "Dashboard"); }
 
-        // Redirect guests to Login
-        //return RedirectToAction("Login", "Auth");
         return View();
     }
     public IActionResult Error()

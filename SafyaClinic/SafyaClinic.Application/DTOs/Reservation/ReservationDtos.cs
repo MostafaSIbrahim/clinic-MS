@@ -9,6 +9,8 @@ public class ReservationDto
     public string DoctorName { get; init; } = string.Empty;
     public int ClinicId { get; init; }
     public string ClinicName { get; init; } = string.Empty;
+    public int TreatmentTypeId { get; init; }
+    public string TreatmentTypeName { get; init; } = string.Empty;
     public string StatusName { get; init; } = string.Empty;
     public string StatusColor { get; init; } = string.Empty;
     public string Category { get; init; } = string.Empty;   // InternalMedicine | Nutritional
@@ -25,9 +27,11 @@ public class ReservationDto
 public class ReservationSummaryDto
 {
     public int Id { get; init; }
+    public int PatientId { get; init; }
     public string PatientName { get; init; } = string.Empty;
     public string DoctorName { get; init; } = string.Empty;
     public string ClinicName { get; init; } = string.Empty;
+    public string TreatmentTypeName { get; init; } = string.Empty;
     public DateTime ReservationDate { get; init; }
     public TimeSpan ReservationTime { get; init; }
     public string StatusName { get; init; } = string.Empty;
@@ -41,6 +45,7 @@ public class CreateReservationRequest
     public int PatientId { get; init; }
     public int DoctorId { get; init; }
     public int ClinicId { get; init; }
+    public int TreatmentTypeId { get; init; }
     public string Category { get; init; } = "InternalMedicine";
     public DateTime ReservationDate { get; init; }
     public TimeSpan ReservationTime { get; init; }
@@ -54,6 +59,7 @@ public class UpdateReservationRequest
 {
     public int DoctorId { get; init; }
     public int ClinicId { get; init; }
+    public int TreatmentTypeId { get; init; }
     public int StatusId { get; init; }
     public DateTime ReservationDate { get; init; }
     public TimeSpan ReservationTime { get; init; }

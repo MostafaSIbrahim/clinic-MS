@@ -1,10 +1,12 @@
 @model UpdateReservationRequest
 @using SafyaClinic.Application.DTOs.Patient
 @using SafyaClinic.Application.DTOs.Settings
+@using SafyaClinic.Application.DTOs.MedicalRecord
 @{
     ViewData["Title"] = "Edit Reservation";
     var doctors = ViewBag.Doctors as IEnumerable<UserDto> ?? Enumerable.Empty<UserDto>();
     var clinics = ViewBag.Clinics as IEnumerable<ClinicDto> ?? Enumerable.Empty<ClinicDto>();
+    var treatmentTypes = ViewBag.TreatmentTypes as IEnumerable<TreatmentTypeDto> ?? Enumerable.Empty<TreatmentTypeDto>();
 }
 
 <div class="card" style="max-width:700px;">
@@ -34,6 +36,22 @@
                     </select>
                 </div>
                 <div class="col-md-6">
+                    <label asp-for="TreatmentTypeId" class="form-label">Treatment Type *</label>
+                    <select asp-for="TreatmentTypeId" id="treatmentTypeSelect" class="form-select" required>
+                        <option value="">— Select Treatment Type —</option>
+                        @foreach (var t in treatmentTypes)
+                        {
+                            <option value="@t.Id"
+                                    data-cost="@(t.DefaultCost?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+                                    data-duration="@t.DurationMinutes"
+                                    selected="@(t.Id == Model.TreatmentTypeId)">
+                                @t.TypeName @(t.DefaultCost != null ? $"— {t.DefaultCost:C}" : "")
+                            </option>
+                        }
+                    </select>
+                    <small class="text-muted">Changing this updates the price below.</small>
+                </div>
+                <div class="col-md-6">
                     <label asp-for="StatusId" class="form-label">Status</label>
                     <select asp-for="StatusId" class="form-select">
                         <option value="1">Pending</option>
@@ -53,11 +71,12 @@
                 </div>
                 <div class="col-md-6">
                     <label asp-for="DurationMinutes" class="form-label">Duration (minutes)</label>
-                    <input asp-for="DurationMinutes" type="number" class="form-control" />
+                    <input asp-for="DurationMinutes" id="durationInput" type="number" class="form-control" />
                 </div>
                 <div class="col-md-6">
                     <label asp-for="TotalAmount" class="form-label">Amount</label>
-                    <input asp-for="TotalAmount" type="number" step="0.01" class="form-control" />
+                    <input asp-for="TotalAmount" id="totalAmountInput" type="number" step="0.01" class="form-control" />
+                    <small class="text-muted">Auto-filled from the treatment type's price — adjust if needed.</small>
                 </div>
                 <div class="col-12">
                     <label asp-for="Reason" class="form-label">Reason</label>
@@ -79,4 +98,13 @@
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script>
+        document.getElementById('treatmentTypeSelect').addEventListener('change', function () {
+            var opt = this.options[this.selectedIndex];
+            var cost = opt.getAttribute('data-cost');
+            var duration = opt.getAttribute('data-duration');
+            if (cost) document.getElementById('totalAmountInput').value = cost;
+            if (duration) document.getElementById('durationInput').value = duration;
+        });
+    </script>
 }

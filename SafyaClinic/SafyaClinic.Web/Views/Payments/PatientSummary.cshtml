@@ -38,9 +38,18 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-receipt me-2"></i>Payment History</span>
-        <a asp-action="Collect" asp-route-patientId="@Model.PatientId" class="btn btn-sm btn-success">
-            <i class="bi bi-cash-coin me-1"></i>Collect Payment
-        </a>
+        @if (Model.Balance > 0)
+        {
+            <a asp-action="Collect" asp-route-patientId="@Model.PatientId" class="btn btn-sm btn-success">
+                <i class="bi bi-cash-coin me-1"></i>Collect Payment
+            </a>
+        }
+        else
+        {
+            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="No payment required">
+                <i class="bi bi-check-circle me-1"></i>Fully Paid
+            </button>
+        }
     </div>
     <div class="card-body p-0">
         @if (!Model.Payments.Any())

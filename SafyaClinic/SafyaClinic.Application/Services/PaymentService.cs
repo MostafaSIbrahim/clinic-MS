@@ -315,6 +315,7 @@ public class PaymentService : IPaymentService
             var dto = new UnpaidReservationDto
             {
                 ReservationId = r.Id,
+                PatientId = r.PatientId,
                 PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
                 DoctorName = doctor?.FullName ?? "",
                 ClinicName = clinic?.Name ?? "",

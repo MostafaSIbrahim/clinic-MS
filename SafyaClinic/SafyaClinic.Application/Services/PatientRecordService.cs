@@ -108,7 +108,6 @@ public class PatientRecordService : IPatientRecordService
         var treatment = new Treatment
         {
             RecordId = recordId,
-            TreatmentTypeId = request.TreatmentTypeId,
             Description = request.Description.Trim(),
             Cost = request.Cost,
             PerformedDate = request.PerformedDate,
@@ -120,15 +119,9 @@ public class PatientRecordService : IPatientRecordService
         await _uow.Treatments.AddAsync(treatment);
         await _uow.SaveChangesAsync();
 
-        TreatmentType? tt = treatment.TreatmentTypeId.HasValue
-            ? await _uow.TreatmentTypes.GetByIdAsync(treatment.TreatmentTypeId.Value)
-            : null;
-
         return ServiceResult<TreatmentDto>.Success(new TreatmentDto
         {
             Id = treatment.Id,
-            TreatmentTypeId = treatment.TreatmentTypeId,
-            TypeName = tt?.TypeName,
             Description = treatment.Description,
             Cost = treatment.Cost,
             PerformedDate = treatment.PerformedDate,
@@ -147,28 +140,6 @@ public class PatientRecordService : IPatientRecordService
         _uow.Treatments.Delete(t);
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Treatment removed.");
-    }
-
-    public async Task<ServiceResult<IEnumerable<TreatmentTypeDto>>> GetTreatmentTypesAsync(
-        string? category = null)
-    {
-        var types = await _uow.TreatmentTypes.FindAsync(t => t.IsActive);
-
-        if (!string.IsNullOrWhiteSpace(category) &&
-            Enum.TryParse<TreatmentCategory>(category, out var cat))
-            types = types.Where(t => t.Category == cat);
-
-        return ServiceResult<IEnumerable<TreatmentTypeDto>>.Success(
-            types.Select(t => new TreatmentTypeDto
-            {
-                Id = t.Id,
-                Category = t.Category.ToString(),
-                TypeName = t.TypeName,
-                Description = t.Description,
-                DefaultCost = t.DefaultCost,
-                DurationMinutes = t.DurationMinutes,
-                IsActive = t.IsActive
-            }));
     }
 
     // ── Prescriptions ─────────────────────────────────────────
@@ -318,13 +289,9 @@ public class PatientRecordService : IPatientRecordService
         var treatmentDtos = new List<TreatmentDto>();
         foreach (var t in treatments)
         {
-            TreatmentType? tt = t.TreatmentTypeId.HasValue
-                ? await _uow.TreatmentTypes.GetByIdAsync(t.TreatmentTypeId.Value) : null;
             treatmentDtos.Add(new TreatmentDto
             {
                 Id = t.Id,
-                TreatmentTypeId = t.TreatmentTypeId,
-                TypeName = tt?.TypeName,
                 Description = t.Description,
                 Cost = t.Cost,
                 PerformedDate = t.PerformedDate,

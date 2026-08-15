@@ -316,14 +316,9 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<int>("RecordId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TreatmentTypeId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("RecordId");
-
-                    b.HasIndex("TreatmentTypeId");
 
                     b.ToTable("Treatments", (string)null);
                 });
@@ -1212,6 +1207,9 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<int>("StatusId")
                         .HasColumnType("int");
 
+                    b.Property<int>("TreatmentTypeId")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("TotalAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1232,6 +1230,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasIndex("ReservationDate");
 
                     b.HasIndex("StatusId");
+
+                    b.HasIndex("TreatmentTypeId");
 
                     b.ToTable("Reservations", (string)null);
                 });
@@ -1609,13 +1609,7 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.TreatmentType", "Type")
-                        .WithMany("Treatments")
-                        .HasForeignKey("TreatmentTypeId");
-
                     b.Navigation("Record");
-
-                    b.Navigation("Type");
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.PackageItem", b =>
@@ -1872,6 +1866,12 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.TreatmentType", "TreatmentType")
+                        .WithMany("Reservations")
+                        .HasForeignKey("TreatmentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Clinic");
 
                     b.Navigation("Doctor");
@@ -1879,6 +1879,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("Patient");
 
                     b.Navigation("Status");
+
+                    b.Navigation("TreatmentType");
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.ClinicSourceAgreement", b =>
@@ -1938,7 +1940,7 @@ namespace SafyaClinic.Infrastructure.Migrations
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.MedicalRecord.TreatmentType", b =>
                 {
-                    b.Navigation("Treatments");
+                    b.Navigation("Reservations");
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.InjectionType", b =>

@@ -31,7 +31,7 @@
                             <td>@r.DoctorName</td>
                             <td><span class="badge bg-secondary">@r.Category</span></td>
                             <td><span class="badge" style="background-color:@r.StatusColor;color:#fff;">@r.StatusName</span></td>
-                            <td>@(r.IsPaid ? "✅" : "❌")</td>
+                            <td>@await Html.PartialAsync("_PaymentStatusToggle", (r.Id, r.PatientId, r.IsPaid))</td>
                         </tr>
                     }
                 </tbody>

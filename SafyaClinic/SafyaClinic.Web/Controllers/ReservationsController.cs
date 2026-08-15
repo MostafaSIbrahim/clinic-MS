@@ -53,6 +53,8 @@ public class ReservationsController : BaseController
         ViewBag.Doctors = doctors.Data;
         var clinics = await _clinicService.GetAllAsync(includeInactive: false);
         ViewBag.Clinics = clinics.Data;
+        var treatmentTypes = await _reservationService.GetTreatmentTypesAsync();
+        ViewBag.TreatmentTypes = treatmentTypes.Data;
         ViewBag.PatientId = patientId;
         return View(new CreateReservationRequest
         {
@@ -71,6 +73,7 @@ public class ReservationsController : BaseController
             var d = await _userService.GetDoctorsAsync();
             ViewBag.Doctors = d.Data;
             ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+            ViewBag.TreatmentTypes = (await _reservationService.GetTreatmentTypesAsync()).Data;
             return View(model);
         }
         var result = await _reservationService.CreateReservationAsync(model, CurrentUserId);
@@ -80,6 +83,7 @@ public class ReservationsController : BaseController
             var d = await _userService.GetDoctorsAsync();
             ViewBag.Doctors = d.Data;
             ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+            ViewBag.TreatmentTypes = (await _reservationService.GetTreatmentTypesAsync()).Data;
             return View(model);
         }
         return RedirectWithSuccess("Reservation booked.", nameof(Details), routeValues: new { id = result.Data!.Id });
@@ -93,11 +97,13 @@ public class ReservationsController : BaseController
         var doctors = await _userService.GetDoctorsAsync();
         ViewBag.Doctors = doctors.Data;
         ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+        ViewBag.TreatmentTypes = (await _reservationService.GetTreatmentTypesAsync()).Data;
         var r = result.Data!;
         return View(new UpdateReservationRequest
         {
             DoctorId = r.DoctorId,
             ClinicId = r.ClinicId,
+            TreatmentTypeId = r.TreatmentTypeId,
             StatusId = 1,
             ReservationDate = r.ReservationDate,
             ReservationTime = r.ReservationTime,
@@ -117,6 +123,7 @@ public class ReservationsController : BaseController
             var d = await _userService.GetDoctorsAsync();
             ViewBag.Doctors = d.Data;
             ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+            ViewBag.TreatmentTypes = (await _reservationService.GetTreatmentTypesAsync()).Data;
             return View(model);
         }
         var result = await _reservationService.UpdateReservationAsync(id, model);
@@ -128,7 +135,22 @@ public class ReservationsController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateStatus(int id, int statusId)
     {
-        await _reservationService.UpdateStatusAsync(id, statusId);
+        var result = await _reservationService.UpdateStatusAsync(id, statusId);
+
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // StatusId 3 = Completed (see ReservationStatus seed data). Prompt reception
+        // to collect the treatment's price right away instead of leaving it to be
+        // found later on the payment dashboard.
+        if (statusId == 3 && result.Data is { IsPaid: false } r)
+        {
+            return RedirectToAction("Collect", "Payments", new { patientId = r.PatientId, reservationId = id });
+        }
+
         return RedirectToAction(nameof(Details), new { id });
     }
 

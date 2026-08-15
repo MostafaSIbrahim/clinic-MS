@@ -66,14 +66,7 @@
                                 <td><span class="badge bg-secondary">@r.Category</span></td>
                                 <td><span class="badge" style="background-color:@r.StatusColor;color:#fff;">@r.StatusName</span></td>
                                 <td>
-                                    @if (r.IsPaid)
-                                    {
-                                        <i class="bi bi-check-circle-fill text-success"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-x-circle-fill text-danger"></i>
-                                    }
+                                    @await Html.PartialAsync("_PaymentStatusToggle", (r.Id, r.PatientId, r.IsPaid))
                                 </td>
                                 <td class="text-end">
                                     <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-outline-primary">
