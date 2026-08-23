@@ -1,40 +1,42 @@
 ﻿@model IEnumerable<SafyaClinic.Domain.Entities.MedicalRecord.TreatmentType>
+@using SafyaClinic.Domain.Enums
 
 @{
-    ViewData["Title"] = "أنواع العلاج والجلسات";
+    ViewData["Title"] = "Treatment Types";
 }
 
-<div class="container-fluid py-3">
+<div class="container-fluid px-4 py-3">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold mb-1">
-                <i class="bi bi-bandaid text-primary me-2"></i>أنواع العلاج والجلسات
-            </h3>
-            <p class="text-muted mb-0">إدارة وتحديد أنواع الجلسات والعلاجات والأسعار الافتراضية</p>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="bi bi-bandaid-fill text-primary me-2"></i>أنواع الزيارات            </h1>
+            <p class="text-muted small mb-0">Manage clinic procedures, services, and default pricing</p>
         </div>
-        <div>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#treatmentTypeModal" onclick="openCreateModal()">
-                <i class="bi bi-plus-lg me-1"></i> إضافة نوع علاج جديد
-            </button>
-            <a asp-action="Index" class="btn btn-outline-secondary ms-1">
-                <i class="bi bi-arrow-right me-1"></i> رجوع للقوائم
-            </a>
-        </div>
+        <button type="button" class="btn btn-primary shadow-sm" onclick="openCreateModal()">
+            <i class="bi bi-plus-lg me-1"></i> Add Treatment Type
+        </button>
     </div>
 
-    <!-- Alert Messages -->
-    @if (TempData["SuccessMessage"] != null)
+    <!-- Alerts -->
+    @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
-    @if (TempData["ErrorMessage"] != null)
+    @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["ErrorMessage"]
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>@TempData["Warning"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
@@ -46,71 +48,78 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4">#</th>
-                            <th>اسم العلاج / الجلسة</th>
-                            <th>التصنيف</th>
-                            <th>السعر الافتراضي</th>
-                            <th>الوصف</th>
-                            <th>الحالة</th>
-                            <th class="text-end pe-4">الإجراءات</th>
+                            <th class="ps-4">Name</th>
+                            <th>Category</th>
+                            <th>Default Cost</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (Model != null && Model.Any())
+                        @if (!Model.Any())
                         {
-                            int index = 1;
-                            foreach (var item in Model)
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+                                    No treatment types found. Click <strong>Add Treatment Type</strong> to create one.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in Model)
                             {
                                 <tr>
-                                    <td class="ps-4 text-muted">@index</td>
-                                    <td class="fw-semibold">@item.TypeName</td>
-                                    <td>
-                                        <span class="badge bg-info text-dark">@item.Category</span>
+                                    <td class="ps-4 fw-semibold">
+                                        @(string.IsNullOrWhiteSpace(item.TypeName) ? "(Unnamed Treatment)" : item.TypeName)
                                     </td>
                                     <td>
-                                        <span class="fw-bold text-success">@item.DefaultCost ج.م</span>
+                                        <span class="badge bg-secondary-subtle text-secondary border">
+                                            @item.Category
+                                        </span>
                                     </td>
-                                    <td class="text-muted text-truncate" style="max-width: 250px;">
+                                    <td class="fw-bold text-primary">
+                                        @item.DefaultCost<span class="text-muted small fw-normal">EGP</span>
+                                    </td>
+                                    <td class="text-muted small">
                                         @(string.IsNullOrWhiteSpace(item.Description) ? "—" : item.Description)
                                     </td>
                                     <td>
                                         @if (item.IsActive)
                                         {
-                                            <span class="badge bg-success">نشط</span>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="bi bi-check-circle-fill me-1 small"></i>Active
+                                            </span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary">غير نشط</span>
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                <i class="bi bi-x-circle-fill me-1 small"></i>Inactive
+                                            </span>
                                         }
                                     </td>
                                     <td class="text-end pe-4">
-                                        <div class="btn-group btn-group-sm">
+                                        <div class="d-inline-flex gap-1">
                                             <button type="button"
-                                                    class="btn btn-outline-primary"
-                                                    title="تعديل"
-                                                    onclick="openEditModal(@item.Id, '@item.TypeName', '@((int)item.Category)', @item.DefaultCost, '@(item.Description ?? "")', @item.IsActive.ToString().ToLower())">
-                                                <i class="bi bi-pencil"></i>
+                                                    class="btn btn-sm btn-outline-primary btn-edit-treatment"
+                                                    data-id="@item.Id"
+                                                    data-typename="@(item.TypeName ?? "")"
+                                                    data-category="@((int)item.Category)"
+                                                    data-defaultcost="@item.DefaultCost"
+                                                    data-description="@(item.Description ?? "")"
+                                                    data-active="@item.IsActive.ToString().ToLower()">
+                                                <i class="bi bi-pencil-square me-1"></i>Edit
                                             </button>
                                             <button type="button"
-                                                    class="btn btn-outline-danger"
-                                                    title="حذف"
-                                                    onclick="confirmDelete(@item.Id, '@item.TypeName')">
-                                                <i class="bi bi-trash"></i>
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="confirmDelete(@item.Id, '@(item.TypeName ?? "Unnamed")')">
+                                                <i class="bi bi-trash me-1"></i>Delete
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                                index++;
                             }
-                        }
-                        else
-                        {
-                            <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                                    لا توجد بيانات مسجلة لأنواع العلاجات حتى الآن.
-                                </td>
-                            </tr>
                         }
                     </tbody>
                 </table>
@@ -121,48 +130,58 @@
 
 <!-- Create / Edit Modal -->
 <div class="modal fade" id="treatmentTypeModal" tabindex="-1" aria-labelledby="treatmentTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="treatmentTypeForm" method="post" asp-action="SaveTreatmentType">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form asp-action="SaveTreatmentType" asp-controller="Lookups" method="post" id="treatmentTypeForm">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="treatmentTypeId" name="Id" value="0" />
 
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="treatmentTypeModalLabel">إضافة نوع علاج جديد</h5>
+                <div class="modal-header bg-light border-0">
+                    <h5 class="modal-title fw-bold" id="treatmentTypeModalLabel">
+                        <i class="bi bi-plus-circle me-2 text-primary"></i><span>Add Treatment Type</span>
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+
+                <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label for="treatmentName" class="form-label required">اسم العلاج / الجلسة</label>
-                        <input type="text" class="form-control" id="treatmentName" name="Name" required placeholder="مثال: جلسة علاج طبيعي، كشف تخصصي..." />
+                        <label for="treatmentTypeName" class="form-label fw-semibold">
+                            Treatment Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="treatmentTypeName" name="TypeName" required placeholder="e.g. Clinical Examination, Dental Scaling" />
                     </div>
 
                     <div class="mb-3">
-                        <label for="treatmentCategory" class="form-label required">التصنيف</label>
-                        <select class="form-select" id="treatmentCategory" name="Category" required asp-items="Html.GetEnumSelectList<SafyaClinic.Domain.Enums.TreatmentCategory>()">
-                            <option value="">-- اختر التصنيف --</option>
+                        <label for="treatmentTypeCategory" class="form-label fw-semibold">Category</label>
+                        <select class="form-select" id="treatmentTypeCategory" name="Category" asp-items="Html.GetEnumSelectList<SafyaClinic.Domain.Enums.TreatmentCategory>()">
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label for="treatmentPrice" class="form-label required">السعر الافتراضي (ج.م)</label>
-                        <input type="number" step="0.01" min="0" class="form-control" id="treatmentPrice" name="Price" required placeholder="0.00" />
+                        <label for="treatmentTypeDefaultCost" class="form-label fw-semibold">
+                            Default Cost <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted">EGP</span>
+                            <input type="number" step="0.01" min="0" class="form-control" id="treatmentTypeDefaultCost" name="DefaultCost" required placeholder="0.00" />
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="treatmentDescription" class="form-label">الوصف / ملاحظات</label>
-                        <textarea class="form-control" id="treatmentDescription" name="Description" rows="3" placeholder="ملاحظات تفصيلية حول الجلسة..."></textarea>
+                        <label for="treatmentTypeDescription" class="form-label fw-semibold">Description</label>
+                        <textarea class="form-control" id="treatmentTypeDescription" name="Description" rows="3" placeholder="Optional treatment notes or details..."></textarea>
                     </div>
 
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="treatmentIsActive" name="IsActive" value="true" checked />
-                        <label class="form-check-label" for="treatmentIsActive">تفعيل نوع العلاج</label>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="treatmentTypeIsActive" name="IsActive" value="true" checked />
+                        <label class="form-check-label fw-semibold" for="treatmentTypeIsActive">Active Status</label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save me-1"></i> حفظ
+
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check-lg me-1"></i>Save
                     </button>
                 </div>
             </form>
@@ -173,18 +192,22 @@
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
-            <form id="deleteForm" method="post" asp-action="DeleteTreatmentType">
+        <div class="modal-content border-0 shadow">
+            <form id="deleteForm" asp-action="DeleteTreatmentType" asp-controller="Lookups" method="post">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="deleteTreatmentTypeId" name="id" value="" />
                 <div class="modal-body text-center p-4">
-                    <i class="bi bi-exclamation-circle text-danger display-4 mb-3 d-block"></i>
-                    <h6 class="fw-bold mb-2">تأكيد الحذف</h6>
-                    <p class="text-muted small mb-0">هل أنت متأكد من حذف "<span id="deleteTreatmentTypeName" class="fw-bold text-dark"></span>"؟</p>
+                    <i class="bi bi-exclamation-triangle-fill text-danger display-5 mb-3 d-block"></i>
+                    <h6 class="fw-bold mb-2">Confirm Deletion</h6>
+                    <p class="text-muted small mb-0">
+                        Are you sure you want to delete <span id="deleteTreatmentTypeName" class="fw-bold text-dark"></span>?
+                    </p>
                 </div>
-                <div class="modal-footer justify-content-center border-0 pt-0">
-                    <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-sm btn-danger px-3">حذف</button>
+                <div class="modal-footer justify-content-center border-0 pt-0 pb-4">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-danger px-3">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
                 </div>
             </form>
         </div>
@@ -195,33 +218,47 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         function openCreateModal() {
-            document.getElementById('treatmentTypeModalLabel').innerText = 'إضافة نوع علاج جديد';
-            document.getElementById('treatmentTypeId').value = '0';
-            document.getElementById('treatmentName').value = '';
-            document.getElementById('treatmentCategory').value = '';
-            document.getElementById('treatmentPrice').value = '';
-            document.getElementById('treatmentDescription').value = '';
-            document.getElementById('treatmentIsActive').checked = true;
-        }
+            $('#treatmentTypeModalLabel span').text('Add Treatment Type');
+            $('#treatmentTypeModalLabel i').attr('class', 'bi bi-plus-circle me-2 text-primary');
 
-        function openEditModal(id, name, category, price, description, isActive) {
-            document.getElementById('treatmentTypeModalLabel').innerText = 'تعديل نوع العلاج';
-            document.getElementById('treatmentTypeId').value = id;
-            document.getElementById('treatmentName').value = name;
-            document.getElementById('treatmentCategory').value = category;
-            document.getElementById('treatmentPrice').value = price;
-            document.getElementById('treatmentDescription').value = description;
-            document.getElementById('treatmentIsActive').checked = isActive;
+            $('#treatmentTypeId').val(0);
+            $('#treatmentTypeName').val('');
+            $('#treatmentTypeCategory').prop('selectedIndex', 0);
+            $('#treatmentTypeDefaultCost').val('');
+            $('#treatmentTypeDescription').val('');
+            $('#treatmentTypeIsActive').prop('checked', true);
 
-            const modal = new bootstrap.Modal(document.getElementById('treatmentTypeModal'));
+            var modal = new bootstrap.Modal(document.getElementById('treatmentTypeModal'));
             modal.show();
         }
+
+        $(document).on('click', '.btn-edit-treatment', function() {
+            var btn = $(this);
+            var id = btn.data('id');
+            var typeName = btn.data('typename');
+            var category = btn.data('category');
+            var defaultCost = btn.data('defaultcost');
+            var description = btn.data('description');
+            var isActive = btn.data('active');
+
+            $('#treatmentTypeModalLabel span').text('Edit Treatment Type');
+            $('#treatmentTypeModalLabel i').attr('class', 'bi bi-pencil-square me-2 text-primary');
+
+            $('#treatmentTypeId').val(id);
+            $('#treatmentTypeName').val(typeName);
+            $('#treatmentTypeCategory').val(category);
+            $('#treatmentTypeDefaultCost').val(defaultCost);
+            $('#treatmentTypeDescription').val(description);
+            $('#treatmentTypeIsActive').prop('checked', isActive === true || isActive === 'true');
+
+            var modal = new bootstrap.Modal(document.getElementById('treatmentTypeModal'));
+            modal.show();
+        });
 
         function confirmDelete(id, name) {
             document.getElementById('deleteTreatmentTypeId').value = id;
             document.getElementById('deleteTreatmentTypeName').innerText = name;
-
-            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
             modal.show();
         }
     </script>

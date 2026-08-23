@@ -4,36 +4,36 @@
     ViewData["Title"] = "أنواع الفيتامينات";
 }
 
-<div class="container-fluid py-3">
+<div class="container-fluid px-4 py-3">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="fw-bold mb-1">
+            <h1 class="h3 mb-0 text-gray-800">
                 <i class="bi bi-capsule text-primary me-2"></i>أنواع الفيتامينات
-            </h3>
-            <p class="text-muted mb-0">إدارة وتحديد أنواع الفيتامينات والمكملات المستخدمة في برامج التغذية</p>
+            </h1>
+            <p class="text-muted small mb-0">إدارة وتحديد أنواع الفيتامينات والمكملات المستخدمة في برامج التغذية</p>
         </div>
-        <div>
-            <button type="button" class="btn btn-primary" id="btnCreateModal">
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary shadow-sm" id="btnCreateModal">
                 <i class="bi bi-plus-lg me-1"></i> إضافة نوع فيتامين جديد
             </button>
-            <a asp-action="Index" class="btn btn-outline-secondary ms-1">
+            <a asp-action="Index" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-right me-1"></i> رجوع للقوائم
             </a>
         </div>
     </div>
 
-    <!-- Alert Messages -->
+    <!-- Alerts -->
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["ErrorMessage"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
@@ -50,7 +50,7 @@
                             <th>اسم الفيتامين</th>
                             <th>الوصف</th>
                             <th style="width: 120px;">الحالة</th>
-                            <th class="text-end pe-4" style="width: 120px;">الإجراءات</th>
+                            <th class="text-end pe-4" style="width: 140px;">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -61,37 +61,43 @@
                             {
                                 <tr>
                                     <td class="ps-4 text-muted">@index</td>
-                                    <td class="fw-semibold">@item.VitaminName</td>
-                                    <td class="text-muted text-truncate" style="max-width: 400px;">
+                                    <td class="fw-semibold">
+                                        @(string.IsNullOrWhiteSpace(item.VitaminName) ? "(بدون اسم)" : item.VitaminName)
+                                    </td>
+                                    <td class="text-muted small text-truncate" style="max-width: 400px;">
                                         @(string.IsNullOrWhiteSpace(item.Description) ? "—" : item.Description)
                                     </td>
                                     <td>
                                         @if (item.IsActive)
                                         {
-                                            <span class="badge bg-success">نشط</span>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="bi bi-check-circle-fill me-1 small"></i>نشط
+                                            </span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary">غير نشط</span>
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                <i class="bi bi-x-circle-fill me-1 small"></i>غير نشط
+                                            </span>
                                         }
                                     </td>
                                     <td class="text-end pe-4">
-                                        <div class="btn-group btn-group-sm">
+                                        <div class="d-inline-flex gap-1">
                                             <button type="button"
-                                                    class="btn btn-outline-primary btn-edit"
+                                                    class="btn btn-sm btn-outline-primary btn-edit-vitamin"
                                                     title="تعديل"
                                                     data-id="@item.Id"
                                                     data-name="@item.VitaminName"
-                                                    data-description="@item.Description"
+                                                    data-description="@(item.Description ?? "")"
                                                     data-isactive="@item.IsActive.ToString().ToLower()">
-                                                <i class="bi bi-pencil"></i>
+                                                <i class="bi bi-pencil-square me-1"></i>تعديل
                                             </button>
                                             <button type="button"
-                                                    class="btn btn-outline-danger btn-delete"
+                                                    class="btn btn-sm btn-outline-danger btn-delete"
                                                     title="حذف"
                                                     data-id="@item.Id"
                                                     data-name="@item.VitaminName">
-                                                <i class="bi bi-trash"></i>
+                                                <i class="bi bi-trash me-1"></i>حذف
                                             </button>
                                         </div>
                                     </td>
@@ -102,8 +108,8 @@
                         else
                         {
                             <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">
-                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
                                     لا توجد بيانات مسجلة لأنواع الفيتامينات حتى الآن.
                                 </td>
                             </tr>
@@ -117,36 +123,43 @@
 
 <!-- Create / Edit Modal -->
 <div class="modal fade" id="vitaminTypeModal" tabindex="-1" aria-labelledby="vitaminTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
             <form id="vitaminTypeForm" method="post" asp-action="SaveVitaminType">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="vitaminTypeId" name="Id" value="0" />
 
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="vitaminTypeModalLabel">إضافة نوع فيتامين جديد</h5>
+                <div class="modal-header bg-light border-0">
+                    <h5 class="modal-title fw-bold" id="vitaminTypeModalLabel">
+                        <i class="bi bi-plus-circle me-2 text-primary"></i>إضافة نوع فيتامين جديد
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+
+                <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label for="vitaminName" class="form-label required">اسم الفيتامين</label>
-                        <input type="text" class="form-control" id="vitaminName" name="Name" required placeholder="مثال: فيتامين د، أوميغا 3..." />
+                        <label for="vitaminName" class="form-label fw-semibold">
+                            اسم الفيتامين <span class="text-danger">*</span>
+                        </label>
+                        <!-- FIXED: name="VitaminName" (was name="Name") -->
+                        <input type="text" class="form-control" id="vitaminName" name="VitaminName" required placeholder="مثال: فيتامين د، أوميغا 3..." />
                     </div>
 
                     <div class="mb-3">
-                        <label for="vitaminDescription" class="form-label">الوصف / ملاحظات</label>
+                        <label for="vitaminDescription" class="form-label fw-semibold">الوصف / ملاحظات</label>
                         <textarea class="form-control" id="vitaminDescription" name="Description" rows="3" placeholder="ملاحظات تفصيلية حول الفيتامين والجرعات..."></textarea>
                     </div>
 
-                    <div class="form-check form-switch mb-2">
+                    <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" id="vitaminIsActive" name="IsActive" value="true" checked />
-                        <label class="form-check-label" for="vitaminIsActive">تفعيل نوع الفيتامين</label>
+                        <label class="form-check-label fw-semibold" for="vitaminIsActive">تفعيل نوع الفيتامين</label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save me-1"></i> حفظ
+
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check-lg me-1"></i>حفظ
                     </button>
                 </div>
             </form>
@@ -157,18 +170,22 @@
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow">
             <form id="deleteForm" method="post" asp-action="DeleteVitaminType">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="deleteVitaminTypeId" name="id" value="" />
                 <div class="modal-body text-center p-4">
-                    <i class="bi bi-exclamation-circle text-danger display-4 mb-3 d-block"></i>
+                    <i class="bi bi-exclamation-triangle-fill text-danger display-5 mb-3 d-block"></i>
                     <h6 class="fw-bold mb-2">تأكيد الحذف</h6>
-                    <p class="text-muted small mb-0">هل أنت متأكد من حذف "<span id="deleteVitaminTypeName" class="fw-bold text-dark"></span>"؟</p>
+                    <p class="text-muted small mb-0">
+                        هل أنت متأكد من حذف "<span id="deleteVitaminTypeName" class="fw-bold text-dark"></span>"؟
+                    </p>
                 </div>
-                <div class="modal-footer justify-content-center border-0 pt-0">
-                    <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-sm btn-danger px-3">حذف</button>
+                <div class="modal-footer justify-content-center border-0 pt-0 pb-4">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-sm btn-danger px-3">
+                        <i class="bi bi-trash me-1"></i>حذف
+                    </button>
                 </div>
             </form>
         </div>
@@ -187,7 +204,7 @@
 
             // Open Create Modal
             document.getElementById('btnCreateModal').addEventListener('click', function() {
-                document.getElementById('vitaminTypeModalLabel').innerText = 'إضافة نوع فيتامين جديد';
+                document.getElementById('vitaminTypeModalLabel').innerHTML = '<i class="bi bi-plus-circle me-2 text-primary"></i>إضافة نوع فيتامين جديد';
                 document.getElementById('vitaminTypeId').value = '0';
                 document.getElementById('vitaminName').value = '';
                 document.getElementById('vitaminDescription').value = '';
@@ -196,14 +213,14 @@
             });
 
             // Open Edit Modal
-            document.querySelectorAll('.btn-edit').forEach(btn => {
+            document.querySelectorAll('.btn-edit-vitamin').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const id = this.getAttribute('data-id');
                     const name = this.getAttribute('data-name') || '';
                     const description = this.getAttribute('data-description') || '';
                     const isActive = this.getAttribute('data-isactive') === 'true';
 
-                    document.getElementById('vitaminTypeModalLabel').innerText = 'تعديل نوع الفيتامين';
+                    document.getElementById('vitaminTypeModalLabel').innerHTML = '<i class="bi bi-pencil-square me-2 text-primary"></i>تعديل نوع الفيتامين';
                     document.getElementById('vitaminTypeId').value = id;
                     document.getElementById('vitaminName').value = name;
                     document.getElementById('vitaminDescription').value = description;
