@@ -79,6 +79,16 @@ public class PaymentService : IPaymentService
 
         await _uow.Payments.AddAsync(payment);
 
+        // BUGFIX: RecalculateReservationPaidStatusAsync sums payments via a fresh
+        // AsNoTracking() database query (see GenericRepository.FindAsync). That query
+        // hits the database directly and does NOT see entities that have only been
+        // added to the change tracker — it needs the payment to actually be persisted
+        // first, otherwise the brand-new payment is silently excluded from the coverage
+        // total and IsPaid is (re)computed as if this payment never happened.
+        // Persisting here, before recalculating, ensures the just-collected payment is
+        // included when we decide whether the reservation is now fully paid.
+        await _uow.SaveChangesAsync();
+
         // Auto-mark reservation as paid if linked and payments cover total
         if (request.ReservationId.HasValue)
             await RecalculateReservationPaidStatusAsync(request.ReservationId.Value);
@@ -127,7 +137,19 @@ public class PaymentService : IPaymentService
         var activePayments = payments.Where(p => p.Status == PaymentStatusEnum.Active).ToList();
         var cancelledPayments = payments.Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
 
-        var totalCharged = reservations.Sum(r => r.TotalAmount ?? 0m)
+        // BUGFIX: a cancelled reservation never has to be paid for, so it must not be
+        // counted as a charge. Previously ALL reservations (including cancelled ones)
+        // were summed into TotalCharged, which inflated Balance above zero for patients
+        // who have no real outstanding payment — leaving the "Collect Payment" button on
+        // PatientSummary wrongly enabled instead of disabled.
+        var cancelledStatusIds = (await _uow.ReservationStatuses.FindAsync(
+                s => s.StatusName == "Cancelled"))
+            .Select(s => s.Id)
+            .ToHashSet();
+
+        var billableReservations = reservations.Where(r => !cancelledStatusIds.Contains(r.StatusId));
+
+        var totalCharged = billableReservations.Sum(r => r.TotalAmount ?? 0m)
                          + enrollments.Sum(e => e.FinalPrice);
         var totalPaid = activePayments.Sum(p => p.Amount);
         var totalWrittenOff = cancelledPayments.Sum(p => p.Amount);
@@ -197,6 +219,13 @@ public class PaymentService : IPaymentService
         // patient's/reservation's due balance. We deliberately do NOT reverse
         // enrollment.TotalPaid here, and RecalculateReservationPaidStatusAsync below treats
         // Active + Cancelled payments as combined "coverage" so IsPaid stays true.
+        //
+        // BUGFIX: persist the status change first so the AsNoTracking() query inside
+        // RecalculateReservationPaidStatusAsync (which reads straight from the database)
+        // reflects the cancellation, keeping this in line with CollectPaymentAsync and
+        // ChangePaymentAmountAsync.
+        await _uow.SaveChangesAsync();
+
         if (payment.ReservationId.HasValue)
             await RecalculateReservationPaidStatusAsync(payment.ReservationId.Value);
 
@@ -259,6 +288,12 @@ public class PaymentService : IPaymentService
                 _uow.NutritionEnrollments.Update(enrollment);
             }
         }
+
+        // BUGFIX: same as CollectPaymentAsync — persist the new amount before summing
+        // payments in RecalculateReservationPaidStatusAsync, otherwise the recalculation
+        // still reads the OLD amount from the database and can leave IsPaid = false
+        // (showing "معلق") even though the updated amount now fully covers the reservation.
+        await _uow.SaveChangesAsync();
 
         if (payment.ReservationId.HasValue)
             await RecalculateReservationPaidStatusAsync(payment.ReservationId.Value);
