@@ -3,6 +3,11 @@
     ViewData["Title"] = "Payment Dashboard";
 }
 
+<style>
+    .dashboard-drilldown-row { cursor: pointer; }
+    .dashboard-drilldown-row:hover { background-color: rgba(13, 110, 253, 0.06); }
+</style>
+
 <div class="card mb-3">
     <div class="card-header"><i class="bi bi-speedometer2 me-2"></i>Payment Dashboard</div>
     <div class="card-body">
@@ -135,7 +140,10 @@
                         <tbody>
                             @foreach (var s in Model.AmountBySource)
                             {
-                                <tr>
+                                <tr class="dashboard-drilldown-row" role="button"
+                                    data-group-type="source"
+                                    data-group-id="@(s.PatientSourceId?.ToString() ?? "")"
+                                    data-group-label="@s.PatientSourceName">
                                     <td>@s.PatientSourceName</td>
                                     <td>@s.PaymentCount</td>
                                     <td class="fw-semibold">@s.TotalCollected.ToString("C")</td>
@@ -164,7 +172,10 @@
                         <tbody>
                             @foreach (var c in Model.AmountByClinic)
                             {
-                                <tr>
+                                <tr class="dashboard-drilldown-row" role="button"
+                                    data-group-type="clinic"
+                                    data-group-id="@(c.ClinicId?.ToString() ?? "")"
+                                    data-group-label="@c.ClinicName">
                                     <td>@c.ClinicName</td>
                                     <td>@c.PaymentCount</td>
                                     <td class="fw-semibold">@c.TotalCollected.ToString("C")</td>
@@ -178,3 +189,167 @@
         </div>
     </div>
 </div>
+
+<!-- ── Dashboard line drill-down modal ─────────────────────────────
+     Two-step flow inside a single modal:
+       Step 1: ask the user for the date range to run the detail report over
+                (pre-filled with the dashboard's current From/To filter).
+       Step 2: the detail report itself, loaded via AJAX from
+                Payments/DashboardLineDetails and rendered in-place.
+     Closing the modal (X, backdrop click, or Close button) simply returns the
+     user to the dashboard underneath — nothing navigates away from this page. -->
+<div class="modal fade" id="drilldownModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="drilldownModalTitle">Payment Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="drilldownStepDuration">
+                    <p class="text-muted">
+                        Choose the date range for this report, or leave a field blank for no limit on that side
+                        (matching the dashboard's own filter that produced this line).
+                    </p>
+                    <form id="drilldownDurationForm" class="row g-2 align-items-end">
+                        <div class="col-sm-4">
+                            <label class="form-label small mb-1">From <span class="text-muted">(optional)</span></label>
+                            <input type="date" id="drilldownFrom" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small mb-1">To <span class="text-muted">(optional)</span></label>
+                            <input type="date" id="drilldownTo" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="submit" class="btn btn-sm btn-primary w-100">Generate</button>
+                        </div>
+                        <div class="col-sm-2">
+                            <button type="button" id="drilldownAllTimeBtn" class="btn btn-sm btn-outline-secondary w-100">All Time</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="drilldownStepLoading" class="text-center text-muted py-4 d-none">
+                    <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                    Loading report…
+                </div>
+
+                <div id="drilldownStepError" class="alert alert-danger d-none"></div>
+
+                <div id="drilldownStepReport" class="d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="drilldownBackBtn" class="btn btn-sm btn-outline-secondary d-none">
+                    <i class="bi bi-arrow-left me-1"></i>Change Dates
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const modalEl = document.getElementById('drilldownModal');
+            const modal = new bootstrap.Modal(modalEl);
+            const titleEl = document.getElementById('drilldownModalTitle');
+
+            const stepDuration = document.getElementById('drilldownStepDuration');
+            const stepLoading = document.getElementById('drilldownStepLoading');
+            const stepError = document.getElementById('drilldownStepError');
+            const stepReport = document.getElementById('drilldownStepReport');
+            const backBtn = document.getElementById('drilldownBackBtn');
+
+            const fromInput = document.getElementById('drilldownFrom');
+            const toInput = document.getElementById('drilldownTo');
+            const durationForm = document.getElementById('drilldownDurationForm');
+            const allTimeBtn = document.getElementById('drilldownAllTimeBtn');
+
+            // The dashboard's own current From/To filter (if set). We pre-fill the popup
+            // with EXACTLY this — including leaving a field blank when the dashboard has
+            // no filter on that side — so the drill-down defaults to the same range that
+            // produced the summary count being clicked. Silently substituting a different
+            // default (e.g. "this month") here previously caused clicks on lines totalled
+            // over a wider/unfiltered range to come back empty.
+            const dashboardFrom = @Html.Raw(ViewBag.From is DateTime df ? $"\"{df:yyyy-MM-dd}\"" : "null");
+            const dashboardTo = @Html.Raw(ViewBag.To is DateTime dt ? $"\"{dt:yyyy-MM-dd}\"" : "null");
+
+            let currentGroupType = null;
+            let currentGroupId = null;
+
+            function showStep(step) {
+                [stepDuration, stepLoading, stepError, stepReport].forEach(el => el.classList.add('d-none'));
+                step.classList.remove('d-none');
+                backBtn.classList.toggle('d-none', step !== stepReport && step !== stepError);
+            }
+
+            document.querySelectorAll('.dashboard-drilldown-row').forEach(row => {
+                row.addEventListener('click', () => {
+                    currentGroupType = row.dataset.groupType;
+                    currentGroupId = row.dataset.groupId || '';
+                    titleEl.textContent = 'Payment Details — ' + row.dataset.groupLabel;
+
+                    fromInput.value = dashboardFrom || '';
+                    toInput.value = dashboardTo || '';
+
+                    showStep(stepDuration);
+                    modal.show();
+                });
+            });
+
+            durationForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                loadReport();
+            });
+
+            allTimeBtn.addEventListener('click', () => {
+                fromInput.value = '';
+                toInput.value = '';
+                loadReport();
+            });
+
+            backBtn.addEventListener('click', () => showStep(stepDuration));
+
+            // Exposed so the "view all time" link inside the loaded report partial
+            // (see _DashboardLineDetails.cshtml) can clear the range and reload without
+            // the user having to go back to the duration step manually.
+            window.paymentDrilldown = {
+                viewAllTime: function () {
+                    fromInput.value = '';
+                    toInput.value = '';
+                    loadReport();
+                }
+            };
+
+            async function loadReport() {
+                if (fromInput.value && toInput.value && fromInput.value > toInput.value) {
+                    showStep(stepError);
+                    stepError.textContent = "'From' date must be before or equal to 'To' date.";
+                    return;
+                }
+
+                showStep(stepLoading);
+
+                const params = new URLSearchParams({ groupType: currentGroupType });
+                if (currentGroupId) params.set('groupId', currentGroupId);
+                if (fromInput.value) params.set('from', fromInput.value);
+                if (toInput.value) params.set('to', toInput.value);
+
+                try {
+                    const response = await fetch('@Url.Action("DashboardLineDetails", "Payments")?' + params.toString());
+                    if (!response.ok) {
+                        const text = await response.text();
+                        throw new Error(text || 'Failed to load report.');
+                    }
+                    stepReport.innerHTML = await response.text();
+                    showStep(stepReport);
+                } catch (err) {
+                    showStep(stepError);
+                    stepError.textContent = err.message || 'Failed to load report.';
+                }
+            }
+        })();
+    </script>
+}
+

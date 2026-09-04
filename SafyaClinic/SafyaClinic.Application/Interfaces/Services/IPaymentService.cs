@@ -25,4 +25,29 @@ public interface IPaymentService
     /// given, otherwise the patient's overall outstanding balance.
     /// </summary>
     Task<ServiceResult<decimal>> GetDueAmountAsync(int patientId, int? reservationId, int? enrollmentId);
+
+    // ── One-time data backfill ───────────────────────────────────
+    /// <summary>
+    /// Recomputes Reservation.IsPaid for every reservation that has a linked payment,
+    /// using the same coverage rule as RecalculateReservationPaidStatusAsync (Active +
+    /// Cancelled payments vs TotalAmount). Intended as a one-off maintenance action to
+    /// correct historical rows written under the pre-fix save-ordering bug, where IsPaid
+    /// could be computed against a stale/incomplete payment total. Safe to run multiple
+    /// times — it is idempotent.
+    /// </summary>
+    /// <returns>The number of reservations whose IsPaid value actually changed.</returns>
+    Task<ServiceResult<int>> RecalculateAllReservationsPaidStatusAsync();
+
+    // ── Dashboard drill-down ──────────────────────────────────────
+    /// <summary>
+    /// Builds the per-payment detail report for a single line clicked on the
+    /// "Amount by Clinic" or "Amount by Patient Source" dashboard tables. groupType is
+    /// "clinic" or "source"; groupId is the ClinicId/PatientSourceId of the clicked row,
+    /// or null for the "No Clinic"/"No Source" row. from/to are optional — omitting
+    /// either leaves that side unbounded, matching GetPaymentDashboardAsync's own
+    /// optional date filtering so a drill-down opened from an unfiltered dashboard
+    /// defaults to the same unfiltered range that produced the number being drilled into.
+    /// </summary>
+    Task<ServiceResult<PaymentLineDetailReportDto>> GetDashboardLineDetailsAsync(
+        string groupType, int? groupId, DateTime? from, DateTime? to);
 }
