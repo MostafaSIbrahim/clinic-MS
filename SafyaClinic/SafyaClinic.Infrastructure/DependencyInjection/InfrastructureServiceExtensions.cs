@@ -18,8 +18,9 @@ public static class InfrastructureServiceExtensions
                 configuration.GetConnectionString("SafyaClinicDb"),
                 sql => sql.MigrationsAssembly(
                     typeof(SafyaDbContext).Assembly.FullName)));
-
+        // Register UnitOfWork
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 
         return services;
     }

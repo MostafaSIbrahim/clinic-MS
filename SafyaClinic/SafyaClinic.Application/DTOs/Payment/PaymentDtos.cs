@@ -124,3 +124,53 @@ public class ClinicAmountDto
     public decimal TotalClinicNet { get; init; }
     public int PaymentCount { get; init; }
 }
+
+// ── Dashboard drill-down (per-line detail popup) ──────────────────
+
+/// <summary>
+/// One row in the drill-down report shown when a user clicks a line in the
+/// "Amount by Clinic" / "Amount by Patient Source" dashboard tables.
+/// </summary>
+public class PaymentLineDetailDto
+{
+    public int PaymentId { get; init; }
+    public string PatientName { get; init; } = string.Empty;
+    public DateTime PaymentDate { get; init; }
+    public decimal AmountPaid { get; init; }
+
+    /// <summary>
+    /// The deducted amount for this line: source deduction when drilling into a Patient
+    /// Source group, clinic's cut (Amount - ClinicNetAmount) when drilling into a Clinic
+    /// group.
+    /// </summary>
+    public decimal DeductedAmount { get; init; }
+
+    public string ClinicName { get; init; } = string.Empty;
+    public string PatientSourceName { get; init; } = string.Empty;
+    public string PaymentMethod { get; init; } = string.Empty;
+    public string? ReferenceNumber { get; init; }
+}
+
+public class PaymentLineDetailReportDto
+{
+    public string GroupLabel { get; init; } = string.Empty;
+
+    /// <summary>Null means unbounded (no start filter) — mirrors the dashboard's optional From filter.</summary>
+    public DateTime? From { get; init; }
+
+    /// <summary>Null means unbounded (no end filter) — mirrors the dashboard's optional To filter.</summary>
+    public DateTime? To { get; init; }
+    public IEnumerable<PaymentLineDetailDto> Lines { get; init; } = Enumerable.Empty<PaymentLineDetailDto>();
+    public decimal TotalAmountPaid => Lines.Sum(l => l.AmountPaid);
+    public decimal TotalDeducted => Lines.Sum(l => l.DeductedAmount);
+
+    // ── Diagnostics for the "no rows in this range" case ────────
+    /// <summary>
+    /// Count of Active payments for this group across ALL time, ignoring From/To.
+    /// Lets the UI explain "this group has payments, just not in the range you picked"
+    /// instead of leaving an unexplained empty table.
+    /// </summary>
+    public int TotalPaymentsAllTime { get; init; }
+    public DateTime? EarliestPaymentDate { get; init; }
+    public DateTime? LatestPaymentDate { get; init; }
+}

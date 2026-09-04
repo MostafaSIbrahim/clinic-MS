@@ -464,6 +464,146 @@ public class PaymentService : IPaymentService
             : ServiceResult<decimal>.Success(0m);
     }
 
+    // ── One-time data backfill ───────────────────────────────────
+
+    /// <summary>
+    /// One-off maintenance action: recomputes IsPaid for every reservation in the system
+    /// using the current (correct) coverage rule, so historical rows written before the
+    /// save-ordering fix in CollectPaymentAsync/ChangePaymentAmountAsync/CancelPaymentAsync
+    /// get corrected. Does a single bulk pass instead of calling the per-reservation
+    /// RecalculateReservationPaidStatusAsync in a loop, to avoid N+1 queries against a
+    /// potentially large reservations table.
+    /// </summary>
+    public async Task<ServiceResult<int>> RecalculateAllReservationsPaidStatusAsync()
+    {
+        var reservations = (await _uow.Reservations.GetAllAsync()).ToList();
+
+        // Only Active + Cancelled payments count as "coverage" — see the note in
+        // RecalculateReservationPaidStatusAsync for why Cancelled is included here.
+        var coverageByReservation = (await _uow.Payments.FindAsync(
+                p => p.ReservationId != null &&
+                     (p.Status == PaymentStatusEnum.Active || p.Status == PaymentStatusEnum.Cancelled)))
+            .GroupBy(p => p.ReservationId!.Value)
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
+
+        var changedCount = 0;
+
+        foreach (var reservation in reservations)
+        {
+            var totalCoverage = coverageByReservation.TryGetValue(reservation.Id, out var covered) ? covered : 0m;
+
+            var shouldBePaid = reservation.TotalAmount.HasValue &&
+                                totalCoverage >= reservation.TotalAmount.Value &&
+                                reservation.TotalAmount.Value > 0;
+
+            if (reservation.IsPaid != shouldBePaid)
+            {
+                reservation.IsPaid = shouldBePaid;
+                reservation.UpdatedAt = DateTime.UtcNow;
+                _uow.Reservations.Update(reservation);
+                changedCount++;
+            }
+        }
+
+        if (changedCount > 0)
+            await _uow.SaveChangesAsync();
+
+        return ServiceResult<int>.Success(changedCount,
+            changedCount == 0
+                ? "No reservations needed correction."
+                : $"Corrected the paid status of {changedCount} reservation(s).");
+    }
+
+    // ── Dashboard drill-down ────────────────────────────────────────
+
+    /// <summary>
+    /// Per-payment detail for a single "Amount by Clinic" / "Amount by Patient Source"
+    /// dashboard line. from/to are optional, mirroring GetPaymentDashboardAsync — when
+    /// either is omitted, that side is unbounded ("all time"), so a drill-down opened
+    /// from a dashboard that itself has no date filter applied defaults to the SAME
+    /// unfiltered range that produced the summary count, instead of silently narrowing
+    /// to an arbitrary window that could disagree with what the user clicked on.
+    /// </summary>
+    public async Task<ServiceResult<PaymentLineDetailReportDto>> GetDashboardLineDetailsAsync(
+        string groupType, int? groupId, DateTime? from, DateTime? to)
+    {
+        groupType = (groupType ?? string.Empty).Trim().ToLowerInvariant();
+        if (groupType is not ("clinic" or "source"))
+            return ServiceResult<PaymentLineDetailReportDto>.Failure("Unknown group type.");
+
+        if (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date)
+            return ServiceResult<PaymentLineDetailReportDto>.Failure("'From' date must be before or equal to 'To' date.");
+
+        // Make 'to' inclusive of the whole day, matching how the date filters are typed
+        // in as plain dates on the dashboard's From/To inputs.
+        var fromInclusive = from?.Date;
+        var toInclusive = to?.Date.AddDays(1).AddTicks(-1);
+
+        var payments = (await _uow.Payments.FindAsync(p =>
+                p.Status == PaymentStatusEnum.Active &&
+                (!fromInclusive.HasValue || p.PaymentDate >= fromInclusive.Value) &&
+                (!toInclusive.HasValue || p.PaymentDate <= toInclusive.Value)))
+            .Where(p => groupType == "clinic" ? p.ClinicId == groupId : p.PatientSourceId == groupId)
+            .OrderByDescending(p => p.PaymentDate)
+            .ToList();
+
+        string groupLabel;
+        if (groupType == "clinic")
+        {
+            var clinic = groupId.HasValue ? await _uow.Clinics.GetByIdAsync(groupId.Value) : null;
+            groupLabel = clinic?.Name ?? "No Clinic";
+        }
+        else
+        {
+            var source = groupId.HasValue ? await _uow.PatientSources.GetByIdAsync(groupId.Value) : null;
+            groupLabel = source?.Name ?? "No Source";
+        }
+
+        // Diagnostics: if the date-filtered result is empty, find out whether this group
+        // actually has payments at all (just outside the chosen range) so the UI can say
+        // so explicitly instead of leaving an unexplained blank table. This is what
+        // happens for "No Clinic"/"No Source" rows containing older, legacy-dated
+        // payments that fall outside whatever range the user happens to pick.
+        var allTimePaymentsForGroup = (await _uow.Payments.FindAsync(p =>
+                p.Status == PaymentStatusEnum.Active))
+            .Where(p => groupType == "clinic" ? p.ClinicId == groupId : p.PatientSourceId == groupId)
+            .ToList();
+
+        var lines = new List<PaymentLineDetailDto>();
+        foreach (var p in payments)
+        {
+            var patient = await _uow.Patients.GetByIdAsync(p.PatientId);
+            var clinic = p.ClinicId.HasValue ? await _uow.Clinics.GetByIdAsync(p.ClinicId.Value) : null;
+            var source = p.PatientSourceId.HasValue ? await _uow.PatientSources.GetByIdAsync(p.PatientSourceId.Value) : null;
+
+            lines.Add(new PaymentLineDetailDto
+            {
+                PaymentId = p.Id,
+                PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
+                PaymentDate = p.PaymentDate,
+                AmountPaid = p.Amount,
+                DeductedAmount = groupType == "source"
+                    ? p.SourceDeductionAmount
+                    : p.Amount - p.ClinicNetAmount,
+                ClinicName = clinic?.Name ?? "—",
+                PatientSourceName = source?.Name ?? "—",
+                PaymentMethod = p.PaymentMethod.ToString(),
+                ReferenceNumber = p.ReferenceNumber
+            });
+        }
+
+        return ServiceResult<PaymentLineDetailReportDto>.Success(new PaymentLineDetailReportDto
+        {
+            GroupLabel = groupLabel,
+            From = from?.Date,
+            To = to?.Date,
+            Lines = lines,
+            TotalPaymentsAllTime = allTimePaymentsForGroup.Count,
+            EarliestPaymentDate = allTimePaymentsForGroup.Count > 0 ? allTimePaymentsForGroup.Min(p => p.PaymentDate) : null,
+            LatestPaymentDate = allTimePaymentsForGroup.Count > 0 ? allTimePaymentsForGroup.Max(p => p.PaymentDate) : null
+        });
+    }
+
     // ── Helpers ──────────────────────────────────────────────────
 
     private async Task RecalculateReservationPaidStatusAsync(int reservationId)

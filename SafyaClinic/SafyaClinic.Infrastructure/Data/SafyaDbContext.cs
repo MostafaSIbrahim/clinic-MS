@@ -73,7 +73,19 @@ namespace SafyaClinic.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Patient>()
+                .Property(p => p.Weight)
+                .HasColumnType("decimal(10,2)");
 
+            modelBuilder.Entity<MedicalAnalysis>()
+                .HasOne(ma=> ma.Type)
+                .WithMany(at=> at.Analyses)
+                .HasForeignKey(ma=> ma.AnalysisTypeId);
+
+            modelBuilder.Entity<WeeklyAdministeredItem>()
+                .HasOne(wi => wi.PackageItem)
+                .WithMany(pi => pi.AdministeredItems)
+                .HasForeignKey(wi => wi.PackageItemId);
             // Apply all configurations from this assembly
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(SafyaDbContext).Assembly);
 

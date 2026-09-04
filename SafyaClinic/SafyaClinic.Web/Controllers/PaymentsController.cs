@@ -37,6 +37,28 @@ public class PaymentsController : BaseController
         return View(result.IsSuccess ? result.Data : Enumerable.Empty<PaymentDto>());
     }
 
+    // ── One-time maintenance: backfill historical IsPaid values ──
+    // Corrects Reservation.IsPaid for rows written before the save-ordering fix in
+    // PaymentService (see CollectPaymentAsync / ChangePaymentAmountAsync). Safe to run
+    // more than once — it only updates rows whose computed status actually differs.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> RecalculateAllPaidStatuses()
+    {
+        var result = await _paymentService.RecalculateAllReservationsPaidStatusAsync();
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            Error("Failed to recalculate reservation paid statuses.");
+        }
+        else
+        {
+            Success(result.Message);
+        }
+        return RedirectToAction(nameof(Report));
+    }
+
     // ── Dashboard ───────────────────────────────────────────────
 
     [HttpGet]
@@ -46,6 +68,21 @@ public class PaymentsController : BaseController
         ViewBag.From = from;
         ViewBag.To = to;
         return View(result.IsSuccess ? result.Data : new PaymentDashboardDto());
+    }
+
+    // ── Dashboard line drill-down (AJAX, rendered inside a modal) ─
+    // Called when the user clicks a row in "Amount by Clinic" / "Amount by Patient
+    // Source" on the dashboard. groupType is "clinic" or "source"; groupId is the
+    // ClinicId/PatientSourceId of that row (omitted/null for the "No Clinic"/"No
+    // Source" row). from/to are the date range the user enters in the popup prompt.
+    [HttpGet]
+    public async Task<IActionResult> DashboardLineDetails(string groupType, int? groupId, DateTime? from, DateTime? to)
+    {
+        var result = await _paymentService.GetDashboardLineDetailsAsync(groupType, groupId, from, to);
+        if (!result.IsSuccess)
+            return BadRequest(result.Errors.FirstOrDefault() ?? "Could not load payment details.");
+
+        return PartialView("_DashboardLineDetails", result.Data);
     }
 
     // ── Collect ─────────────────────────────────────────────────
