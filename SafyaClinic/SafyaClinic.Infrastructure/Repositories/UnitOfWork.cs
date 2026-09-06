@@ -38,6 +38,7 @@ public class UnitOfWork : IUnitOfWork
 
     // ── Prescription ──────────────────────────────────────────
     private IRepository<Prescription>? _prescriptions;
+    private IRepository<PrescriptionItem>? _prescriptionsItem;
     private IRepository<PrescriptionAttachment>? _prescriptionAttachments;
 
     // ── Analysis ──────────────────────────────────────────────
@@ -84,6 +85,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<TreatmentType> TreatmentTypes => _treatmentTypes ??= new GenericRepository<TreatmentType>(_context);
 
     public IRepository<Prescription> Prescriptions => _prescriptions ??= new GenericRepository<Prescription>(_context);
+    public IRepository<PrescriptionItem> PrescriptionItems => _prescriptionsItem ??= new GenericRepository<PrescriptionItem>(_context);
     public IRepository<PrescriptionAttachment> PrescriptionAttachments => _prescriptionAttachments ??= new GenericRepository<PrescriptionAttachment>(_context);
 
     public IRepository<AnalysisType> AnalysisTypes => _analysisTypes ??= new GenericRepository<AnalysisType>(_context);

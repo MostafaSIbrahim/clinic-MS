@@ -23,8 +23,27 @@ public class PaymentService : IPaymentService
         if (!Enum.TryParse<PaymentMethodEnum>(request.PaymentMethod, out var method))
             return ServiceResult<PaymentDto>.Failure(
                 "Invalid payment method. Valid: Cash, CreditCard, BankTransfer, Insurance, MobilePayment.");
-        if (request.Amount <= 0)
-            return ServiceResult<PaymentDto>.Failure("Amount must be greater than zero.");
+        if (request.Amount < 0)
+            return ServiceResult<PaymentDto>.Failure("Amount cannot be negative.");
+
+        // A zero-amount payment is only legitimate when it's logging a reservation that
+        // genuinely costs nothing (e.g. a nutrition "Follow-up" visit already covered by
+        // the patient's enrollment package). For every other case zero is still rejected,
+        // otherwise the "Amount must be greater than zero" safeguard would be lost entirely.
+        if (request.Amount == 0)
+        {
+            var isZeroCostReservation = false;
+            if (request.ReservationId.HasValue)
+            {
+                var linkedReservation = await _uow.Reservations.GetByIdAsync(request.ReservationId.Value);
+                isZeroCostReservation = linkedReservation is not null &&
+                                        linkedReservation.TotalAmount.HasValue &&
+                                        linkedReservation.TotalAmount.Value == 0m;
+            }
+
+            if (!isZeroCostReservation)
+                return ServiceResult<PaymentDto>.Failure("Amount must be greater than zero.");
+        }
 
         // ── First-visit source/clinic deduction ─────────────────
         var priorActivePayments = await _uow.Payments.FindAsync(
@@ -242,10 +261,27 @@ public class PaymentService : IPaymentService
             return ServiceResult<PaymentDto>.Failure("Payment not found.");
         if (payment.Status == PaymentStatusEnum.Cancelled)
             return ServiceResult<PaymentDto>.Failure("Cannot change the amount of a cancelled payment.");
-        if (request.NewAmount <= 0)
-            return ServiceResult<PaymentDto>.Failure("Amount must be greater than zero.");
+        if (request.NewAmount < 0)
+            return ServiceResult<PaymentDto>.Failure("Amount cannot be negative.");
         if (string.IsNullOrWhiteSpace(request.Reason))
             return ServiceResult<PaymentDto>.Failure("A reason for the amount change is required.");
+
+        // Same zero-cost exception as CollectPaymentAsync — allow correcting a payment down
+        // to zero only when it's tied to a reservation that genuinely has no charge.
+        if (request.NewAmount == 0)
+        {
+            var isZeroCostReservation = false;
+            if (payment.ReservationId.HasValue)
+            {
+                var linkedReservation = await _uow.Reservations.GetByIdAsync(payment.ReservationId.Value);
+                isZeroCostReservation = linkedReservation is not null &&
+                                        linkedReservation.TotalAmount.HasValue &&
+                                        linkedReservation.TotalAmount.Value == 0m;
+            }
+
+            if (!isZeroCostReservation)
+                return ServiceResult<PaymentDto>.Failure("Amount must be greater than zero.");
+        }
 
         var oldAmount = payment.Amount;
 
@@ -341,7 +377,9 @@ public class PaymentService : IPaymentService
             var paid = paidByReservation.TryGetValue(r.Id, out var amt) ? amt : 0m;
             var writtenOff = writtenOffByReservation.TryGetValue(r.Id, out var wo) ? wo : 0m;
             var total = r.TotalAmount ?? 0m;
-            if (paid + writtenOff >= total && total > 0) continue; // fully covered, skip
+            // Also skips genuinely free reservations (total == 0, e.g. a nutrition
+            // "Follow-up" visit) — there's nothing owed, so it shouldn't show as unpaid.
+            if (paid + writtenOff >= total) continue; // fully covered, skip
 
             var patient = await _uow.Patients.GetByIdAsync(r.PatientId);
             var doctor = await _uow.Users.GetByIdAsync(r.DoctorId);
@@ -369,8 +407,7 @@ public class PaymentService : IPaymentService
         foreach (var p in activePayments.Where(p => !p.ReservationId.HasValue ||
                     (paidByReservation.TryGetValue(p.ReservationId!.Value, out var paidAmt) &&
                      paidAmt + (writtenOffByReservation.TryGetValue(p.ReservationId!.Value, out var woAmt) ? woAmt : 0m) >=
-                        (reservations.FirstOrDefault(r => r.Id == p.ReservationId)?.TotalAmount ?? 0m) &&
-                     (reservations.FirstOrDefault(r => r.Id == p.ReservationId)?.TotalAmount ?? 0m) > 0)))
+                        (reservations.FirstOrDefault(r => r.Id == p.ReservationId)?.TotalAmount ?? 0m))))
         {
             fullyPaidPayments.Add(await BuildPaymentDtoAsync(p));
         }
@@ -492,9 +529,11 @@ public class PaymentService : IPaymentService
         {
             var totalCoverage = coverageByReservation.TryGetValue(reservation.Id, out var covered) ? covered : 0m;
 
+            // NOTE: no longer requires TotalAmount > 0 — a reservation whose treatment type
+            // genuinely costs nothing (e.g. a nutrition "Follow-up" visit) has TotalAmount
+            // explicitly set to 0, and 0 >= 0 correctly means "fully covered", i.e. paid.
             var shouldBePaid = reservation.TotalAmount.HasValue &&
-                                totalCoverage >= reservation.TotalAmount.Value &&
-                                reservation.TotalAmount.Value > 0;
+                                totalCoverage >= reservation.TotalAmount.Value;
 
             if (reservation.IsPaid != shouldBePaid)
             {
@@ -618,9 +657,11 @@ public class PaymentService : IPaymentService
                  (p.Status == PaymentStatusEnum.Active || p.Status == PaymentStatusEnum.Cancelled));
         var totalCoverage = payments.Sum(p => p.Amount);
 
+        // NOTE: no longer requires TotalAmount > 0 — see the matching comment in
+        // RecalculateAllReservationsPaidStatusAsync for why a $0 reservation (e.g. a
+        // nutrition "Follow-up" visit) is correctly considered fully paid.
         reservation.IsPaid = reservation.TotalAmount.HasValue &&
-                              totalCoverage >= reservation.TotalAmount.Value &&
-                              reservation.TotalAmount.Value > 0;
+                              totalCoverage >= reservation.TotalAmount.Value;
         reservation.UpdatedAt = DateTime.UtcNow;
         _uow.Reservations.Update(reservation);
     }

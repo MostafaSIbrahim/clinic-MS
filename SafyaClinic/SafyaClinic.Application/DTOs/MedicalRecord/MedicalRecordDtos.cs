@@ -102,25 +102,19 @@ public class PrescriptionDto
 public class PrescriptionPrintDto
 {
     public int Id { get; init; }
-    public string MedicationName { get; init; } = string.Empty;
-    public string? Dosage { get; init; }
-    public string? Frequency { get; init; }
-    public string? Duration { get; init; }
-    public string? RouteOfAdministration { get; init; }
-    public string? Instructions { get; init; }
-    public DateTime CreatedAt { get; init; }
+    public DateTime PrescriptionDate { get; init; }
+    public string? Notes { get; init; }
 
-    public int RecordId { get; init; }
-    public string? Diagnosis { get; init; }
-
-    public int PatientId { get; init; }
     public string PatientName { get; init; } = string.Empty;
     public int? PatientAge { get; init; }
     public string? PatientGender { get; init; }
+    public string? Diagnosis { get; init; }
 
     public string DoctorName { get; init; } = string.Empty;
     public string? DoctorSpecialization { get; init; }
     public string? DoctorLicenseNumber { get; init; }
+
+    public IEnumerable<PrescriptionItemDto> Items { get; init; } = Enumerable.Empty<PrescriptionItemDto>();
 }
 
 public class AddPrescriptionRequest
@@ -132,7 +126,72 @@ public class AddPrescriptionRequest
     public string? RouteOfAdministration { get; init; }
     public string? Instructions { get; init; }
 }
+public class PrescriptionItemRequest
+{
+    public string MedicationName { get; init; } = string.Empty;
+    public string? Dosage { get; init; }
+    public string? Frequency { get; init; }
+    public string? Duration { get; init; }
+    public string? RouteOfAdministration { get; init; }
+    public string? Instructions { get; init; }
+}
 
+public class AddPrescriptionItemRequest
+{
+    public int PrescriptionId { get; init; }
+    public string MedicationName { get; init; } = string.Empty;
+    public string? Dosage { get; init; }
+    public string? Frequency { get; init; }
+    public string? Duration { get; init; }
+    public string? RouteOfAdministration { get; init; }
+    public string? Instructions { get; init; }
+}
+// ── Prescription Document (list view) ─────────────────────────
+public class PrescriptionListDto
+{
+    public int Id { get; init; }
+    public DateTime PrescriptionDate { get; init; }
+    public string? Notes { get; init; }
+    public bool IsPrinted { get; init; }
+    public int DrugCount { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public string CreatedByName { get; init; } = string.Empty;
+}
+
+// ── Prescription Detail (full view with all drugs) ────────────
+public class PrescriptionDetailDto
+{
+    public int Id { get; init; }
+    public int RecordId { get; init; }
+    public DateTime PrescriptionDate { get; init; }
+    public string? Notes { get; init; }
+    public bool IsPrinted { get; init; }
+    public DateTime CreatedAt { get; init; }
+
+    public string PatientName { get; init; } = string.Empty;
+    public int? PatientAge { get; init; }
+    public string? PatientGender { get; init; }
+    public string? Diagnosis { get; init; }
+
+    public string DoctorName { get; init; } = string.Empty;
+    public string? DoctorSpecialization { get; init; }
+    public string? DoctorLicenseNumber { get; init; }
+
+    public IEnumerable<PrescriptionItemDto> Items { get; init; } = Enumerable.Empty<PrescriptionItemDto>();
+    public IEnumerable<AttachmentDto> Attachments { get; init; } = Enumerable.Empty<AttachmentDto>();
+}
+
+// ── Prescription Item (single drug line) ──────────────────────
+public class PrescriptionItemDto
+{
+    public int Id { get; init; }
+    public string MedicationName { get; init; } = string.Empty;
+    public string? Dosage { get; init; }
+    public string? Frequency { get; init; }
+    public string? Duration { get; init; }
+    public string? RouteOfAdministration { get; init; }
+    public string? Instructions { get; init; }
+}
 // ── Attachments ───────────────────────────────────────────────
 
 public class AttachmentDto
@@ -145,3 +204,12 @@ public class AttachmentDto
     public DateTime UploadedAt { get; init; }
     public string UploadedBy { get; init; } = string.Empty;
 }
+// ── Requests ──────────────────────────────────────────────────
+public class CreatePrescriptionRequest
+{
+    public int RecordId { get; init; }
+    public string? Notes { get; init; }
+    public List<PrescriptionItemRequest> Items { get; init; } = new();
+}
+
+

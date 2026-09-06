@@ -1,0 +1,157 @@
+﻿@model PrescriptionDetailDto
+@{
+    ViewData["Title"] = $"Prescription #{Model.Id}";
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h4 class="mb-0">Prescription #@Model.Id</h4>
+        <small class="text-muted">@Model.PatientName • @Model.PrescriptionDate.ToString("dd MMM yyyy")</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="PrintPrescription" asp-route-prescriptionId="@Model.Id" target="_blank" class="btn btn-sm btn-primary">
+            <i class="bi bi-printer me-1"></i>Print
+        </a>
+        <a asp-action="Details" asp-route-id="@Model.RecordId" class="btn btn-sm btn-outline-secondary">Back to Record</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-capsule-pill me-2"></i>Drugs</div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Medication</th>
+                            <th>Dosage</th>
+                            <th>Frequency</th>
+                            <th>Duration</th>
+                            <th>Route</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td><strong>@item.MedicationName</strong></td>
+                                <td>@item.Dosage</td>
+                                <td>@item.Frequency</td>
+                                <td>@item.Duration</td>
+                                <td>@item.RouteOfAdministration</td>
+                            </tr>
+                            @if (!string.IsNullOrWhiteSpace(item.Instructions))
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-muted small ps-4">↳ @item.Instructions</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Notes))
+                {
+                    <div class="alert alert-light border mt-3">
+                        <strong>Notes:</strong> @Model.Notes
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Add more drugs to existing prescription -->
+        <div class="card">
+            <div class="card-header"><i class="bi bi-plus-lg me-2"></i>Add Another Drug</div>
+            <div class="card-body">
+                <form asp-action="AddPrescriptionItem" method="post" class="row g-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="prescriptionId" value="@Model.Id" />
+                    <div class="col-md-3 position-relative">
+                        <input type="text" name="MedicationName" class="form-control form-control-sm" placeholder="Medication" required />
+                    </div>
+                    <div class="col-md-2"><input type="text" name="Dosage" class="form-control form-control-sm" placeholder="Dosage" /></div>
+                    <div class="col-md-2"><input type="text" name="Frequency" class="form-control form-control-sm" placeholder="Frequency" /></div>
+                    <div class="col-md-2"><input type="text" name="Duration" class="form-control form-control-sm" placeholder="Duration" /></div>
+                    <div class="col-md-2"><input type="text" name="RouteOfAdministration" class="form-control form-control-sm" placeholder="Route" /></div>
+                    <div class="col-md-1"><button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus"></i></button></div>
+                    <div class="col-12"><input type="text" name="Instructions" class="form-control form-control-sm" placeholder="Instructions" /></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-person me-2"></i>Patient</div>
+            <div class="card-body">
+                <p class="mb-1"><strong>@Model.PatientName</strong></p>
+                <p class="text-muted small mb-0">@(Model.PatientAge?.ToString() ?? "—") yrs / @(Model.PatientGender ?? "—")</p>
+                <p class="text-muted small mb-0">Diagnosis: @(Model.Diagnosis ?? "—")</p>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-clipboard2-pulse me-2"></i>Doctor</div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Dr. @Model.DoctorName</strong></p>
+                @if (!string.IsNullOrWhiteSpace(Model.DoctorSpecialization))
+                {
+                    <p class="text-muted small mb-0">@Model.DoctorSpecialization</p>
+                }
+            </div>
+        </div>
+
+        <!-- Attachments -->
+        <div class="card">
+            <div class="card-header"><i class="bi bi-paperclip me-2"></i>Attachments</div>
+            <div class="card-body">
+                @if (!Model.Attachments.Any())
+                {
+                    <p class="text-muted small mb-2">No attachments.</p>
+                }
+                else
+                {
+                    @foreach (var a in Model.Attachments)
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <a href="javascript:void(0)" onclick="showAttachmentPreview('@Url.Action("ViewAttachment", new { attachmentId = a.Id })', '@Url.Action("DownloadAttachment", new { attachmentId = a.Id })', '@a.FileName')">
+                                @a.FileName
+                            </a>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <form asp-action="DeleteAttachment" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="attachmentId" value="@a.Id" />
+                                    <input type="hidden" name="recordId" value="@Model.RecordId" />
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0">×</button>
+                                </form>
+                            }
+                        </div>
+                    }
+                }
+                <form asp-action="UploadPrescriptionAttachment" method="post" enctype="multipart/form-data" class="d-flex gap-2 mt-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="prescriptionId" value="@Model.Id" />
+                    <input type="hidden" name="recordId" value="@Model.RecordId" />
+                    <input type="file" name="file" class="form-control form-control-sm" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-upload"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/medicine-autocomplete.js"></script>
+    <script>
+        document.querySelectorAll('.med-input').forEach(input => {
+            attachMedicineAutocomplete(input, {
+                minLength: 2,
+                onSelect: function(med) {
+                    input.value = med.tradeName;
+                }
+            });
+        });
+    </script>
+}

@@ -5,6 +5,7 @@ using SafyaClinic.Domain.Entities.Analysis;
 using SafyaClinic.Domain.Entities.MedicalRecord;
 using SafyaClinic.Domain.Entities.Nutrition;
 using SafyaClinic.Domain.Entities.Settings;
+using SafyaClinic.Domain.Enums;
 using SafyaClinic.Infrastructure.Data;
 
 namespace SafyaClinic.Web.Controllers
@@ -127,9 +128,32 @@ namespace SafyaClinic.Web.Controllers
                 ModelState.AddModelError(nameof(model.TypeName), "Treatment name is required.");
             }
 
+            if (model.DefaultCost is null)
+            {
+                ModelState.AddModelError(nameof(model.DefaultCost), "Default cost is required.");
+            }
+            else if (model.DefaultCost.Value < 0)
+            {
+                ModelState.AddModelError(nameof(model.DefaultCost), "Default cost cannot be negative.");
+            }
+            else if (model.DefaultCost.Value == 0m && !IsFreeNutritionFollowUp(model))
+            {
+                // A zero cost is only meaningful for the Nutrition "Follow-up" visit, which is
+                // already covered by the patient's enrollment package and carries no extra
+                // charge. Every other treatment type must have a real, positive price —
+                // otherwise reservations/payments built on it would silently be "free".
+                ModelState.AddModelError(nameof(model.DefaultCost),
+                    "Default cost must be greater than zero. Only the Nutrition \"Follow-up\" visit may be free.");
+            }
+
             if (!ModelState.IsValid)
             {
-                TempData["Error"] = "Please fill in all required fields properly (Treatment Name and Default Cost are required).";
+                TempData["Error"] = string.Join(" ", ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage))
+                    is { Length: > 0 } errors
+                        ? errors
+                        : "Please fill in all required fields properly (Treatment Name and Default Cost are required).";
                 return RedirectToAction(nameof(TreatmentTypes));
             }
 
@@ -172,6 +196,16 @@ namespace SafyaClinic.Web.Controllers
 
             return RedirectToAction(nameof(TreatmentTypes));
         }
+
+        /// <summary>
+        /// True only for the one deliberate exception to "every treatment type has a real
+        /// price": the Nutrition "Follow-up" visit, which is already paid for as part of the
+        /// patient's enrollment package. Match is case-insensitive/trimmed so "Follow-up",
+        /// "follow-up ", etc. are all treated the same.
+        /// </summary>
+        private static bool IsFreeNutritionFollowUp(TreatmentType model) =>
+            model.Category == TreatmentCategory.Nutritional &&
+            string.Equals(model.TypeName?.Trim(), "Follow-up", StringComparison.OrdinalIgnoreCase);
 
         [HttpPost]
         [ValidateAntiForgeryToken]

@@ -41,6 +41,7 @@ namespace SafyaClinic.Infrastructure.Data
 
         // Prescription
         public DbSet<Prescription> Prescriptions { get; set; }
+        public DbSet<PrescriptionItem> PrescriptionItems { get; set; }
         public DbSet<PrescriptionAttachment> PrescriptionAttachments { get; set; }
 
         // Analysis

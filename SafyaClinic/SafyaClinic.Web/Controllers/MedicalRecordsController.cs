@@ -41,6 +41,8 @@ namespace SafyaClinic.Web.Controllers
             var analyses = await _analysisService.GetAnalysesByRecordAsync(id);
             ViewBag.Analyses = analyses.IsSuccess ? analyses.Data : Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>();
 
+            var prescriptions = await _recordService.GetPrescriptionsByRecordAsync(id);
+            ViewBag.Prescriptions = prescriptions.IsSuccess ? prescriptions.Data : Enumerable.Empty<PrescriptionListDto>();
             return View(result.Data);
         }
 
@@ -129,11 +131,42 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddPrescription(int recordId, AddPrescriptionRequest model)
+        public async Task<IActionResult> CreatePrescription(CreatePrescriptionRequest model)
         {
-            var result = await _recordService.AddPrescriptionAsync(recordId, model, CurrentUserId);
+            if (!ModelState.IsValid) return View(model);
+            var result = await _recordService.CreatePrescriptionAsync(model, CurrentUserId);
+            if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+            return RedirectWithSuccess("Prescription created.", nameof(Details), routeValues: new { id = model.RecordId });
+        }
+        [HttpGet]
+        public async Task<IActionResult> CreatePrescription(int recordId)
+        {
+            return View(new CreatePrescriptionRequest { RecordId = recordId });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PrescriptionDetails(int id)
+        {
+            var result = await _recordService.GetPrescriptionByIdAsync(id);
+            if (!result.IsSuccess) return NotFound();
+            return View(result.Data);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddPrescriptionItem(int prescriptionId, AddPrescriptionItemRequest model)
+        {
+            var result = await _recordService.AddPrescriptionItemAsync(prescriptionId, model);
             if (!result.IsSuccess) Error(result.Errors.First());
-            return RedirectToAction(nameof(Details), new { id = recordId });
+            return RedirectToAction(nameof(PrescriptionDetails), new { id = prescriptionId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemovePrescriptionItem(int itemId, int prescriptionId)
+        {
+            await _recordService.RemovePrescriptionItemAsync(itemId);
+            return RedirectToAction(nameof(PrescriptionDetails), new { id = prescriptionId });
         }
 
         [HttpPost]
@@ -143,7 +176,6 @@ namespace SafyaClinic.Web.Controllers
             await _recordService.MarkPrescriptionPrintedAsync(prescriptionId);
             return RedirectToAction(nameof(Details), new { id = recordId });
         }
-
         // ── Attachments ───────────────────────────────────────────
 
         [HttpPost]
