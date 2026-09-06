@@ -33,6 +33,7 @@ public interface IUnitOfWork : IDisposable
 
     // ── Prescription ──────────────────────────────────────────
     IRepository<Prescription> Prescriptions { get; }
+    IRepository<PrescriptionItem> PrescriptionItems { get; }
     IRepository<PrescriptionAttachment> PrescriptionAttachments { get; }
 
     // ── Analysis ──────────────────────────────────────────────

@@ -1,0 +1,89 @@
+﻿@model CreatePrescriptionRequest
+@{
+    ViewData["Title"] = "New Prescription";
+}
+
+<h4>New Prescription</h4>
+<p class="text-muted">Record #@Model.RecordId</p>
+
+<form asp-action="CreatePrescription" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="RecordId" />
+
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label">Prescription Notes</label>
+        <textarea asp-for="Notes" class="form-control" rows="2" placeholder="General notes for this prescription..."></textarea>
+    </div>
+
+    <h5>Drugs</h5>
+    <div id="drugs-container"></div>
+
+    <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="addDrugRow()">
+        <i class="bi bi-plus-lg"></i> Add Drug
+    </button>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save Prescription</button>
+        <a asp-action="Details" asp-route-id="@Model.RecordId" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/medicine-autocomplete.js"></script>
+    <script>
+        let drugIndex = 0;
+
+        function addDrugRow() {
+            const container = document.getElementById('drugs-container');
+            const html = `
+                        <div class="card mb-2 drug-row" data-index="${drugIndex}">
+                            <div class="card-body py-2">
+                                <div class="row g-2">
+                                    <div class="col-md-3 position-relative">
+                                        <input type="text" name="Items[${drugIndex}].MedicationName" class="form-control form-control-sm med-input" placeholder="Medication" required />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" name="Items[${drugIndex}].Dosage" class="form-control form-control-sm dosage-input" placeholder="Dosage" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" name="Items[${drugIndex}].Frequency" class="form-control form-control-sm" placeholder="Frequency" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" name="Items[${drugIndex}].Duration" class="form-control form-control-sm" placeholder="Duration" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="text" name="Items[${drugIndex}].RouteOfAdministration" class="form-control form-control-sm" placeholder="Route" />
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('.drug-row').remove()">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-1">
+                                    <input type="text" name="Items[${drugIndex}].Instructions" class="form-control form-control-sm" placeholder="Special instructions" />
+                                </div>
+                            </div>
+                        </div>
+                    `;
+            container.insertAdjacentHTML('beforeend', html);
+
+            const newRow = container.lastElementChild;
+            const medInput = newRow.querySelector('.med-input');
+            const dosageInput = newRow.querySelector('.dosage-input');
+            attachMedicineAutocomplete(medInput, {
+                minLength: 2,
+                onSelect: function (med) {
+                    medInput.value = med.tradeName;
+                    if (dosageInput && !dosageInput.value) {
+                        dosageInput.value = med.strength || '';
+                            }
+                        }
+                    });
+
+                    drugIndex++;
+                }
+
+                addDrugRow();
+    </script>
+}

@@ -13,6 +13,7 @@ namespace SafyaClinic.Domain.Entities.Prescription
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
         public int UploadedBy { get; set; }
 
+
         // Navigation properties
         public virtual Prescription Prescription { get; set; } = null!;
     }

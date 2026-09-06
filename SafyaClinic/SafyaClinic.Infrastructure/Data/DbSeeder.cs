@@ -119,7 +119,10 @@ public static class DbSeeder
             new TreatmentType { Category = TreatmentCategory.InternalMedicine, TypeName = "Emergency Treatment", Description = "Urgent care treatment", DefaultCost = 1200.00m, DurationMinutes = 60 },
             new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Nutrition Consultation", Description = "Initial nutritional assessment", DefaultCost = 600.00m, DurationMinutes = 45 },
             new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Diet Plan Review", Description = "Weekly diet plan review", DefaultCost = 150.00m, DurationMinutes = 20 },
-            new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Body Composition Analysis", Description = "InBody/body composition test", DefaultCost = 250.00m, DurationMinutes = 15 }
+            new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Body Composition Analysis", Description = "InBody/body composition test", DefaultCost = 250.00m, DurationMinutes = 15 },
+            // Nutrition follow-up visits are already covered by the patient's enrollment
+            // package price, so the reservation itself carries no additional charge.
+            new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Follow-up", Description = "Nutrition follow-up visit — included in the enrollment package, no extra charge", DefaultCost = 0.00m, DurationMinutes = 15 }
         };
 
         await context.TreatmentTypes.AddRangeAsync(types);

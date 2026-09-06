@@ -50,7 +50,10 @@ public class ReservationService : IReservationService
             DurationMinutes = request.DurationMinutes,
             Reason = request.Reason?.Trim(),
             Notes = request.Notes?.Trim(),
-            IsPaid = false,
+            // A reservation whose treatment type genuinely costs nothing (e.g. a nutrition
+            // "Follow-up" visit already covered by the enrollment package) has nothing left
+            // to collect, so it's considered paid the moment it's created.
+            IsPaid = totalAmount.HasValue && totalAmount.Value == 0m,
             TotalAmount = totalAmount,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = createdBy
@@ -154,6 +157,14 @@ public class ReservationService : IReservationService
         r.Reason = request.Reason?.Trim();
         r.Notes = request.Notes?.Trim();
         r.TotalAmount = totalAmount;
+
+        // If the (possibly new) treatment type carries no charge, there's nothing left to
+        // collect — mark it paid automatically, same as at creation time. Otherwise leave
+        // the existing IsPaid flag alone; it's kept in sync with real payments separately
+        // via PaymentService.RecalculateReservationPaidStatusAsync.
+        if (totalAmount.HasValue && totalAmount.Value == 0m)
+            r.IsPaid = true;
+
         r.UpdatedAt = DateTime.UtcNow;
 
         _uow.Reservations.Update(r);

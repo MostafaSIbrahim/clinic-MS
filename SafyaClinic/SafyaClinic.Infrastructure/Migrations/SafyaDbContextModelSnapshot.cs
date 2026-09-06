@@ -830,7 +830,7 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal?>("Weight")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(10,2)");
 
                     b.HasKey("Id");
 
@@ -1077,38 +1077,25 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
 
-                    b.Property<string>("Dosage")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Duration")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Frequency")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Instructions")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
                     b.Property<bool>("IsPrinted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("MedicationName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("PatientRecordId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PrescriptionDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("RecordId")
                         .HasColumnType("int");
 
-                    b.Property<string>("RouteOfAdministration")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("PatientRecordId");
 
                     b.HasIndex("RecordId");
 
@@ -1124,8 +1111,7 @@ namespace SafyaClinic.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ContentType")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -1154,6 +1140,49 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasIndex("PrescriptionId");
 
                     b.ToTable("PrescriptionAttachments", (string)null);
+                });
+
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Prescription.PrescriptionItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Dosage")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Duration")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Frequency")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("MedicationName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("PrescriptionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RouteOfAdministration")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PrescriptionId");
+
+                    b.ToTable("PrescriptionItems", (string)null);
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Reservation.Reservation", b =>
@@ -1207,12 +1236,12 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<int>("StatusId")
                         .HasColumnType("int");
 
-                    b.Property<int>("TreatmentTypeId")
-                        .HasColumnType("int");
-
                     b.Property<decimal?>("TotalAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("TreatmentTypeId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1820,8 +1849,12 @@ namespace SafyaClinic.Infrastructure.Migrations
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Prescription.Prescription", b =>
                 {
-                    b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", "Record")
+                    b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", null)
                         .WithMany("Prescriptions")
+                        .HasForeignKey("PatientRecordId");
+
+                    b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", "Record")
+                        .WithMany()
                         .HasForeignKey("RecordId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1833,6 +1866,17 @@ namespace SafyaClinic.Infrastructure.Migrations
                 {
                     b.HasOne("SafyaClinic.Domain.Entities.Prescription.Prescription", "Prescription")
                         .WithMany("Attachments")
+                        .HasForeignKey("PrescriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Prescription");
+                });
+
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Prescription.PrescriptionItem", b =>
+                {
+                    b.HasOne("SafyaClinic.Domain.Entities.Prescription.Prescription", "Prescription")
+                        .WithMany("Items")
                         .HasForeignKey("PrescriptionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2004,6 +2048,8 @@ namespace SafyaClinic.Infrastructure.Migrations
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Prescription.Prescription", b =>
                 {
                     b.Navigation("Attachments");
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Reservation.Reservation", b =>

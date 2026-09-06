@@ -165,6 +165,11 @@
                             <span class="input-group-text bg-light text-muted">EGP</span>
                             <input type="number" step="0.01" min="0" class="form-control" id="treatmentTypeDefaultCost" name="DefaultCost" required placeholder="0.00" />
                         </div>
+                        <small class="text-muted">
+                            Must be greater than zero — the only exception is a Nutritional treatment named
+                            exactly <strong>"Follow-up"</strong>, which is free (already covered by the
+                            patient's enrollment package).
+                        </small>
                     </div>
 
                     <div class="mb-3">
