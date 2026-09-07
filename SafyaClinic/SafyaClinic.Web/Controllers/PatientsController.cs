@@ -41,19 +41,21 @@ public class PatientsController : BaseController
     // ── Create ────────────────────────────────────────────────
 
     [HttpGet]
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(bool popup = false)
     {
         ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
+        ViewBag.Popup = popup;
         return View(new CreatePatientRequest());
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(CreatePatientRequest model)
+    public async Task<IActionResult> Create(CreatePatientRequest model, bool popup = false)
     {
         if (!ModelState.IsValid)
         {
             ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
+            ViewBag.Popup = popup;
             return View(model);
         }
         var result = await _patientService.CreatePatientAsync(model, CurrentUserId);
@@ -61,7 +63,18 @@ public class PatientsController : BaseController
         {
             ApplyErrors(result);
             ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
+            ViewBag.Popup = popup;
             return View(model);
+        }
+        if (popup)
+        {
+            var patient = result.Data!;
+            var primaryPhone = patient.Phones.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber
+                ?? patient.Phones.FirstOrDefault()?.PhoneNumber;
+            ViewBag.NewPatientId = patient.Id;
+            ViewBag.NewPatientName = patient.FullName;
+            ViewBag.NewPatientPhone = primaryPhone ?? "";
+            return View("CreateSuccessPopup");
         }
         return RedirectWithSuccess("Patient registered.", nameof(Details), routeValues: new { id = result.Data!.Id });
     }

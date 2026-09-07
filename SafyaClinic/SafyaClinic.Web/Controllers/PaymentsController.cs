@@ -59,6 +59,30 @@ public class PaymentsController : BaseController
         return RedirectToAction(nameof(Report));
     }
 
+    // ── One-time maintenance: backfill $0 payments for pre-existing free reservations ──
+    // Reservations for a zero-cost treatment type (e.g. nutrition "Follow-up") created
+    // before ReservationService started auto-recording a $0 payment were left with no
+    // Payment row at all, so they never appeared in payment reports/dashboards. Safe to
+    // run more than once — it only creates a payment for reservations that don't already
+    // have one.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> BackfillZeroCostPayments()
+    {
+        var result = await _paymentService.BackfillZeroCostPaymentsAsync(CurrentUserId);
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            Error("Failed to backfill zero-cost payments.");
+        }
+        else
+        {
+            Success(result.Message);
+        }
+        return RedirectToAction(nameof(Report));
+    }
+
     // ── Dashboard ───────────────────────────────────────────────
 
     [HttpGet]

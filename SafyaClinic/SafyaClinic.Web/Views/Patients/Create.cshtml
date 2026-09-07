@@ -3,12 +3,13 @@
 @{
     ViewData["Title"] = "Register Patient";
     var sources = ViewBag.Sources as IEnumerable<PatientSourceDto> ?? Enumerable.Empty<PatientSourceDto>();
+    bool isPopup = ViewBag.Popup == true;
 }
-
 <div class="card">
     <div class="card-header"><i class="bi bi-person-plus me-2"></i>Register New Patient</div>
     <div class="card-body">
         <form asp-action="Create" method="post">
+            <input type="hidden" name="popup" value="@(isPopup ? "true" : "false")" />
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
 
@@ -118,7 +119,14 @@
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Register Patient
                 </button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                @if (!isPopup)
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-outline-secondary" onclick="window.close()">Cancel</button>
+                }
             </div>
         </form>
     </div>

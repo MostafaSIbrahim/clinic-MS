@@ -29,6 +29,27 @@
             </form>
         </div> *@
 
+    <div class="card-body pb-0">
+        <!--
+            One-time maintenance action: creates a $0 payment record for every existing
+            "free" reservation (e.g. nutrition "Follow-up") that doesn't already have one,
+            so it becomes visible in payment reports/dashboards. Safe to click more than
+            once — it only creates a payment for reservations that don't already have one.
+        -->
+        @* <div class="alert alert-info d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Maintenance:</strong> record $0 payments for pre-existing free reservations
+                (one-time fix so nutrition "Follow-up" visits created before this feature show up here).
+            </div>
+            <form asp-action="BackfillZeroCostPayments" method="post"
+                  onsubmit="return confirm('This will create a $0 payment record for every free reservation that doesn\'t already have one. Continue?');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-info text-nowrap">
+                    <i class="bi bi-arrow-repeat me-1"></i>Backfill Now
+                </button>
+            </form>
+        </div> *@
+
         <form method="get" class="row g-2 mb-3">
             <div class="col-md-3">
                 <input type="date" name="from" value="@(((DateTime)ViewBag.From).ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
