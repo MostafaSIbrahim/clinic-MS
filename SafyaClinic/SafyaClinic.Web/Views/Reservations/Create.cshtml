@@ -17,10 +17,17 @@
             <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
 
             <div class="row g-3">
+                <!-- Patient Search (hidden ID + visible search) -->
                 <div class="col-md-6">
-                    <label asp-for="PatientId" class="form-label">Patient ID *</label>
-                    <input asp-for="PatientId" type="number" class="form-control" required />
-                    <small class="text-muted">Enter the patient ID (found on their profile page).</small>
+                    <label class="form-label">Patient *</label>
+                    <input type="hidden" asp-for="PatientId" id="patientIdHidden" />
+                    <div class="position-relative">
+                        <input type="text" id="patientSearchInput" class="form-control"
+                               placeholder="Search by name or mobile number..."
+                               value="@(ViewBag.SelectedPatientName ?? "")"
+                               autocomplete="off" required />
+                    </div>
+                    <small class="text-muted">Type at least 2 characters to search.</small>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="DoctorId" class="form-label">Doctor *</label>
@@ -88,6 +95,12 @@
                 </div>
 
                 <div class="col-12">
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="openNewPatientWindow()">
+                        <i class="bi bi-person-plus me-1"></i>Register New Patient
+                    </button>
+                </div>
+
+                <div class="col-12">
                     <label asp-for="Reason" class="form-label">Reason</label>
                     <input asp-for="Reason" class="form-control" />
                 </div>
@@ -106,14 +119,138 @@
 </div>
 
 @section Scripts {
-    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
     <script>
-        document.getElementById('treatmentTypeSelect').addEventListener('change', function () {
+        // ── Patient Autocomplete ─────────────────────────────────
+        (function() {
+            const searchInput = document.getElementById('patientSearchInput');
+            const hiddenInput = document.getElementById('patientIdHidden');
+
+            function debounce(fn, delayMs) {
+                let timer = null;
+                return function(...args) {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => fn.apply(this, args), delayMs);
+                };
+            }
+
+            function escapeHtml(s) {
+                if (s == null) return '';
+                return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            const list = document.createElement('div');
+            list.className = 'list-group shadow-sm';
+            list.style.cssText = 'position:absolute;z-index:1050;top:100%;left:0;right:0;max-height:260px;overflow-y:auto;display:none;';
+            searchInput.parentElement.style.position = 'relative';
+            searchInput.parentElement.appendChild(list);
+            searchInput.setAttribute('autocomplete', 'off');
+
+            let activeItems = [];
+            let activeIndex = -1;
+
+            function hide() {
+                list.style.display = 'none';
+                list.innerHTML = '';
+                activeItems = [];
+                activeIndex = -1;
+            }
+
+            function highlight(index) {
+                Array.from(list.children).forEach((c, i) => c.classList.toggle('active', i === index));
+                activeIndex = index;
+            }
+
+            function render(items) {
+                activeItems = items;
+                if (!items.length) { hide(); return; }
+                list.innerHTML = '';
+                items.forEach((patient, i) => {
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'list-group-item list-group-item-action py-2';
+                    item.innerHTML =
+                        '<div class="d-flex justify-content-between">' +
+                        '<span><strong>' + escapeHtml(patient.fullName) + '</strong>' +
+                        ' <span class="text-muted small">#' + patient.id + '</span></span>' +
+                        '<span class="text-muted small">' + escapeHtml(patient.primaryPhone) + '</span>' +
+                        '</div>' +
+                        '<div class="small text-muted">' +
+                        (patient.nationalId ? 'ID: ' + escapeHtml(patient.nationalId) + ' • ' : '') +
+                        (patient.age ? patient.age + ' yrs' : '') +
+                        '</div>';
+                    item.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        searchInput.value = patient.fullName + (patient.primaryPhone ? ' — ' + patient.primaryPhone : '');
+                        hiddenInput.value = patient.id;
+                        hide();
+                    });
+                    list.appendChild(item);
+                });
+                list.style.display = 'block';
+                activeIndex = -1;
+            }
+
+            const doSearch = debounce(function(term) {
+                fetch('/api/patients/search?query=' + encodeURIComponent(term), { credentials: 'same-origin' })
+                    .then(r => r.ok ? r.json() : [])
+                    .then(render)
+                    .catch(() => hide());
+            }, 300);
+
+            searchInput.addEventListener('input', function() {
+                const term = searchInput.value.trim();
+                if (term.length < 2) { hide(); return; }
+                doSearch(term);
+            });
+
+            searchInput.addEventListener('keydown', function(e) {
+                if (list.style.display === 'none') return;
+                if (e.key === 'ArrowDown') { e.preventDefault(); highlight(Math.min(activeIndex + 1, activeItems.length - 1)); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(Math.max(activeIndex - 1, 0)); }
+                else if (e.key === 'Enter') {
+                    if (activeIndex >= 0 && activeItems[activeIndex]) {
+                        e.preventDefault();
+                        const p = activeItems[activeIndex];
+                        searchInput.value = p.fullName + (p.primaryPhone ? ' — ' + p.primaryPhone : '');
+                        hiddenInput.value = p.id;
+                        hide();
+                    }
+                } else if (e.key === 'Escape') {
+                    hide();
+                }
+            });
+
+            searchInput.addEventListener('blur', function() {
+                setTimeout(hide, 150);
+            });
+        })();
+
+        // ── Treatment Type Auto-fill ─────────────────────────────
+        document.getElementById('treatmentTypeSelect').addEventListener('change', function() {
             var opt = this.options[this.selectedIndex];
             var cost = opt.getAttribute('data-cost');
             var duration = opt.getAttribute('data-duration');
             if (cost) document.getElementById('totalAmountInput').value = cost;
             if (duration) document.getElementById('durationInput').value = duration;
+        });
+
+        // ── New Patient Popup ────────────────────────────────────
+        function openNewPatientWindow() {
+            var w = window.open('/Patients/Create?popup=true', 'NewPatient', 'width=900,height=700,scrollbars=yes,resizable=yes');
+            if (!w) {
+                alert('Please allow popups to register a new patient.');
+            }
+        }
+
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'NEW_PATIENT_CREATED') {
+                var patient = e.data.patient;
+                document.getElementById('patientIdHidden').value = patient.id;
+                document.getElementById('patientSearchInput').value = patient.fullName + (patient.primaryPhone ? ' — ' + patient.primaryPhone : '');
+            }
         });
     </script>
 }

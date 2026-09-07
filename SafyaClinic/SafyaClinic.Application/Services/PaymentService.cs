@@ -345,10 +345,17 @@ public class PaymentService : IPaymentService
         var reservations = (await _uow.Reservations.GetAllAsync()).ToList();
         var allPayments = (await _uow.Payments.GetAllAsync()).ToList();
 
-        if (from.HasValue)
-            allPayments = allPayments.Where(p => p.PaymentDate >= from.Value).ToList();
-        if (to.HasValue)
-            allPayments = allPayments.Where(p => p.PaymentDate <= to.Value).ToList();
+        // BUGFIX: use the SAME inclusive-of-the-whole-"to"-day semantics as
+        // GetDashboardLineDetailsAsync (NormalizeDateRange). Previously this compared
+        // PaymentDate <= to.Value directly — since 'to' comes in as a plain date
+        // (midnight), that silently excluded every payment made later in the day on the
+        // end date, so the dashboard's own totals/counts for a given range could
+        // disagree with what a drill-down over the exact same range returned.
+        var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
+        if (fromInclusive.HasValue)
+            allPayments = allPayments.Where(p => p.PaymentDate >= fromInclusive.Value).ToList();
+        if (toInclusive.HasValue)
+            allPayments = allPayments.Where(p => p.PaymentDate <= toInclusive.Value).ToList();
 
         var activePayments = allPayments.Where(p => p.Status == PaymentStatusEnum.Active).ToList();
         var cancelledPayments = allPayments.Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
@@ -553,6 +560,56 @@ public class PaymentService : IPaymentService
                 : $"Corrected the paid status of {changedCount} reservation(s).");
     }
 
+    public async Task<ServiceResult<int>> BackfillZeroCostPaymentsAsync(int currentUserId)
+    {
+        var freeReservations = (await _uow.Reservations.GetAllAsync())
+            .Where(r => r.TotalAmount.HasValue && r.TotalAmount.Value == 0m)
+            .ToList();
+
+        if (freeReservations.Count == 0)
+            return ServiceResult<int>.Success(0, "No zero-cost reservations found.");
+
+        var reservationIdsWithPayment = (await _uow.Payments.FindAsync(
+                p => p.ReservationId != null && p.Status == PaymentStatusEnum.Active))
+            .Select(p => p.ReservationId!.Value)
+            .ToHashSet();
+
+        var createdCount = 0;
+        foreach (var reservation in freeReservations)
+        {
+            if (reservationIdsWithPayment.Contains(reservation.Id))
+                continue;
+
+            var patient = await _uow.Patients.GetByIdAsync(reservation.PatientId);
+            await _uow.Payments.AddAsync(new Payment
+            {
+                PatientId = reservation.PatientId,
+                ReservationId = reservation.Id,
+                ClinicId = reservation.ClinicId,
+                PatientSourceId = patient?.PatientSourceId,
+                CollectedBy = currentUserId > 0 ? currentUserId : 1,
+                Amount = 0m,
+                OriginalAmount = 0m,
+                PaymentMethod = PaymentMethodEnum.Cash,
+                PaymentDate = reservation.CreatedAt,
+                Notes = "Backfilled: this treatment type carries no charge.",
+                CreatedAt = DateTime.UtcNow,
+                SourceDeductionAmount = 0m,
+                ClinicNetAmount = 0m,
+                Status = PaymentStatusEnum.Active
+            });
+            createdCount++;
+        }
+
+        if (createdCount > 0)
+            await _uow.SaveChangesAsync();
+
+        return ServiceResult<int>.Success(createdCount,
+            createdCount == 0
+                ? "All zero-cost reservations already have a payment record."
+                : $"Created {createdCount} zero-amount payment record(s) for pre-existing free reservations.");
+    }
+
     // ── Dashboard drill-down ────────────────────────────────────────
 
     /// <summary>
@@ -574,9 +631,10 @@ public class PaymentService : IPaymentService
             return ServiceResult<PaymentLineDetailReportDto>.Failure("'From' date must be before or equal to 'To' date.");
 
         // Make 'to' inclusive of the whole day, matching how the date filters are typed
-        // in as plain dates on the dashboard's From/To inputs.
-        var fromInclusive = from?.Date;
-        var toInclusive = to?.Date.AddDays(1).AddTicks(-1);
+        // in as plain dates on the dashboard's From/To inputs. Shared with
+        // GetPaymentDashboardAsync via NormalizeDateRange so the two can never disagree
+        // about which payments fall inside a given range.
+        var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
 
         var payments = (await _uow.Payments.FindAsync(p =>
                 p.Status == PaymentStatusEnum.Active &&
@@ -586,16 +644,37 @@ public class PaymentService : IPaymentService
             .OrderByDescending(p => p.PaymentDate)
             .ToList();
 
+        // Label resolution deliberately distinguishes "no id at all" (null — genuinely no
+        // clinic/source attached) from "an id that doesn't resolve to a live record"
+        // (orphaned/deleted). This MUST match GetPaymentDashboardAsync's own fallback
+        // naming ("No Clinic"/"No Source" vs "Unknown Clinic"/"Unknown Source") exactly —
+        // otherwise a row you can click on the dashboard opens a drill-down titled
+        // differently than the row you clicked, which looks like it's showing you the
+        // wrong group entirely even though the underlying data matches correctly.
         string groupLabel;
         if (groupType == "clinic")
         {
-            var clinic = groupId.HasValue ? await _uow.Clinics.GetByIdAsync(groupId.Value) : null;
-            groupLabel = clinic?.Name ?? "No Clinic";
+            if (!groupId.HasValue)
+            {
+                groupLabel = "No Clinic";
+            }
+            else
+            {
+                var clinic = await _uow.Clinics.GetByIdAsync(groupId.Value);
+                groupLabel = clinic?.Name ?? "Unknown Clinic";
+            }
         }
         else
         {
-            var source = groupId.HasValue ? await _uow.PatientSources.GetByIdAsync(groupId.Value) : null;
-            groupLabel = source?.Name ?? "No Source";
+            if (!groupId.HasValue)
+            {
+                groupLabel = "No Source";
+            }
+            else
+            {
+                var source = await _uow.PatientSources.GetByIdAsync(groupId.Value);
+                groupLabel = source?.Name ?? "Unknown Source";
+            }
         }
 
         // Diagnostics: if the date-filtered result is empty, find out whether this group
@@ -644,6 +723,18 @@ public class PaymentService : IPaymentService
     }
 
     // ── Helpers ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Normalizes a (from, to) date-only range the same way everywhere it's used
+    /// (GetPaymentDashboardAsync's own filter AND GetDashboardLineDetailsAsync's
+    /// drill-down/diagnostics), so a summary count and a drill-down over "the same"
+    /// range can never silently disagree: 'from' starts at midnight, 'to' is extended
+    /// to the last tick of that day so it actually includes the whole day, not just
+    /// payments made exactly at midnight.
+    /// </summary>
+    private static (DateTime? fromInclusive, DateTime? toInclusive) NormalizeDateRange(
+        DateTime? from, DateTime? to) =>
+        (from?.Date, to?.Date.AddDays(1).AddTicks(-1));
 
     private async Task RecalculateReservationPaidStatusAsync(int reservationId)
     {

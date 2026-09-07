@@ -3,6 +3,7 @@ using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Entities.MedicalRecord;
+using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Entities.Reservation;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
@@ -61,6 +62,14 @@ public class ReservationService : IReservationService
 
         await _uow.Reservations.AddAsync(reservation);
         await _uow.SaveChangesAsync();
+
+        // A reservation with no charge (e.g. a nutrition "Follow-up" visit) still gets a
+        // real $0 Payment record, exactly like any other visit — just for a zero amount.
+        // Without this, "free" visits would leave no trace in payment reports/dashboards
+        // at all, since those are built from Payment rows, not reservations.
+        if (reservation.IsPaid && totalAmount.HasValue && totalAmount.Value == 0m)
+            await RecordZeroCostPaymentAsync(reservation, createdBy);
+
         return ServiceResult<ReservationDto>.Success(await BuildReservationDtoAsync(reservation));
     }
 
@@ -169,7 +178,50 @@ public class ReservationService : IReservationService
 
         _uow.Reservations.Update(r);
         await _uow.SaveChangesAsync();
+
+        // Same rationale as CreateReservationAsync: if this update is what made the
+        // reservation free (e.g. the treatment type was changed to the nutrition
+        // "Follow-up" type), record the $0 payment now so it shows up in reports too.
+        // Guarded so switching back and forth doesn't create duplicate $0 rows.
+        if (totalAmount.HasValue && totalAmount.Value == 0m)
+        {
+            var alreadyRecorded = (await _uow.Payments.FindAsync(
+                p => p.ReservationId == r.Id && p.Status == PaymentStatusEnum.Active)).Any();
+            if (!alreadyRecorded)
+                await RecordZeroCostPaymentAsync(r, r.CreatedBy);
+        }
+
         return ServiceResult.Success("Reservation updated.");
+    }
+
+    /// <summary>
+    /// Records a $0 Payment for a reservation whose treatment type carries no charge, so
+    /// the visit is genuinely visible everywhere payments are reported (dashboards,
+    /// patient payment summary, etc.) instead of silently existing only as a reservation.
+    /// </summary>
+    private async Task RecordZeroCostPaymentAsync(Reservation reservation, int collectedBy)
+    {
+        var patient = await _uow.Patients.GetByIdAsync(reservation.PatientId);
+
+        var zeroPayment = new Payment
+        {
+            PatientId = reservation.PatientId,
+            ReservationId = reservation.Id,
+            ClinicId = reservation.ClinicId,
+            PatientSourceId = patient?.PatientSourceId,
+            CollectedBy = collectedBy > 0 ? collectedBy : 1,
+            Amount = 0m,
+            OriginalAmount = 0m,
+            PaymentMethod = PaymentMethodEnum.Cash,
+            PaymentDate = DateTime.UtcNow,
+            Notes = "Auto-recorded: this treatment type carries no charge.",
+            CreatedAt = DateTime.UtcNow,
+            SourceDeductionAmount = 0m,
+            ClinicNetAmount = 0m,
+            Status = PaymentStatusEnum.Active
+        };
+        await _uow.Payments.AddAsync(zeroPayment);
+        await _uow.SaveChangesAsync();
     }
 
     public async Task<ServiceResult<ReservationDto>> UpdateStatusAsync(int reservationId, int statusId)

@@ -38,6 +38,19 @@ public interface IPaymentService
     /// <returns>The number of reservations whose IsPaid value actually changed.</returns>
     Task<ServiceResult<int>> RecalculateAllReservationsPaidStatusAsync();
 
+    // ── One-time data backfill ───────────────────────────────────
+    /// <summary>
+    /// Creates a $0 Payment record for every existing reservation whose TotalAmount is
+    /// exactly 0 (e.g. a nutrition "Follow-up" visit) that doesn't already have one.
+    /// Needed because such reservations were previously marked IsPaid = true without any
+    /// Payment row at all, so they were invisible in payment reports/dashboards, which
+    /// are built from Payment rows rather than reservations. New free reservations get
+    /// their $0 payment recorded automatically going forward — this only backfills
+    /// reservations created before that fix. Safe to run more than once.
+    /// </summary>
+    /// <returns>The number of $0 payments created.</returns>
+    Task<ServiceResult<int>> BackfillZeroCostPaymentsAsync(int currentUserId);
+
     // ── Dashboard drill-down ──────────────────────────────────────
     /// <summary>
     /// Builds the per-payment detail report for a single line clicked on the
