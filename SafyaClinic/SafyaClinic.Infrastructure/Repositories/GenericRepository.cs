@@ -55,4 +55,8 @@ public class GenericRepository<T> : IRepository<T> where T : BaseEntity
 
     public virtual void DeleteRange(IEnumerable<T> entities)
         => _dbSet.RemoveRange(entities);
+
+    public IQueryable<T> Query(bool asNoTracking = true) => asNoTracking 
+        ? _dbSet.AsNoTracking() 
+        : _dbSet;
 }
