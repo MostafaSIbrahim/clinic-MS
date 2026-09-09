@@ -6,6 +6,7 @@ using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Options;
 
 namespace SafyaClinic.Application.Services;
 
@@ -103,7 +104,7 @@ public class PatientService : IPatientService
         PaginationRequest request)
     {
         var all = _uow.Patients.Query();
-        var search = request.Search?.Trim().ToLower();
+        var search = request.Search?.Trim();
         if (!string.IsNullOrWhiteSpace(search))
         {
             all = all.Where(p =>
@@ -122,10 +123,11 @@ public class PatientService : IPatientService
                     p.Id,
                     p.FirstName,
                     p.LastName,
-                    PatienSourceName = p.PatientSource.Name != null ? p.PatientSource.Name : null,
+                    PatientSourceName = p.PatientSource != null ? p.PatientSource.Name : null,
                     p.NationalId,
                     PrimaryPhone = p.Phones
                         .Where(ph => ph.IsPrimary)
+                        .OrderBy(ph => ph.Id) // Ensure consistent ordering
                         .Select(ph => ph.PhoneNumber)
                         .FirstOrDefault(),
                     p.DateOfBirth,
@@ -137,7 +139,7 @@ public class PatientService : IPatientService
             {
                 Id = p.Id,
                 FullName = $"{p.FirstName} {p.LastName}",
-                PatientSourceName = p.PatienSourceName,
+                PatientSourceName = p.PatientSourceName,
                 NationalId = p.NationalId,
                 PrimaryPhone = p.PrimaryPhone,
                 Age = p.DateOfBirth.HasValue
@@ -147,7 +149,13 @@ public class PatientService : IPatientService
                 CreatedAt = p.CreatedAt
             }).ToList();
         if (!patients.Any())
-            return ServiceResult<PagedResult<PatientSummaryDto>>.Failure("No patients found.");
+            return ServiceResult<PagedResult<PatientSummaryDto>>.Success(new PagedResult<PatientSummaryDto>
+            {
+                Items = new List<PatientSummaryDto>(),
+                TotalCount = 0,
+                Page = request.Page,
+                PageSize = request.PageSize
+            });
 
 
         return ServiceResult<PagedResult<PatientSummaryDto>>.Success(new PagedResult<PatientSummaryDto>
