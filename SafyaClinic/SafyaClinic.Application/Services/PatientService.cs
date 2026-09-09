@@ -4,6 +4,8 @@ using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Headers;
 
 namespace SafyaClinic.Application.Services;
 
@@ -100,64 +102,62 @@ public class PatientService : IPatientService
     public async Task<ServiceResult<PagedResult<PatientSummaryDto>>> SearchPatientsAsync(
         PaginationRequest request)
     {
-        var all = await _uow.Patients.GetAllAsync();
-
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        var all = _uow.Patients.Query();
+        var search = request.Search?.Trim().ToLower();
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            var q = request.Search.ToLower();
-            // Find patients whose phone numbers match the search
-            var matchingPhones = await _uow.PatientPhones.FindAsync(
-                ph => ph.PhoneNumber.Contains(q));
-            var patientIdsWithMatchingPhone = matchingPhones
-                .Select(ph => ph.PatientId)
-                .ToHashSet();
-            // In-memory filter — replace with IQueryable extension for production
             all = all.Where(p =>
-            p.FirstName.ToLower().Contains(q) ||
-            p.LastName.ToLower().Contains(q) ||
-            (p.NationalId != null && p.NationalId.Contains(q)) ||
-            patientIdsWithMatchingPhone.Contains(p.Id));
+               p.FirstName.Contains(search) ||
+               p.LastName.Contains(search) ||
+               (p.NationalId != null && p.NationalId.Contains(search)) ||
+               p.Phones.Any(ph => ph.PhoneNumber.Contains(search)));
         }
-
-        var totalCount = all.Count();
-        var paged = all
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .ToList();
-
-        var summaries = new List<PatientSummaryDto>();
-        foreach (var p in paged)
-        {
-            var primaryPhone = (await _uow.PatientPhones.FindAsync(
-                ph => ph.PatientId == p.Id && ph.IsPrimary))
-                .FirstOrDefault()?.PhoneNumber;
-
-            var source = p.PatientSourceId.HasValue
-                ? await _uow.PatientSources.GetByIdAsync(p.PatientSourceId.Value)
-                : null;
-
-            summaries.Add(new PatientSummaryDto
+        var totalCount = await all.CountAsync();
+        var patients = await all
+                .OrderBy(p => p.Id) // Default ordering; can be enhanced based on request.SortBy
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FirstName,
+                    p.LastName,
+                    PatienSourceName = p.PatientSource.Name != null ? p.PatientSource.Name : null,
+                    p.NationalId,
+                    PrimaryPhone = p.Phones
+                        .Where(ph => ph.IsPrimary)
+                        .Select(ph => ph.PhoneNumber)
+                        .FirstOrDefault(),
+                    p.DateOfBirth,
+                    p.Gender,
+                    p.CreatedAt,
+                })
+                .ToListAsync();
+        var summeries = patients.Select(p => new PatientSummaryDto
             {
                 Id = p.Id,
                 FullName = $"{p.FirstName} {p.LastName}",
-                PatientSourceName = source?.Name,
+                PatientSourceName = p.PatienSourceName,
                 NationalId = p.NationalId,
-                PrimaryPhone = primaryPhone,
+                PrimaryPhone = p.PrimaryPhone,
                 Age = p.DateOfBirth.HasValue
                     ? (int)((DateTime.Today - p.DateOfBirth.Value).TotalDays / 365.25)
                     : null,
-                Gender = p.Gender?.ToString(),
+                Gender = p.Gender != null ? p.Gender.ToString() : null,
                 CreatedAt = p.CreatedAt
-            });
-        }
+            }).ToList();
+        if (!patients.Any())
+            return ServiceResult<PagedResult<PatientSummaryDto>>.Failure("No patients found.");
+
 
         return ServiceResult<PagedResult<PatientSummaryDto>>.Success(new PagedResult<PatientSummaryDto>
-        {
-            Items = summaries,
-            TotalCount = totalCount,
-            Page = request.Page,
-            PageSize = request.PageSize
-        });
+            {
+                Items = summeries,
+                TotalCount = totalCount,
+                Page = request.Page,
+                PageSize = request.PageSize
+            });
+        
     }
 
     public async Task<ServiceResult> UpdateBasicInfoAsync(
