@@ -388,32 +388,7 @@ public class ReservationService : IReservationService
             })
             .FirstOrDefaultAsync();
     }
-  
-    private async Task<ReservationSummaryDto> BuildReservationSummaryAsync(Reservation r)
-    {
-        var patient = await _uow.Patients.GetByIdAsync(r.PatientId);
-        var doctor = await _uow.Users.GetByIdAsync(r.DoctorId);
-        var clinic = await _uow.Clinics.GetByIdAsync(r.ClinicId);
-        var status = await _uow.ReservationStatuses.GetByIdAsync(r.StatusId);
-        var treatmentType = await _uow.TreatmentTypes.GetByIdAsync(r.TreatmentTypeId);
-
-        return new ReservationSummaryDto
-        {
-            Id = r.Id,
-            PatientId = r.PatientId,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-            DoctorName = doctor?.FullName ?? "",
-            ClinicName = clinic?.Name ?? "",
-            TreatmentTypeName = treatmentType?.TypeName ?? "",
-            ReservationDate = r.ReservationDate,
-            ReservationTime = r.ReservationTime,
-            StatusName = status?.StatusName ?? "",
-            StatusColor = status?.ColorCode ?? "#6c757d",
-            Category = r.Category.ToString(),
-            IsPaid = r.IsPaid
-        };
-    }
-    //--------------------------------------//
+      //--------------------------------------//
     public async Task<ServiceResult<List<ReservationDto>>> GetPatientReservationHistoryAsync(int patientId)
     {
         try
