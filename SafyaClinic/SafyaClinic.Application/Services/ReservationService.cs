@@ -88,58 +88,7 @@ public class ReservationService : IReservationService
             return ServiceResult<ReservationDto>.Failure("Reservation not found.");
 
         return ServiceResult<ReservationDto>.Success(reservation);
-        /*var reservation = await _uow.Reservations.Query()
-            .Where(r => r.Id == reservationId)
-            .Select(r => new ReservationDto
-            {
-                Id = r.Id,
-                PatientId = r.PatientId,
-                PatientName = r.Patient != null
-                    ? $"{r.Patient.FirstName} {r.Patient.LastName}"
-                    : "",
-
-                DoctorId = r.DoctorId,
-                DoctorName = r.Doctor != null
-                    ? r.Doctor.FullName
-                    : "",
-
-                ClinicId = r.ClinicId,
-                ClinicName = r.Clinic != null
-                    ? r.Clinic.Name
-                    : "",
-
-                TreatmentTypeId = r.TreatmentTypeId,
-                TreatmentTypeName = r.TreatmentType != null
-                    ? r.TreatmentType.TypeName
-                    : "",
-
-                StatusName = r.Status != null
-                    ? r.Status.StatusName
-                    : "",
-
-                StatusColor = r.Status != null
-                    ? r.Status.ColorCode
-                    : "#6c757d",
-
-                Category = r.Category.ToString(),
-
-                ReservationDate = r.ReservationDate,
-                ReservationTime = r.ReservationTime,
-                DurationMinutes = r.DurationMinutes,
-
-                Reason = r.Reason,
-                Notes = r.Notes,
-
-                IsPaid = r.IsPaid,
-                TotalAmount = r.TotalAmount,
-                CreatedAt = r.CreatedAt
-            })
-            .FirstOrDefaultAsync();
-
-        if (reservation is null)
-            return ServiceResult<ReservationDto>.Failure("Reservation not found.");
-
-        return ServiceResult<ReservationDto>.Success(reservation);*/
+       
     }
 
     public async Task<ServiceResult<PagedResult<ReservationSummaryDto>>> GetReservationsAsync(
