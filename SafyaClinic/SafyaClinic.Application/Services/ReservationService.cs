@@ -1,4 +1,5 @@
-﻿using SafyaClinic.Application.DTOs.Common;
+﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Interfaces.Services;
@@ -70,58 +71,138 @@ public class ReservationService : IReservationService
         if (reservation.IsPaid && totalAmount.HasValue && totalAmount.Value == 0m)
             await RecordZeroCostPaymentAsync(reservation, createdBy);
 
-        return ServiceResult<ReservationDto>.Success(await BuildReservationDtoAsync(reservation));
+        var dto = await GetReservationDtoByIdAsync(reservation.Id);
+
+        if (dto is null)
+            return ServiceResult<ReservationDto>.Failure(
+                "Reservation created but could not be loaded.");
+
+        return ServiceResult<ReservationDto>.Success(dto);
     }
 
     public async Task<ServiceResult<ReservationDto>> GetReservationByIdAsync(int reservationId)
     {
-        var reservation = await _uow.Reservations.GetByIdAsync(reservationId);
+        var reservation = await GetReservationDtoByIdAsync(reservationId);
+
         if (reservation is null)
             return ServiceResult<ReservationDto>.Failure("Reservation not found.");
 
-        return ServiceResult<ReservationDto>.Success(await BuildReservationDtoAsync(reservation));
+        return ServiceResult<ReservationDto>.Success(reservation);
+        /*var reservation = await _uow.Reservations.Query()
+            .Where(r => r.Id == reservationId)
+            .Select(r => new ReservationDto
+            {
+                Id = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient != null
+                    ? $"{r.Patient.FirstName} {r.Patient.LastName}"
+                    : "",
+
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor != null
+                    ? r.Doctor.FullName
+                    : "",
+
+                ClinicId = r.ClinicId,
+                ClinicName = r.Clinic != null
+                    ? r.Clinic.Name
+                    : "",
+
+                TreatmentTypeId = r.TreatmentTypeId,
+                TreatmentTypeName = r.TreatmentType != null
+                    ? r.TreatmentType.TypeName
+                    : "",
+
+                StatusName = r.Status != null
+                    ? r.Status.StatusName
+                    : "",
+
+                StatusColor = r.Status != null
+                    ? r.Status.ColorCode
+                    : "#6c757d",
+
+                Category = r.Category.ToString(),
+
+                ReservationDate = r.ReservationDate,
+                ReservationTime = r.ReservationTime,
+                DurationMinutes = r.DurationMinutes,
+
+                Reason = r.Reason,
+                Notes = r.Notes,
+
+                IsPaid = r.IsPaid,
+                TotalAmount = r.TotalAmount,
+                CreatedAt = r.CreatedAt
+            })
+            .FirstOrDefaultAsync();
+
+        if (reservation is null)
+            return ServiceResult<ReservationDto>.Failure("Reservation not found.");
+
+        return ServiceResult<ReservationDto>.Success(reservation);*/
     }
 
     public async Task<ServiceResult<PagedResult<ReservationSummaryDto>>> GetReservationsAsync(
         ReservationFilterRequest filter, PaginationRequest pagination)
     {
-        var all = await _uow.Reservations.GetAllAsync();
+        var query = _uow.Reservations.Query();
 
         if (filter.DoctorId.HasValue)
-            all = all.Where(r => r.DoctorId == filter.DoctorId.Value);
+            query = query.Where(r => r.DoctorId == filter.DoctorId.Value);
+
         if (filter.PatientId.HasValue)
-            all = all.Where(r => r.PatientId == filter.PatientId.Value);
+            query = query.Where(r => r.PatientId == filter.PatientId.Value);
+
         if (filter.ClinicId.HasValue)
-            all = all.Where(r => r.ClinicId == filter.ClinicId.Value);
+            query = query.Where(r => r.ClinicId == filter.ClinicId.Value);
+
         if (filter.StatusId.HasValue)
-            all = all.Where(r => r.StatusId == filter.StatusId.Value);
-        if (!string.IsNullOrWhiteSpace(filter.Category) &&
-            Enum.TryParse<TreatmentCategory>(filter.Category, out var cat))
-            all = all.Where(r => r.Category == cat);
+            query = query.Where(r => r.StatusId == filter.StatusId.Value);
+
+        if (!string.IsNullOrEmpty(filter.Category) &&
+            Enum.TryParse<TreatmentCategory>(filter.Category, out var category))
+        { 
+            query = query.Where(r => r.Category == category); 
+        }
+
         if (filter.DateFrom.HasValue)
-            all = all.Where(r => r.ReservationDate >= filter.DateFrom.Value);
+            query = query.Where(r => r.ReservationDate >= filter.DateFrom.Value);
+
         if (filter.DateTo.HasValue)
-            all = all.Where(r => r.ReservationDate <= filter.DateTo.Value);
+            query = query.Where(r => r.ReservationDate <= filter.DateTo.Value);
+
         if (filter.IsPaid.HasValue)
-            all = all.Where(r => r.IsPaid == filter.IsPaid.Value);
+            query = query.Where(r => r.IsPaid == filter.IsPaid.Value);
 
-        all = all.OrderByDescending(r => r.ReservationDate).ThenBy(r => r.ReservationTime);
-
-        var totalCount = all.Count();
-        var paged = all.Skip((pagination.Page - 1) * pagination.PageSize)
-                       .Take(pagination.PageSize).ToList();
-
-        var summaries = new List<ReservationSummaryDto>();
-        foreach (var r in paged)
-            summaries.Add(await BuildReservationSummaryAsync(r));
-
+        var totalCount = await query.CountAsync();
+        var summaries = await query
+            .OrderByDescending(r=> r.ReservationDate)
+            .ThenBy(r=> r.ReservationTime)
+            .ThenBy(r => r.Id)
+            .Skip((pagination.Page-1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .Select(r => new ReservationSummaryDto
+            {
+                Id = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient != null ? $"{r.Patient.FirstName} {r.Patient.LastName}" : "",
+                DoctorName = r.Doctor != null ? r.Doctor.FullName : "",
+                ClinicName = r.Clinic != null ? r.Clinic.Name : "",
+                TreatmentTypeName = r.TreatmentType != null ? r.TreatmentType.TypeName : "",
+                ReservationDate = r.ReservationDate,
+                ReservationTime = r.ReservationTime,
+                StatusName = r.Status != null ? r.Status.StatusName : "Unknown",
+                StatusColor = r.Status != null ? r.Status.ColorCode : "#6c757d",
+                Category = r.Category.ToString(),
+                IsPaid = r.IsPaid
+            }).ToListAsync();
         return ServiceResult<PagedResult<ReservationSummaryDto>>.Success(
             new PagedResult<ReservationSummaryDto>
             {
                 Items = summaries,
                 TotalCount = totalCount,
                 Page = pagination.Page,
-                PageSize = pagination.PageSize
+                PageSize = pagination.PageSize,
             });
     }
 
@@ -129,15 +210,29 @@ public class ReservationService : IReservationService
         int? doctorId = null)
     {
         var today = DateTime.Today;
-        var all = await _uow.Reservations.FindAsync(r => r.ReservationDate == today);
+        var query = _uow.Reservations.Query()
+            .Where(r => r.ReservationDate == today);
         if (doctorId.HasValue)
-            all = all.Where(r => r.DoctorId == doctorId.Value);
+            query = query.Where(r => r.DoctorId == doctorId.Value);
 
-        all = all.OrderBy(r => r.ReservationTime);
-
-        var summaries = new List<ReservationSummaryDto>();
-        foreach (var r in all)
-            summaries.Add(await BuildReservationSummaryAsync(r));
+        var summaries = await query
+            .OrderBy(r => r.ReservationTime)
+            .ThenBy(r => r.Id)
+            .Select(r => new ReservationSummaryDto
+            {
+                Id = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient != null ? $"{r.Patient.FirstName} {r.Patient.LastName}" : "",
+                DoctorName = r.Doctor != null ? r.Doctor.FullName : "",
+                ClinicName = r.Clinic != null ? r.Clinic.Name : "",
+                TreatmentTypeName = r.TreatmentType != null ? r.TreatmentType.TypeName : "",
+                ReservationDate = r.ReservationDate,
+                ReservationTime = r.ReservationTime,
+                StatusName = r.Status != null ? r.Status.StatusName : "Unknown",
+                StatusColor = r.Status != null ? r.Status.ColorCode : "#6c757d",
+                Category = r.Category.ToString(),
+                IsPaid = r.IsPaid
+            }).ToListAsync();
 
         return ServiceResult<IEnumerable<ReservationSummaryDto>>.Success(summaries);
     }
@@ -237,7 +332,11 @@ public class ReservationService : IReservationService
         r.UpdatedAt = DateTime.UtcNow;
         _uow.Reservations.Update(r);
         await _uow.SaveChangesAsync();
-        return ServiceResult<ReservationDto>.Success(await BuildReservationDtoAsync(r));
+        var reservation = await GetReservationDtoByIdAsync(r.Id);
+        if (reservation is null)
+            return ServiceResult<ReservationDto>.Failure("Failed to retrieve updated reservation.");
+
+        return ServiceResult<ReservationDto>.Success(reservation);
     }
 
     public async Task<ServiceResult> MarkAsPaidAsync(int reservationId)
@@ -288,40 +387,59 @@ public class ReservationService : IReservationService
     }
 
     // ── Mappers ──────────────────────────────────────────────
-
-    private async Task<ReservationDto> BuildReservationDtoAsync(Reservation r)
+    private async Task<ReservationDto?> GetReservationDtoByIdAsync(int reservationId)
     {
-        var patient = await _uow.Patients.GetByIdAsync(r.PatientId);
-        var doctor = await _uow.Users.GetByIdAsync(r.DoctorId);
-        var clinic = await _uow.Clinics.GetByIdAsync(r.ClinicId);
-        var status = await _uow.ReservationStatuses.GetByIdAsync(r.StatusId);
-        var treatmentType = await _uow.TreatmentTypes.GetByIdAsync(r.TreatmentTypeId);
+        return await _uow.Reservations.Query()
+            .Where(r => r.Id == reservationId)
+            .Select(r => new ReservationDto
+            {
+                Id = r.Id,
 
-        return new ReservationDto
-        {
-            Id = r.Id,
-            PatientId = r.PatientId,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-            DoctorId = r.DoctorId,
-            DoctorName = doctor?.FullName ?? "",
-            ClinicId = r.ClinicId,
-            ClinicName = clinic?.Name ?? "",
-            TreatmentTypeId = r.TreatmentTypeId,
-            TreatmentTypeName = treatmentType?.TypeName ?? "",
-            StatusName = status?.StatusName ?? "",
-            StatusColor = status?.ColorCode ?? "#6c757d",
-            Category = r.Category.ToString(),
-            ReservationDate = r.ReservationDate,
-            ReservationTime = r.ReservationTime,
-            DurationMinutes = r.DurationMinutes,
-            Reason = r.Reason,
-            Notes = r.Notes,
-            IsPaid = r.IsPaid,
-            TotalAmount = r.TotalAmount,
-            CreatedAt = r.CreatedAt
-        };
+                PatientId = r.PatientId,
+                PatientName = r.Patient != null
+                    ? $"{r.Patient.FirstName} {r.Patient.LastName}"
+                    : "",
+
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor != null
+                    ? r.Doctor.FullName
+                    : "",
+
+                ClinicId = r.ClinicId,
+                ClinicName = r.Clinic != null
+                    ? r.Clinic.Name
+                    : "",
+
+                TreatmentTypeId = r.TreatmentTypeId,
+                TreatmentTypeName = r.TreatmentType != null
+                    ? r.TreatmentType.TypeName
+                    : "",
+
+                StatusName = r.Status != null
+                    ? r.Status.StatusName
+                    : "",
+
+                StatusColor = r.Status != null
+                    ? r.Status.ColorCode
+                    : "#6c757d",
+
+                Category = r.Category.ToString(),
+
+                ReservationDate = r.ReservationDate,
+                ReservationTime = r.ReservationTime,
+                DurationMinutes = r.DurationMinutes,
+
+                Reason = r.Reason,
+                Notes = r.Notes,
+
+                IsPaid = r.IsPaid,
+                TotalAmount = r.TotalAmount,
+
+                CreatedAt = r.CreatedAt
+            })
+            .FirstOrDefaultAsync();
     }
-
+  
     private async Task<ReservationSummaryDto> BuildReservationSummaryAsync(Reservation r)
     {
         var patient = await _uow.Patients.GetByIdAsync(r.PatientId);
@@ -351,22 +469,57 @@ public class ReservationService : IReservationService
     {
         try
         {
-            var all = await _uow.Reservations.GetAllAsync();
-            var patientReservations = (all ?? Enumerable.Empty<Reservation>())
-                .Where(r => r != null && r.PatientId == patientId)
+            var reservations = await _uow.Reservations.Query()
+                .Where(r => r.PatientId == patientId)
                 .OrderByDescending(r => r.ReservationDate)
                 .ThenByDescending(r => r.ReservationTime)
-                .ToList();
-                        
-            var dtos = new List<ReservationDto>();
-            foreach (var r in patientReservations)
-                dtos.Add(await BuildReservationDtoAsync(r));
+                .ThenByDescending(r => r.Id)
+                .Select(r => new ReservationDto
+                {
+                    Id = r.Id,
+                    PatientId = r.PatientId,
+                    DoctorId = r.DoctorId,
+                    ClinicId = r.ClinicId,
+                    StatusId = r.StatusId,
+                    TreatmentTypeId = r.TreatmentTypeId,
 
-            return ServiceResult<List<ReservationDto>>.Success(dtos);
+                    ReservationDate = r.ReservationDate,
+                    ReservationTime = r.ReservationTime,
+                    Category = r.Category.ToString(),
+                    IsPaid = r.IsPaid,
+
+                    PatientName = r.Patient != null
+                        ? $"{r.Patient.FirstName} {r.Patient.LastName}"
+                        : "",
+
+                    DoctorName = r.Doctor != null
+                        ? r.Doctor.FullName
+                        : "",
+
+                    ClinicName = r.Clinic != null
+                        ? r.Clinic.Name
+                        : "",
+
+                    StatusName = r.Status != null
+                        ? r.Status.StatusName
+                        : "Unknown",
+
+                    StatusColor = r.Status != null
+                        ? r.Status.ColorCode
+                        : "#6c757d",
+
+                    TreatmentTypeName = r.TreatmentType != null
+                        ? r.TreatmentType.TypeName
+                        : ""
+                })
+                .ToListAsync();
+
+            return ServiceResult<List<ReservationDto>>.Success(reservations);
         }
         catch (Exception ex)
         {
-            return ServiceResult<List<ReservationDto>>.Failure($"حدث خطأ أثناء جلب سجل الحجوزات: {ex.Message}");
+            return ServiceResult<List<ReservationDto>>.Failure(
+                $"حدث خطأ أثناء جلب سجل الحجوزات: {ex.Message}");
         }
     }
 }
