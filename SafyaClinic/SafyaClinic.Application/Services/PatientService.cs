@@ -5,8 +5,7 @@ using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
-using System.Net.Http.Headers;
-using Microsoft.Extensions.Options;
+
 
 namespace SafyaClinic.Application.Services;
 
@@ -85,19 +84,19 @@ public class PatientService : IPatientService
         }
 
         await _uow.SaveChangesAsync();
-
+        var createdPatient = await GetPatientDtoByIdAsync(patient.Id);
         return ServiceResult<PatientDto>.Success(
-            await BuildPatientDtoAsync(patient),
+            createdPatient,
             "Patient created successfully.");
     }
 
     public async Task<ServiceResult<PatientDto>> GetPatientByIdAsync(int patientId)
     {
-        var patient = await _uow.Patients.GetByIdAsync(patientId);
+        var patient = await GetPatientDtoByIdAsync(patientId);
         if (patient is null)
             return ServiceResult<PatientDto>.Failure("Patient not found.");
 
-        return ServiceResult<PatientDto>.Success(await BuildPatientDtoAsync(patient));
+        return ServiceResult<PatientDto>.Success(patient);
     }
 
     public async Task<ServiceResult<PagedResult<PatientSummaryDto>>> SearchPatientsAsync(
@@ -135,19 +134,19 @@ public class PatientService : IPatientService
                     p.CreatedAt,
                 })
                 .ToListAsync();
-        var summeries = patients.Select(p => new PatientSummaryDto
-            {
-                Id = p.Id,
-                FullName = $"{p.FirstName} {p.LastName}",
-                PatientSourceName = p.PatientSourceName,
-                NationalId = p.NationalId,
-                PrimaryPhone = p.PrimaryPhone,
-                Age = p.DateOfBirth.HasValue
+        var summaries = patients.Select(p => new PatientSummaryDto
+        {
+            Id = p.Id,
+            FullName = $"{p.FirstName} {p.LastName}",
+            PatientSourceName = p.PatientSourceName,
+            NationalId = p.NationalId,
+            PrimaryPhone = p.PrimaryPhone,
+            Age = p.DateOfBirth.HasValue
                     ? (int)((DateTime.Today - p.DateOfBirth.Value).TotalDays / 365.25)
                     : null,
-                Gender = p.Gender != null ? p.Gender.ToString() : null,
-                CreatedAt = p.CreatedAt
-            }).ToList();
+            Gender = p.Gender != null ? p.Gender.ToString() : null,
+            CreatedAt = p.CreatedAt
+        }).ToList();
         if (!patients.Any())
             return ServiceResult<PagedResult<PatientSummaryDto>>.Success(new PagedResult<PatientSummaryDto>
             {
@@ -159,13 +158,13 @@ public class PatientService : IPatientService
 
 
         return ServiceResult<PagedResult<PatientSummaryDto>>.Success(new PagedResult<PatientSummaryDto>
-            {
-                Items = summeries,
-                TotalCount = totalCount,
-                Page = request.Page,
-                PageSize = request.PageSize
-            });
-        
+        {
+            Items = summaries,
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        });
+
     }
 
     public async Task<ServiceResult> UpdateBasicInfoAsync(
@@ -282,50 +281,45 @@ public class PatientService : IPatientService
     }
 
     // ── Mapper ────────────────────────────────────────────────
-
-    private async Task<PatientDto> BuildPatientDtoAsync(Patient patient)
+    private async Task<PatientDto> GetPatientDtoByIdAsync(int patientId)
     {
-        
-        var phones = await _uow.PatientPhones.FindAsync(ph => ph.PatientId == patient.Id);
-        var addresses = await _uow.PatientAddresses.FindAsync(a => a.PatientId == patient.Id);
-        var source = patient.PatientSourceId.HasValue
-            ? await _uow.PatientSources.GetByIdAsync(patient.PatientSourceId.Value)
-            : null;
+        var patient = await _uow.Patients.Query()
+             .Where(p => p.Id == patientId)
+             .Select(p => new PatientDto
+             {
+                 Id = p.Id,
+                 PatientSourceId = p.PatientSourceId,
+                 PatientSourceName = p.PatientSource != null ? p.PatientSource.Name : null,
+                 FirstName = p.FirstName,
+                 LastName = p.LastName,
+                 DateOfBirth = p.DateOfBirth,
+                 Gender = p.Gender != null ? p.Gender.ToString() : null,
+                 BloodType = p.BloodType != null ? p.BloodType.ToString() : null,
+                 NationalId = p.NationalId,
+                 HeightCm = p.HeightCm,
+                 Weight = p.Weight,
+                 Allergies = p.Allergies,
+                 ChronicDiseases = p.ChronicDiseases,
+                 Notes = p.Notes,
+                 CreatedAt = p.CreatedAt,
+                 Phones = p.Phones.Select(ph => new PatientPhoneDto
+                 {
+                     Id = ph.Id,
+                     PhoneNumber = ph.PhoneNumber,
+                     PhoneType = ph.PhoneType ?? "Mobile",
+                     IsPrimary = ph.IsPrimary
+                 }),
+                 Addresses = p.Addresses.Select(a => new PatientAddressDto
+                 {
+                     Id = a.Id,
+                     Street = a.Street,
+                     City = a.City,
+                     Governorate = a.Governorate,
+                     PostalCode = a.PostalCode,
+                     IsPrimary = a.IsPrimary
+                 })
+             }).FirstOrDefaultAsync();
 
-       
-        return new PatientDto
-        {
-            Id = patient.Id,
-            PatientSourceId = patient.PatientSourceId,
-            PatientSourceName = source?.Name,
-            FirstName = patient.FirstName,
-            LastName = patient.LastName,
-            DateOfBirth = patient.DateOfBirth,
-            Gender = patient.Gender?.ToString(),
-            BloodType = patient.BloodType?.ToString(),
-            NationalId = patient.NationalId,
-            HeightCm = patient.HeightCm,
-            Weight = patient.Weight,
-            Allergies = patient.Allergies,
-            ChronicDiseases = patient.ChronicDiseases,
-            Notes = patient.Notes,
-            CreatedAt = patient.CreatedAt,
-            Phones = phones.Select(ph => new PatientPhoneDto
-            {
-                Id = ph.Id,
-                PhoneNumber = ph.PhoneNumber,
-                PhoneType = ph.PhoneType ?? "Mobile",
-                IsPrimary = ph.IsPrimary
-            }),
-            Addresses = addresses.Select(a => new PatientAddressDto
-            {
-                Id = a.Id,
-                Street = a.Street,
-                City = a.City,
-                Governorate = a.Governorate,
-                PostalCode = a.PostalCode,
-                IsPrimary = a.IsPrimary
-            })
-        };
+        return patient ?? throw new Exception("Patient not found.");
     }
 }
