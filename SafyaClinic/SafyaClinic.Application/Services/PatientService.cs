@@ -281,7 +281,7 @@ public class PatientService : IPatientService
     }
 
     // ── Mapper ────────────────────────────────────────────────
-    private async Task<PatientDto> GetPatientDtoByIdAsync(int patientId)
+    private async Task<PatientDto?> GetPatientDtoByIdAsync(int patientId)
     {
         var patient = await _uow.Patients.Query()
              .Where(p => p.Id == patientId)
@@ -320,6 +320,6 @@ public class PatientService : IPatientService
                  })
              }).FirstOrDefaultAsync();
 
-        return patient ?? throw new Exception("Patient not found.");
+        return patient;
     }
 }

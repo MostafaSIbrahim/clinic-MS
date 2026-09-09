@@ -11,6 +11,7 @@ public class ReservationDto
     public string ClinicName { get; init; } = string.Empty;
     public int TreatmentTypeId { get; init; }
     public string TreatmentTypeName { get; init; } = string.Empty;
+    public int StatusId { get; init; }
     public string StatusName { get; init; } = string.Empty;
     public string StatusColor { get; init; } = string.Empty;
     public string Category { get; init; } = string.Empty;   // InternalMedicine | Nutritional
