@@ -139,11 +139,37 @@ public class PaymentService : IPaymentService
     {
         var payments = await _uow.Payments.Query()
             .Where(p => p.PatientId == patientId)
+            .OrderByDescending(p => p.PaymentDate)
+            .Select(p => new PaymentDto
+            {
+                Id = p.Id,
+                PatientId = p.PatientId,
+                PatientName = $"{p.Patient.FirstName} {p.Patient.LastName}",
+                ReservationId = p.ReservationId,
+                EnrollmentId = p.EnrollmentId,
+                CollectorName = p.Collector.FullName,
+                Amount = p.Amount,
+                PaymentMethod = p.PaymentMethod.ToString(),
+                PaymentDate = p.PaymentDate,
+                ReferenceNumber = p.ReferenceNumber,
+                Notes = p.Notes,
+                ClinicId = p.ClinicId,
+                ClinicName = p.ClinicId.HasValue ? p.Clinic.Name : null,
+                PatientSourceId = p.PatientSourceId,
+                PatientSourceName = p.PatientSourceId.HasValue ? p.PatientSource.Name : null,
+                IsFirstVisitDeduction = p.IsFirstVisitDeduction,
+                DeductionPercentage = p.DeductionPercentage,
+                SourceDeductionAmount = p.SourceDeductionAmount,
+                ClinicNetAmount = p.ClinicNetAmount,
+                Status = p.Status.ToString(),
+                CancelledAt = p.CancelledAt,
+                CancellationReason = p.CancellationReason,
+                OriginalAmount = p.OriginalAmount,
+                LastModifiedAt = p.LastModifiedAt
+            })
             .ToListAsync();
-        var dtos = new List<PaymentDto>();
-        foreach (var p in payments.OrderByDescending(p => p.PaymentDate))
-            dtos.Add(await GetPaymentDtoByIdAsync(p.Id));
-        return ServiceResult<IEnumerable<PaymentDto>>.Success(dtos);
+       
+        return ServiceResult<IEnumerable<PaymentDto>>.Success(payments);
     }
 
     public async Task<ServiceResult<PatientFinancialSummaryDto>> GetPatientFinancialSummaryAsync(
