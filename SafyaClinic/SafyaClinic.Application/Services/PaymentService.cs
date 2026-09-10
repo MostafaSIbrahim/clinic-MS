@@ -4,6 +4,7 @@ using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace SafyaClinic.Application.Services;
 
@@ -124,34 +125,46 @@ public class PaymentService : IPaymentService
         }
 
         await _uow.SaveChangesAsync();
-        return ServiceResult<PaymentDto>.Success(await BuildPaymentDtoAsync(payment));
+        return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(payment.Id));
     }
 
     public async Task<ServiceResult<PaymentDto>> GetPaymentByIdAsync(int paymentId)
     {
-        var payment = await _uow.Payments.GetByIdAsync(paymentId);
+        var payment = await _uow.Payments.Query()
+            .Where(p => p.Id == paymentId)
+            .FirstOrDefaultAsync();
         if (payment is null) return ServiceResult<PaymentDto>.Failure("Payment not found.");
-        return ServiceResult<PaymentDto>.Success(await BuildPaymentDtoAsync(payment));
+        return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(paymentId));
     }
 
     public async Task<ServiceResult<IEnumerable<PaymentDto>>> GetPatientPaymentsAsync(int patientId)
     {
-        var payments = await _uow.Payments.FindAsync(p => p.PatientId == patientId);
+        var payments = await _uow.Payments.Query()
+            .Where(p => p.PatientId == patientId)
+            .ToListAsync();
         var dtos = new List<PaymentDto>();
         foreach (var p in payments.OrderByDescending(p => p.PaymentDate))
-            dtos.Add(await BuildPaymentDtoAsync(p));
+            dtos.Add(await GetPaymentDtoByIdAsync(p.Id));
         return ServiceResult<IEnumerable<PaymentDto>>.Success(dtos);
     }
 
     public async Task<ServiceResult<PatientFinancialSummaryDto>> GetPatientFinancialSummaryAsync(
         int patientId)
     {
-        var patient = await _uow.Patients.GetByIdAsync(patientId);
+        var patient = await _uow.Patients.Query()
+            .Where(p => p.Id == patientId)
+            .FirstOrDefaultAsync();
         if (patient is null) return ServiceResult<PatientFinancialSummaryDto>.Failure("Patient not found.");
 
-        var payments = await _uow.Payments.FindAsync(p => p.PatientId == patientId);
-        var reservations = await _uow.Reservations.FindAsync(r => r.PatientId == patientId);
-        var enrollments = await _uow.NutritionEnrollments.FindAsync(e => e.PatientId == patientId);
+        var payments = await _uow.Payments.Query()
+            .Where(p => p.PatientId == patientId)
+            .ToListAsync();
+        var reservations = await _uow.Reservations.Query()
+            .Where(r => r.PatientId == patientId)
+            .ToListAsync();
+        var enrollments = await _uow.NutritionEnrollments.Query()
+            .Where(e => e.PatientId == patientId)
+            .ToListAsync();
 
         var activePayments = payments.Where(p => p.Status == PaymentStatusEnum.Active).ToList();
         var cancelledPayments = payments.Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
@@ -161,10 +174,14 @@ public class PaymentService : IPaymentService
         // were summed into TotalCharged, which inflated Balance above zero for patients
         // who have no real outstanding payment — leaving the "Collect Payment" button on
         // PatientSummary wrongly enabled instead of disabled.
-        var cancelledStatusIds = (await _uow.ReservationStatuses.FindAsync(
-                s => s.StatusName == "Cancelled"))
+        var cancelledStatusIds = (await _uow.ReservationStatuses.Query()
+            .Where(s => s.StatusName == "Cancelled")
+            .ToListAsync())
             .Select(s => s.Id)
             .ToHashSet();
+               /* s => s.StatusName == "Cancelled"))
+            .Select(s => s.Id)
+            .ToHashSet();*/
 
         var billableReservations = reservations.Where(r => !cancelledStatusIds.Contains(r.StatusId));
 
@@ -175,7 +192,7 @@ public class PaymentService : IPaymentService
 
         var dtos = new List<PaymentDto>();
         foreach (var p in payments.OrderByDescending(p => p.PaymentDate))
-            dtos.Add(await BuildPaymentDtoAsync(p));
+            dtos.Add(await GetPaymentDtoByIdAsync(p.Id));
 
         return ServiceResult<PatientFinancialSummaryDto>.Success(new PatientFinancialSummaryDto
         {
@@ -195,7 +212,7 @@ public class PaymentService : IPaymentService
             p => p.PaymentDate >= from && p.PaymentDate <= to);
         var dtos = new List<PaymentDto>();
         foreach (var p in payments.OrderByDescending(p => p.PaymentDate))
-            dtos.Add(await BuildPaymentDtoAsync(p));
+            dtos.Add(await GetPaymentDtoByIdAsync(p.Id));
         return ServiceResult<IEnumerable<PaymentDto>>.Success(dtos);
     }
 
@@ -249,7 +266,7 @@ public class PaymentService : IPaymentService
             await RecalculateReservationPaidStatusAsync(payment.ReservationId.Value);
 
         await _uow.SaveChangesAsync();
-        return ServiceResult<PaymentDto>.Success(await BuildPaymentDtoAsync(payment), "Payment cancelled.");
+        return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(payment.Id), "Payment cancelled.");
     }
 
     // ── Change payment amount ────────────────────────────────────
@@ -335,7 +352,7 @@ public class PaymentService : IPaymentService
             await RecalculateReservationPaidStatusAsync(payment.ReservationId.Value);
 
         await _uow.SaveChangesAsync();
-        return ServiceResult<PaymentDto>.Success(await BuildPaymentDtoAsync(payment), "Payment amount updated.");
+        return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(payment.Id), "Payment amount updated.");
     }
 
     // ── Payment dashboard ─────────────────────────────────────────
@@ -416,7 +433,7 @@ public class PaymentService : IPaymentService
                      paidAmt + (writtenOffByReservation.TryGetValue(p.ReservationId!.Value, out var woAmt) ? woAmt : 0m) >=
                         (reservations.FirstOrDefault(r => r.Id == p.ReservationId)?.TotalAmount ?? 0m))))
         {
-            fullyPaidPayments.Add(await BuildPaymentDtoAsync(p));
+            fullyPaidPayments.Add(await GetPaymentDtoByIdAsync(p.Id));
         }
 
         // ── Amount by source ─────────────────────────────────────
@@ -758,8 +775,40 @@ public class PaymentService : IPaymentService
     }
 
     // ── Mapper ────────────────────────────────────────────────
+    private async Task<PaymentDto> GetPaymentDtoByIdAsync(int paymentId)
+    {
+        var payment = await _uow.Payments.Query()
+            .Where(p => p.Id == paymentId)
+            .Select(p => new PaymentDto
+            {
+                Id = p.Id,
+                PatientId = p.PatientId,
+                ReservationId = p.ReservationId,
+                EnrollmentId = p.EnrollmentId,
+                CollectedBy = p.CollectedBy.ToString(),
+                Amount = p.Amount,
+                PaymentMethod = p.PaymentMethod.ToString(),
+                PaymentDate = p.PaymentDate,
+                ReferenceNumber = p.ReferenceNumber,
+                Notes = p.Notes,
+                ClinicId = p.ClinicId,
+                PatientSourceId = p.PatientSourceId,
+                IsFirstVisitDeduction = p.IsFirstVisitDeduction,
+                DeductionPercentage = p.DeductionPercentage,
+                SourceDeductionAmount = p.SourceDeductionAmount,
+                ClinicNetAmount = p.ClinicNetAmount,
+                Status = p.Status.ToString(),
+                CancelledAt = p.CancelledAt,
+                CancellationReason = p.CancellationReason,
+                OriginalAmount = p.OriginalAmount,
+                LastModifiedAt = p.LastModifiedAt
+            })
+            .FirstOrDefaultAsync();
+        if (payment is null) throw new Exception("Payment not found.");
 
-    private async Task<PaymentDto> BuildPaymentDtoAsync(Payment p)
+        return payment;
+    }
+   /* private async Task<PaymentDto> BuildPaymentDtoAsync(Payment p)
     {
         var patient = await _uow.Patients.GetByIdAsync(p.PatientId);
         var collector = await _uow.Users.GetByIdAsync(p.CollectedBy);
@@ -793,5 +842,5 @@ public class PaymentService : IPaymentService
             OriginalAmount = p.OriginalAmount,
             LastModifiedAt = p.LastModifiedAt
         };
-    }
+    }*/
 }
