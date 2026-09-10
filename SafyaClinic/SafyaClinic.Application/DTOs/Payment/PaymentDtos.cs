@@ -13,6 +13,7 @@ public class PaymentDto
     public DateTime PaymentDate { get; init; }
     public string? ReferenceNumber { get; init; }
     public string? Notes { get; init; }
+    public string? CollectedBy { get; init; }
 
     // Clinic / source attribution
     public int? ClinicId { get; init; }
