@@ -130,9 +130,7 @@ public class PaymentService : IPaymentService
 
     public async Task<ServiceResult<PaymentDto>> GetPaymentByIdAsync(int paymentId)
     {
-        var payment = await _uow.Payments.Query()
-            .Where(p => p.Id == paymentId)
-            .FirstOrDefaultAsync();
+        var payment = await GetPaymentDtoByIdAsync(paymentId);
         if (payment is null) return ServiceResult<PaymentDto>.Failure("Payment not found.");
         return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(paymentId));
     }
@@ -783,16 +781,19 @@ public class PaymentService : IPaymentService
             {
                 Id = p.Id,
                 PatientId = p.PatientId,
+                PatientName = $"{p.Patient.FirstName} {p.Patient.LastName}",
                 ReservationId = p.ReservationId,
                 EnrollmentId = p.EnrollmentId,
-                CollectedBy = p.CollectedBy.ToString(),
+                CollectorName = p.Collector.FullName,
                 Amount = p.Amount,
                 PaymentMethod = p.PaymentMethod.ToString(),
                 PaymentDate = p.PaymentDate,
                 ReferenceNumber = p.ReferenceNumber,
                 Notes = p.Notes,
                 ClinicId = p.ClinicId,
+                ClinicName = p.ClinicId.HasValue ? p.Clinic.Name : null,
                 PatientSourceId = p.PatientSourceId,
+                PatientSourceName = p.PatientSourceId.HasValue ? p.PatientSource.Name : null,
                 IsFirstVisitDeduction = p.IsFirstVisitDeduction,
                 DeductionPercentage = p.DeductionPercentage,
                 SourceDeductionAmount = p.SourceDeductionAmount,
@@ -808,39 +809,4 @@ public class PaymentService : IPaymentService
 
         return payment;
     }
-   /* private async Task<PaymentDto> BuildPaymentDtoAsync(Payment p)
-    {
-        var patient = await _uow.Patients.GetByIdAsync(p.PatientId);
-        var collector = await _uow.Users.GetByIdAsync(p.CollectedBy);
-        var clinic = p.ClinicId.HasValue ? await _uow.Clinics.GetByIdAsync(p.ClinicId.Value) : null;
-        var source = p.PatientSourceId.HasValue ? await _uow.PatientSources.GetByIdAsync(p.PatientSourceId.Value) : null;
-
-        return new PaymentDto
-        {
-            Id = p.Id,
-            PatientId = p.PatientId,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-            ReservationId = p.ReservationId,
-            EnrollmentId = p.EnrollmentId,
-            CollectorName = collector?.FullName ?? "",
-            Amount = p.Amount,
-            PaymentMethod = p.PaymentMethod.ToString(),
-            PaymentDate = p.PaymentDate,
-            ReferenceNumber = p.ReferenceNumber,
-            Notes = p.Notes,
-            ClinicId = p.ClinicId,
-            ClinicName = clinic?.Name,
-            PatientSourceId = p.PatientSourceId,
-            PatientSourceName = source?.Name,
-            IsFirstVisitDeduction = p.IsFirstVisitDeduction,
-            DeductionPercentage = p.DeductionPercentage,
-            SourceDeductionAmount = p.SourceDeductionAmount,
-            ClinicNetAmount = p.ClinicNetAmount,
-            Status = p.Status.ToString(),
-            CancelledAt = p.CancelledAt,
-            CancellationReason = p.CancellationReason,
-            OriginalAmount = p.OriginalAmount,
-            LastModifiedAt = p.LastModifiedAt
-        };
-    }*/
 }
