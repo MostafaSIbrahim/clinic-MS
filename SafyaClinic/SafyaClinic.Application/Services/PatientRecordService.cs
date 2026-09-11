@@ -246,63 +246,51 @@ public class PatientRecordService : IPatientRecordService
         return ServiceResult<PrescriptionDetailDto>.Success(prescription);
     }
 
-    public async Task<ServiceResult<IEnumerable<PrescriptionListDto>>> GetPrescriptionsByRecordAsync(int recordId)
+    public async Task<ServiceResult<IEnumerable<PrescriptionListDto>>> GetPrescriptionsByRecordAsync(
+      int recordId)
     {
-        var prescriptions = await _uow.Prescriptions.FindAsync(p => p.RecordId == recordId);
-        var dtos = new List<PrescriptionListDto>();
-        foreach (var p in prescriptions)
-        {
-            var creator = p.CreatedBy > 0
-                ? await _uow.Users.GetByIdAsync(p.CreatedBy)
-                : null;
-
-            dtos.Add(new PrescriptionListDto
-            {
-                Id = p.Id,
-                PrescriptionDate = p.CreatedAt,
-                Notes = p.Notes, // or null if you don’t store notes
-                IsPrinted = p.IsPrinted,
-                DrugCount = p.Items?.Count ?? 0, // count drugs if you have a collection
-                CreatedAt = p.CreatedAt,
-                CreatedByName = creator?.FullName ?? string.Empty
-            });
-        }
-        return ServiceResult<IEnumerable<PrescriptionListDto>>.Success(dtos);
-        /*var creator = recordId.CreatedBy > 0 ? await _uow.Users.GetByIdAsync(p.CreatedBy) : null;
-            dtos.Add(new PrescriptionListDto
-            {
-                Id = p.Id,
-                PrescriptionDate = p.CreatedAt,
-                Notes = null,
-                IsPrinted = p.IsPrinted,
-                DrugCount = 1,  // old model: 1 row = 1 drug
-                CreatedAt = p.CreatedAt,
-                CreatedByName = creator?.FullName ?? ""
-            });*/
-    }
-
-   /* public async Task<ServiceResult<IEnumerable<PrescriptionListDto>>> GetPrescriptionsByRecordAsync(int recordId)
-    {
-        var prescriptions = await _uow.Prescriptions.FindAsync(p => p.RecordId == recordId);
-        var dtos = new List<PrescriptionListDto>();
-
-        foreach (var p in prescriptions.OrderByDescending(p => p.PrescriptionDate))
-        {
-            var creator = p.CreatedBy > 0 ? await _uow.Users.GetByIdAsync(p.CreatedBy) : null;
-            dtos.Add(new PrescriptionListDto
+        var dtos = await _uow.Prescriptions.Query()
+            .Where(p => p.RecordId == recordId)
+            .OrderByDescending(p => p.PrescriptionDate)
+            .Select(p => new PrescriptionListDto
             {
                 Id = p.Id,
                 PrescriptionDate = p.PrescriptionDate,
                 Notes = p.Notes,
                 IsPrinted = p.IsPrinted,
-                DrugCount = p.Items.Count,
+                DrugCount = p.Items.Count(),
                 CreatedAt = p.CreatedAt,
-                CreatedByName = creator?.FullName ?? ""
-            });
-        }
+                CreatedByName = p.CreatedBy > 0
+                    ? p.CreatedBy.ToString()
+                    : string.Empty
+            })
+            .ToListAsync();
 
         return ServiceResult<IEnumerable<PrescriptionListDto>>.Success(dtos);
-    }*/
+    }
+
+    /* public async Task<ServiceResult<IEnumerable<PrescriptionListDto>>> GetPrescriptionsByRecordAsync(int recordId)
+     {
+         var prescriptions = await _uow.Prescriptions.FindAsync(p => p.RecordId == recordId);
+         var dtos = new List<PrescriptionListDto>();
+
+         foreach (var p in prescriptions.OrderByDescending(p => p.PrescriptionDate))
+         {
+             var creator = p.CreatedBy > 0 ? await _uow.Users.GetByIdAsync(p.CreatedBy) : null;
+             dtos.Add(new PrescriptionListDto
+             {
+                 Id = p.Id,
+                 PrescriptionDate = p.PrescriptionDate,
+                 Notes = p.Notes,
+                 IsPrinted = p.IsPrinted,
+                 DrugCount = p.Items.Count,
+                 CreatedAt = p.CreatedAt,
+                 CreatedByName = creator?.FullName ?? ""
+             });
+         }
+
+         return ServiceResult<IEnumerable<PrescriptionListDto>>.Success(dtos);
+     }*/
 
     public async Task<ServiceResult<PrescriptionItemDto>> AddPrescriptionItemAsync(
         int prescriptionId, AddPrescriptionItemRequest request)
