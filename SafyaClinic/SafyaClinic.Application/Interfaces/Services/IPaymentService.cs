@@ -63,4 +63,7 @@ public interface IPaymentService
     /// </summary>
     Task<ServiceResult<PaymentLineDetailReportDto>> GetDashboardLineDetailsAsync(
         string groupType, int? groupId, DateTime? from, DateTime? to);
+    Task<ServiceResult<decimal>> GetRevenueByDateRangeAsync(
+DateTime from,
+DateTime to);
 }

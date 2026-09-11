@@ -8,7 +8,7 @@ namespace SafyaClinic.Web.Controllers;
 public class DashboardController : BaseController
 {
     private readonly IReservationService _reservationService;
-    private readonly IPatientService _patientService;
+ 
     private readonly IPaymentService _paymentService;
 
     public DashboardController(
@@ -17,7 +17,7 @@ public class DashboardController : BaseController
         IPaymentService paymentService)
     {
         _reservationService = reservationService;
-        _patientService = patientService;
+     
         _paymentService = paymentService;
     }
 
@@ -26,12 +26,12 @@ public class DashboardController : BaseController
         var doctorId = (IsDoctor || IsNutritionist) ? CurrentUserId : (int?)null;
 
         var todayResult = await _reservationService.GetTodayReservationsAsync(doctorId);
-        var todayPayments = await _paymentService.GetPaymentsByDateRangeAsync(
+        var todayPayments = await _paymentService.GetRevenueByDateRangeAsync(
             DateTime.Today, DateTime.Today.AddDays(1).AddSeconds(-1));
 
         ViewBag.TodayReservations = todayResult.IsSuccess ? todayResult.Data : Enumerable.Empty<object>();
         ViewBag.TodayRevenue = todayPayments.IsSuccess
-            ? todayPayments.Data!.Sum(p => p.Amount) : 0m;
+            ? todayPayments.Data! : 0m;
 
         return View();
     }
