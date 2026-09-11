@@ -197,10 +197,10 @@ public class PaymentService : IPaymentService
             {
                   Id  = p.Id,
                   PatientId = p.PatientId,
-                  PatientName = $"{patient.FirstName + patient.LastName}",
+                  PatientName = $"{patient.FirstName} {patient.LastName}",
                   ReservationId = p.ReservationId,
                   EnrollmentId = p.EnrollmentId,
-                  CollectorName = p.Collector.ToString(),
+                  CollectorName = p.Collector.FullName,
                    Amount = p.Amount,
                    PaymentMethod = p.PaymentMethod.ToString(),
                    PaymentDate = p.PaymentDate,
@@ -208,9 +208,9 @@ public class PaymentService : IPaymentService
                    Notes = p.Notes,
                    // Clinic / source attribution
                     ClinicId = p.ClinicId,
-                    ClinicName = p.Clinic.Name,
+                    ClinicName = p.ClinicId.HasValue ? p.Clinic.Name : null,
                     PatientSourceId = p.PatientSourceId,
-                    PatientSourceName = p.PatientSource.Name,
+                    PatientSourceName = p.PatientSourceId.HasValue ? p.PatientSource.Name : null,
                     IsFirstVisitDeduction = p.IsFirstVisitDeduction,
                     DeductionPercentage = p.DeductionPercentage,
                     SourceDeductionAmount = p.SourceDeductionAmount,
@@ -223,28 +223,28 @@ public class PaymentService : IPaymentService
                     LastModifiedAt = p.LastModifiedAt
                 }).ToListAsync();
 
+        var cancelledStatusIds = await _uow.ReservationStatuses.Query()
+            .Where(s => s.StatusName == "Cancelled")
+            .Select(s => s.Id)
+            .ToListAsync();
+
         var totalEnrollmentCharges = await _uow.NutritionEnrollments.Query()
         .Where(e => e.PatientId == patientId)
          .SumAsync(e => e.FinalPrice);
-        var totalReservationCharges = totalPaied - totalWrittenOff;
-        var totalCharged = totalReservationCharges + totalEnrollmentCharges;
-        // BUGFIX: a cancelled reservation never has to be paid for, so it must not be
-        // counted as a charge. Previously ALL reservations (including cancelled ones)
-        // were summed into TotalCharged, which inflated Balance above zero for patients
-        // who have no real outstanding payment — leaving the "Collect Payment" button on
-        // PatientSummary wrongly enabled instead of disabled.
-        var cancelledStatusIds = (await _uow.ReservationStatuses.Query()
-            .Where(s => s.StatusName == "Cancelled")
-            .ToListAsync())
-            .Select(s => s.Id)
-            .ToHashSet();
+        
+      
+        var totalReservationCharges = await _uow.Reservations.Query()
+             .Where(r => r.PatientId == patientId &&
+                !cancelledStatusIds.Contains(r.StatusId))
+              .SumAsync(r => r.TotalAmount ?? 0m);
 
+        var totalCharged = totalReservationCharges + totalEnrollmentCharges;
         var summary = new PatientFinancialSummaryDto
         {
             PatientId = patientId,
             PatientName = $"{patient.FirstName} {patient.LastName}",
             TotalCharged = totalCharged,
-            TotalPaid = totalReservationCharges,
+            TotalPaid = totalPaied,
             TotalWrittenOff = totalWrittenOff,
             Payments = dtos
         };
