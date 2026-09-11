@@ -180,20 +180,54 @@ public class PaymentService : IPaymentService
             .FirstOrDefaultAsync();
         if (patient is null) 
             return ServiceResult<PatientFinancialSummaryDto>.Failure("Patient not found.");
+        
+        var totalPaied = await _uow.Payments.Query()
+            .Where(p => p.PatientId == patientId &&
+            p.Status == PaymentStatusEnum.Active)
+            .SumAsync(p => p.Amount);
+        var totalWrittenOff = await _uow.Payments.Query()
+            .Where (p => p.PatientId == patientId && 
+            p.Status == PaymentStatusEnum.Cancelled)
+            .SumAsync(p => p.Amount);
 
-        var payments = await _uow.Payments.Query()
+        var dtos = await _uow.Payments.Query()
             .Where(p => p.PatientId == patientId)
-            .ToListAsync();
-        var reservations = await _uow.Reservations.Query()
-            .Where(r => r.PatientId == patientId)
-            .ToListAsync();
-        var enrollments = await _uow.NutritionEnrollments.Query()
-            .Where(e => e.PatientId == patientId)
-            .ToListAsync();
+            .OrderByDescending(p => p.PaymentDate)
+            .Select(p => new PaymentDto
+            {
+                  Id  = p.Id,
+                  PatientId = p.PatientId,
+                  PatientName = $"{patient.FirstName + patient.LastName}",
+                  ReservationId = p.ReservationId,
+                  EnrollmentId = p.EnrollmentId,
+                  CollectorName = p.Collector.ToString(),
+                   Amount = p.Amount,
+                   PaymentMethod = p.PaymentMethod.ToString(),
+                   PaymentDate = p.PaymentDate,
+                   ReferenceNumber = p.ReferenceNumber,
+                   Notes = p.Notes,
+                   // Clinic / source attribution
+                    ClinicId = p.ClinicId,
+                    ClinicName = p.Clinic.Name,
+                    PatientSourceId = p.PatientSourceId,
+                    PatientSourceName = p.PatientSource.Name,
+                    IsFirstVisitDeduction = p.IsFirstVisitDeduction,
+                    DeductionPercentage = p.DeductionPercentage,
+                    SourceDeductionAmount = p.SourceDeductionAmount,
+                    ClinicNetAmount = p.ClinicNetAmount,
+                    // Status
+                    Status = p.Status.ToString(),
+                    CancelledAt = p.CancelledAt,
+                    CancellationReason = p.CancellationReason,
+                    OriginalAmount = p.OriginalAmount,
+                    LastModifiedAt = p.LastModifiedAt
+                }).ToListAsync();
 
-        var activePayments = payments.Where(p => p.Status == PaymentStatusEnum.Active).ToList();
-        var cancelledPayments = payments.Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
-
+        var totalEnrollmentCharges = await _uow.NutritionEnrollments.Query()
+        .Where(e => e.PatientId == patientId)
+         .SumAsync(e => e.FinalPrice);
+        var totalReservationCharges = totalPaied - totalWrittenOff;
+        var totalCharged = totalReservationCharges + totalEnrollmentCharges;
         // BUGFIX: a cancelled reservation never has to be paid for, so it must not be
         // counted as a charge. Previously ALL reservations (including cancelled ones)
         // were summed into TotalCharged, which inflated Balance above zero for patients
@@ -204,43 +238,19 @@ public class PaymentService : IPaymentService
             .ToListAsync())
             .Select(s => s.Id)
             .ToHashSet();
-          
 
-        var billableReservations = reservations.Where(r => !cancelledStatusIds.Contains(r.StatusId));
+        var summary = new PatientFinancialSummaryDto
+        {
+            PatientId = patientId,
+            PatientName = $"{patient.FirstName} {patient.LastName}",
+            TotalCharged = totalCharged,
+            TotalPaid = totalReservationCharges,
+            TotalWrittenOff = totalWrittenOff,
+            Payments = dtos
+        };
 
-        var totalCharged = billableReservations.Sum(r => r.TotalAmount ?? 0m)
-                         + enrollments.Sum(e => e.FinalPrice);
-        var totalPaid = activePayments.Sum(p => p.Amount);
-        var totalWrittenOff = cancelledPayments.Sum(p => p.Amount);
-
-        var dtos = await _uow.Payments.Query()
-            .Where(p=> p.PatientId == patientId)
-            .OrderByDescending(pd=> pd.PaymentDate)
-            .Select (p = new PaymentDto
-            {
-                Id = patientId,
-                PatientId = patientId,
-                PatientName = $"{patient.FirstName} {patient.LastName}",
-                Amount = totalPaid,
-               
-
-            }).ToListAsync();
-
-        var summeries = await _uow.Payments.Query()
-            .Where(p => p.PatientId == patientId)
-            .OrderByDescending(p => p.PaymentDate)
-            .Select(s => new PatientFinancialSummaryDto
-            {
-                PatientId = patientId,
-                PatientName = $"{patient.FirstName} {patient.LastName}",
-                TotalCharged = totalCharged,
-                TotalPaid = totalPaid,
-                TotalWrittenOff = totalWrittenOff,
-                Payments = dtos
-            }).ToListAsync();
-     
-
-       return summeries;
+        return ServiceResult<PatientFinancialSummaryDto>.Success(summary);
+      
     }
 
     public async Task<ServiceResult<IEnumerable<PaymentDto>>> GetPaymentsByDateRangeAsync(
