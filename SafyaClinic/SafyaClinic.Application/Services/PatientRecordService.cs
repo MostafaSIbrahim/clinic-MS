@@ -8,6 +8,7 @@ using global::SafyaClinic.Domain.Entities.MedicalRecord;
 using global::SafyaClinic.Domain.Entities.Prescription;
 using global::SafyaClinic.Domain.Enums;
 using global::SafyaClinic.Domain.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 public class PatientRecordService : IPatientRecordService
 {
@@ -50,17 +51,23 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult<PatientRecordDto>> GetRecordByIdAsync(int recordId)
     {
-        var record = await _uow.PatientRecords.GetByIdAsync(recordId);
-        if (record is null) return ServiceResult<PatientRecordDto>.Failure("Record not found.");
-        return ServiceResult<PatientRecordDto>.Success(await BuildRecordDtoAsync(record));
+        var record = await PatientRecordDtoQuery()
+            .Where(r => r.Id == recordId)
+            .FirstOrDefaultAsync();
+
+        if (record is null)
+            return ServiceResult<PatientRecordDto>.Failure("Record not found.");
+
+        return ServiceResult<PatientRecordDto>.Success(record);
     }
 
     public async Task<ServiceResult<IEnumerable<PatientRecordDto>>> GetPatientRecordsAsync(int patientId)
     {
-        var records = await _uow.PatientRecords.FindAsync(r => r.PatientId == patientId);
-        var dtos = new List<PatientRecordDto>();
-        foreach (var r in records.OrderByDescending(r => r.CreatedAt))
-            dtos.Add(await BuildRecordDtoAsync(r));
+        var dtos = await PatientRecordDtoQuery()
+            .Where(r => r.PatientId == patientId)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
         return ServiceResult<IEnumerable<PatientRecordDto>>.Success(dtos);
     }
 
@@ -629,6 +636,29 @@ public class PatientRecordService : IPatientRecordService
         };
     }
     // ── Private mapper ────────────────────────────────────────
+    private IQueryable<PatientRecordDto> PatientRecordDtoQuery()
+    {
+        return _uow.PatientRecords.Query()
+            .Select(r => new PatientRecordDto
+            {
+                Id = r.Id,
+                PatientId = r.PatientId,
+                PatientName = $"{r.Patient.FirstName} {r.Patient.LastName}",
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor.FullName,
+                ReservationId = r.ReservationId,
+                Category = r.Category.ToString(),
+                ChiefComplaint = r.ChiefComplaint,
+                PresentIllnessHistory = r.PresentIllnessHistory,
+                Diagnosis = r.Diagnosis,
+                DifferentialDiagnosis = r.DifferentialDiagnosis,
+                TreatmentPlan = r.TreatmentPlan,
+                Notes = r.Notes,
+                FollowUpDate = r.FollowUpDate,
+                IsLocked = r.IsLocked,
+                CreatedAt = r.CreatedAt
+            });
+    }
     private async Task<PrescriptionDetailDto> BuildPrescriptionDetailDtoAsync(Prescription p)
     {
         var record = await _uow.PatientRecords.GetByIdAsync(p.RecordId);
