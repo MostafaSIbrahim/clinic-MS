@@ -264,7 +264,7 @@ public class PaymentService : IPaymentService
             {
                 Id = p.Id,
                 PatientId = p.PatientId,
-               
+                PatientName = $"{p.Patient.FirstName} {p.Patient.LastName}",
                 ReservationId = p.ReservationId,
                 EnrollmentId = p.EnrollmentId,
                 CollectorName = p.Collector.FullName,
