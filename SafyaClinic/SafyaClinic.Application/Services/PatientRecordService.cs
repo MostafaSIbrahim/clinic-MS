@@ -269,28 +269,7 @@ public class PatientRecordService : IPatientRecordService
         return ServiceResult<IEnumerable<PrescriptionListDto>>.Success(dtos);
     }
 
-    /* public async Task<ServiceResult<IEnumerable<PrescriptionListDto>>> GetPrescriptionsByRecordAsync(int recordId)
-     {
-         var prescriptions = await _uow.Prescriptions.FindAsync(p => p.RecordId == recordId);
-         var dtos = new List<PrescriptionListDto>();
-
-         foreach (var p in prescriptions.OrderByDescending(p => p.PrescriptionDate))
-         {
-             var creator = p.CreatedBy > 0 ? await _uow.Users.GetByIdAsync(p.CreatedBy) : null;
-             dtos.Add(new PrescriptionListDto
-             {
-                 Id = p.Id,
-                 PrescriptionDate = p.PrescriptionDate,
-                 Notes = p.Notes,
-                 IsPrinted = p.IsPrinted,
-                 DrugCount = p.Items.Count,
-                 CreatedAt = p.CreatedAt,
-                 CreatedByName = creator?.FullName ?? ""
-             });
-         }
-
-         return ServiceResult<IEnumerable<PrescriptionListDto>>.Success(dtos);
-     }*/
+  
 
     public async Task<ServiceResult<PrescriptionItemDto>> AddPrescriptionItemAsync(
         int prescriptionId, AddPrescriptionItemRequest request)
