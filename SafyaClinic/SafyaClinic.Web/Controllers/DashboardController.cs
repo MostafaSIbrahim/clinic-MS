@@ -13,11 +13,9 @@ public class DashboardController : BaseController
 
     public DashboardController(
         IReservationService reservationService,
-        IPatientService patientService,
         IPaymentService paymentService)
     {
-        _reservationService = reservationService;
-     
+        _reservationService = reservationService;  
         _paymentService = paymentService;
     }
 

@@ -434,8 +434,8 @@ public class PaymentService : IPaymentService
         return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(payment.Id), "Payment amount updated.");
     }
 
-    //-----Aggrigate method-----//
-    public async Task<ServiceResult<decimal>> GetRevenueByDateRangeAsync(DateTime? from = null, DateTime? to = null)
+    //-----Aggregate method-----//
+    public async Task<ServiceResult<decimal>> GetRevenueByDateRangeAsync(DateTime from, DateTime to)
     {
         var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
         var paymentsQuery = _uow.Payments.Query()
@@ -1021,4 +1021,5 @@ public class PaymentService : IPaymentService
 
         return payment;
     }
+   
 }
