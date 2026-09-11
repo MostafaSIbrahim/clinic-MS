@@ -232,8 +232,10 @@ public class PatientRecordService : IPatientRecordService
                     FilePath = a.FilePath,
                     ContentType = a.ContentType,
                     FileSizeBytes = (long)a.FileSizeBytes!,
-                    UploadedAt = a.UploadedAt
-                    
+                    UploadedAt = a.UploadedAt,
+                    UploadedBy = p.CreatedBy > 0
+                                           ? p.CreatedBy.ToString()
+                                        : ""
                 })
             })
             .FirstOrDefaultAsync();
