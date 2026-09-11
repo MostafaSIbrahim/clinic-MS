@@ -667,37 +667,7 @@ public class PaymentService : IPaymentService
             AmountByClinic = byClinic.OrderByDescending(c => c.TotalCollected)
         });
     }
-*/
-        // ── Collect-form helper ─────────────────────────────────────
-
-            {
-                var c = await _uow.Clinics.GetByIdAsync(grp.Key.Value);
-                name = c?.Name ?? "Unknown Clinic";
-            }
-            byClinic.Add(new ClinicAmountDto
-            {
-                ClinicId = grp.Key,
-                ClinicName = name,
-                TotalCollected = grp.Sum(p => p.Amount),
-                TotalClinicNet = grp.Sum(p => p.ClinicNetAmount),
-                PaymentCount = grp.Count()
-            });
-        }
-
-        return ServiceResult<PaymentDashboardDto>.Success(new PaymentDashboardDto
-        {
-            UnpaidCompletedReservations = unpaidCompleted.OrderByDescending(r => r.ReservationDate),
-            UnpaidPendingReservations = unpaidPending.OrderByDescending(r => r.ReservationDate),
-            FullyPaidPayments = fullyPaidPayments.OrderByDescending(p => p.PaymentDate),
-            TotalUnpaidCompleted = unpaidCompleted.Sum(r => r.Balance),
-            TotalUnpaidPending = unpaidPending.Sum(r => r.Balance),
-            TotalFullyPaid = fullyPaidPayments.Sum(p => p.Amount),
-            AmountBySource = bySource.OrderByDescending(s => s.TotalCollected),
-            AmountByClinic = byClinic.OrderByDescending(c => c.TotalCollected)
-        });
-    }
-*/
-        // ── Collect-form helper ─────────────────────────────────────
+    // ── Collect-form helper ─────────────────────────────────────
 
     public async Task<ServiceResult<decimal>> GetDueAmountAsync(int patientId, int? reservationId, int? enrollmentId)
     {
