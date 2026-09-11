@@ -132,8 +132,9 @@ public class PaymentService : IPaymentService
     public async Task<ServiceResult<PaymentDto>> GetPaymentByIdAsync(int paymentId)
     {
         var payment = await GetPaymentDtoByIdAsync(paymentId);
-        if (payment is null) return ServiceResult<PaymentDto>.Failure("Payment not found.");
-        return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(paymentId));
+        if (payment is null) return ServiceResult<PaymentDto>
+                .Failure("Payment not found.");
+        return ServiceResult<PaymentDto>.Success(payment);
     }
 
     public async Task<ServiceResult<IEnumerable<PaymentDto>>> GetPatientPaymentsAsync(int patientId)
