@@ -1,10 +1,11 @@
-﻿using SafyaClinic.Application.DTOs.Common;
+﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Payment;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
-using Microsoft.EntityFrameworkCore;
 
 namespace SafyaClinic.Application.Services;
 
@@ -181,7 +182,7 @@ public class PaymentService : IPaymentService
         if (patient is null) 
             return ServiceResult<PatientFinancialSummaryDto>.Failure("Patient not found.");
         
-        var totalPaied = await _uow.Payments.Query()
+        var totalPaid = await _uow.Payments.Query()
             .Where(p => p.PatientId == patientId &&
             p.Status == PaymentStatusEnum.Active)
             .SumAsync(p => p.Amount);
@@ -244,7 +245,7 @@ public class PaymentService : IPaymentService
             PatientId = patientId,
             PatientName = $"{patient.FirstName} {patient.LastName}",
             TotalCharged = totalCharged,
-            TotalPaid = totalPaied,
+            TotalPaid = totalPaid,
             TotalWrittenOff = totalWrittenOff,
             Payments = dtos
         };
@@ -256,12 +257,41 @@ public class PaymentService : IPaymentService
     public async Task<ServiceResult<IEnumerable<PaymentDto>>> GetPaymentsByDateRangeAsync(
         DateTime from, DateTime to)
     {
-        var payments = await _uow.Payments.FindAsync(
-            p => p.PaymentDate >= from && p.PaymentDate <= to);
-        var dtos = new List<PaymentDto>();
-        foreach (var p in payments.OrderByDescending(p => p.PaymentDate))
-            dtos.Add(await GetPaymentDtoByIdAsync(p.Id));
-        return ServiceResult<IEnumerable<PaymentDto>>.Success(dtos);
+        var payments = await _uow.Payments.Query()
+            .Where(p => p.PaymentDate >=  from && p.PaymentDate <= to)
+            .OrderByDescending(p => p.PaymentDate)
+            .Select( p => new PaymentDto
+            {
+                Id = p.Id,
+                PatientId = p.PatientId,
+               
+                ReservationId = p.ReservationId,
+                EnrollmentId = p.EnrollmentId,
+                CollectorName = p.Collector.FullName,
+                Amount = p.Amount,
+                PaymentMethod = p.PaymentMethod.ToString(),
+                PaymentDate = p.PaymentDate,
+                ReferenceNumber = p.ReferenceNumber,
+                Notes = p.Notes,
+                // Clinic / source attribution
+                ClinicId = p.ClinicId,
+                ClinicName = p.ClinicId.HasValue ? p.Clinic.Name : null,
+                PatientSourceId = p.PatientSourceId,
+                PatientSourceName = p.PatientSourceId.HasValue ? p.PatientSource.Name : null,
+                IsFirstVisitDeduction = p.IsFirstVisitDeduction,
+                DeductionPercentage = p.DeductionPercentage,
+                SourceDeductionAmount = p.SourceDeductionAmount,
+                ClinicNetAmount = p.ClinicNetAmount,
+                // Status
+                Status = p.Status.ToString(),
+                CancelledAt = p.CancelledAt,
+                CancellationReason = p.CancellationReason,
+                OriginalAmount = p.OriginalAmount,
+                LastModifiedAt = p.LastModifiedAt
+            }).ToListAsync();
+        return ServiceResult<IEnumerable<PaymentDto>>.Success(payments);
+
+
     }
 
     // ── Cancel payment ───────────────────────────────────────────
