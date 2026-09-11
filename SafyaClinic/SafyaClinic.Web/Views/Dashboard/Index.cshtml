@@ -11,7 +11,9 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="small opacity-75">Today's Reservations</div>
-                    <div class="fs-3 fw-bold">@todayReservations.Count()</div>
+                    <div class="fs-3 fw-bold">
+                        @ViewBag.TodayReservationCount
+                    </div>
                 </div>
                 <i class="bi bi-calendar2-week fs-1 opacity-50"></i>
             </div>
@@ -33,7 +35,9 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="small opacity-75">Pending</div>
-                    <div class="fs-3 fw-bold">@todayReservations.Count(r => r.StatusName == "Pending")</div>
+                    <div class="fs-3 fw-bold">
+                        @ViewBag.TodayPendingCount
+                    </div>
                 </div>
                 <i class="bi bi-hourglass-split fs-1 opacity-50"></i>
             </div>
@@ -44,7 +48,9 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <div class="small opacity-75">Unpaid</div>
-                    <div class="fs-3 fw-bold">@todayReservations.Count(r => !r.IsPaid)</div>
+                    <div class="fs-3 fw-bold">
+                        @ViewBag.TodayUnpaidCount
+                    </div>
                 </div>
                 <i class="bi bi-exclamation-circle fs-1 opacity-50"></i>
             </div>
@@ -83,7 +89,7 @@
                     </thead>
                     <tbody>
                         @foreach (var r in todayReservations)
-                           {
+                         {
                             <tr>
                                 <td>@r.ReservationTime.ToString(@"hh\:mm")</td>
                                 <td>@r.PatientName</td>
