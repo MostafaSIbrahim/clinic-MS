@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Models;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -32,19 +33,21 @@ public class DashboardController : BaseController
             ? todayResult.Data?.ToList() ?? new List<ReservationSummaryDto>()
             : new List<ReservationSummaryDto>();
 
-        ViewBag.TodayReservations = reservations;
-        ViewBag.TodayReservationCount = reservations.Count;
-        ViewBag.TodayPendingCount = reservations.Count(r => r.StatusName == "Pending");
-        ViewBag.TodayUnpaidCount = reservations.Count(r => !r.IsPaid);
-
         var todayPayments = await _paymentService.GetRevenueByDateRangeAsync(
             DateTime.Today,
             DateTime.Today.AddDays(1).AddSeconds(-1));
 
-        ViewBag.TodayRevenue = todayPayments.IsSuccess
-            ? todayPayments.Data
-            : 0m;
+        var model = new DashboardViewModel
+        {
+            TodayReservations = reservations,
+            TodayReservationCount = reservations.Count,
+            TodayPendingCount = reservations.Count(r => r.StatusName == "Pending"),
+            TodayUnpaidCount = reservations.Count(r => !r.IsPaid),
+            TodayRevenue = todayPayments.IsSuccess
+                ? todayPayments.Data
+                : 0m
+        };
 
-        return View();
+        return View(model);
     }
 }
