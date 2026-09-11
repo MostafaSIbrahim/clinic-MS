@@ -206,44 +206,70 @@ public class AnalysisService : IAnalysisService
     }
 
     public async Task<ServiceResult<PagedResult<MedicalAnalysisDto>>> SearchAnalysesAsync(
-        PaginationRequest request, string? status = null)
+     PaginationRequest request, string? status = null)
     {
-        var analyses = (await _uow.MedicalAnalyses.GetAllAsync()).AsEnumerable();
+        var query = _uow.MedicalAnalyses.Query();
 
         if (!string.IsNullOrWhiteSpace(status) &&
             Enum.TryParse<AnalysisStatus>(status, out var statusFilter))
         {
-            analyses = analyses.Where(a => a.Status == statusFilter);
+            query = query.Where(a => a.Status == statusFilter);
         }
 
-        // Build DTOs first (need patient name to search on), then filter/page.
-        var all = new List<MedicalAnalysisDto>();
-        foreach (var a in analyses.OrderByDescending(a => a.RequestDate))
-            all.Add(await BuildAnalysisDtoAsync(a));
+        var search = request.Search?.Trim();
 
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = request.Search.Trim();
-            all = all.Where(a =>
-                a.PatientName.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                a.AnalysisTypeName.Contains(term, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            query = query.Where(a =>
+                $"{a.Patient.FirstName} {a.Patient.LastName}".Contains(search) ||
+                a.Type.TypeName.Contains(search));
         }
 
-        var totalCount = all.Count;
-        var page = all.Skip((request.Page - 1) * request.PageSize)
-                       .Take(request.PageSize)
-                       .ToList();
+        var totalCount = await query.CountAsync();
 
-        return ServiceResult<PagedResult<MedicalAnalysisDto>>.Success(new PagedResult<MedicalAnalysisDto>
-        {
-            Items = page,
-            TotalCount = totalCount,
-            Page = request.Page,
-            PageSize = request.PageSize
-        });
+        var analyses = await query
+            .OrderByDescending(a => a.RequestDate)
+            .ThenByDescending(a => a.Id)
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(a => new MedicalAnalysisDto
+            {
+                Id = a.Id,
+                PatientId = a.PatientId,
+                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                DoctorId = a.DoctorId,
+                DoctorName = a.Doctor.FullName,
+                RecordId = a.RecordId,
+                AnalysisTypeId = a.AnalysisTypeId,
+                AnalysisTypeName = a.Type.TypeName,
+                PreparationInstructions = a.Type.PreparationInstructions,
+                Status = a.Status.ToString(),
+                IsUrgent = a.IsUrgent,
+                RequestDate = a.RequestDate,
+                ResultDate = a.ResultDate,
+                ResultNotes = a.ResultNotes,
+
+                Attachments = a.Attachments.Select(att => new AttachmentDto
+                {
+                    Id = att.Id,
+                    FileName = att.FileName,
+                    FilePath = att.FilePath,
+                    ContentType = att.ContentType,
+                    FileSizeBytes = (long)att.FileSizeBytes,
+                    UploadedAt = att.UploadedAt
+                })
+            })
+            .ToListAsync();
+
+        return ServiceResult<PagedResult<MedicalAnalysisDto>>.Success(
+            new PagedResult<MedicalAnalysisDto>
+            {
+                Items = analyses,
+                TotalCount = totalCount,
+                Page = request.Page,
+                PageSize = request.PageSize
+            });
     }
-
     public async Task<ServiceResult<AttachmentDto>> GetAttachmentAsync(int attachmentId)
     {
         var a = await _uow.AnalysisAttachments.GetByIdAsync(attachmentId);
