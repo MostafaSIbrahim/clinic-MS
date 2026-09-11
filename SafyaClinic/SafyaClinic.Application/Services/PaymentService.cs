@@ -501,17 +501,14 @@ public class PaymentService : IPaymentService
             if (statusName is "Cancelled" or "NoShow") continue;
 
             var paid = paidByReservation.TryGetValue(r.Id, out var amt) ? amt : 0m;
+            
             var writtenOff = writtenOffByReservation.TryGetValue(r.Id, out var wo) ? wo : 0m;
+            
             var total = r.TotalAmount ?? 0m;
 
             if (paid + writtenOff >= total)
                 continue;
-
-            var patient = await _uow.Patients.Query()
-                .Where(p => p.Id == r.PatientId)
-                .Select(p => new { p.FirstName, p.LastName })
-                .FirstOrDefaultAsync();
-           
+               
 
             var dto = new UnpaidReservationDto
             {
@@ -532,8 +529,6 @@ public class PaymentService : IPaymentService
             else
                 unpaidPending.Add(dto);
 
-            if (statusName == "Completed") unpaidCompleted.Add(dto);
-            else unpaidPending.Add(dto);
         }
 
         var reservationsDict = reservations.ToDictionary(r => r.Id, r => r);
