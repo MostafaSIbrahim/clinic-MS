@@ -178,7 +178,8 @@ public class PaymentService : IPaymentService
         var patient = await _uow.Patients.Query()
             .Where(p => p.Id == patientId)
             .FirstOrDefaultAsync();
-        if (patient is null) return ServiceResult<PatientFinancialSummaryDto>.Failure("Patient not found.");
+        if (patient is null) 
+            return ServiceResult<PatientFinancialSummaryDto>.Failure("Patient not found.");
 
         var payments = await _uow.Payments.Query()
             .Where(p => p.PatientId == patientId)
@@ -203,9 +204,7 @@ public class PaymentService : IPaymentService
             .ToListAsync())
             .Select(s => s.Id)
             .ToHashSet();
-               /* s => s.StatusName == "Cancelled"))
-            .Select(s => s.Id)
-            .ToHashSet();*/
+          
 
         var billableReservations = reservations.Where(r => !cancelledStatusIds.Contains(r.StatusId));
 
@@ -214,19 +213,34 @@ public class PaymentService : IPaymentService
         var totalPaid = activePayments.Sum(p => p.Amount);
         var totalWrittenOff = cancelledPayments.Sum(p => p.Amount);
 
-        var dtos = new List<PaymentDto>();
-        foreach (var p in payments.OrderByDescending(p => p.PaymentDate))
-            dtos.Add(await GetPaymentDtoByIdAsync(p.Id));
+        var dtos = await _uow.Payments.Query()
+            .Where(p=> p.PatientId == patientId)
+            .OrderByDescending(pd=> pd.PaymentDate)
+            .Select (p = new PaymentDto
+            {
+                Id = patientId,
+                PatientId = patientId,
+                PatientName = $"{patient.FirstName} {patient.LastName}",
+                Amount = totalPaid,
+               
 
-        return ServiceResult<PatientFinancialSummaryDto>.Success(new PatientFinancialSummaryDto
-        {
-            PatientId = patientId,
-            PatientName = $"{patient.FirstName} {patient.LastName}",
-            TotalCharged = totalCharged,
-            TotalPaid = totalPaid,
-            TotalWrittenOff = totalWrittenOff,
-            Payments = dtos
-        });
+            }).ToListAsync();
+
+        var summeries = await _uow.Payments.Query()
+            .Where(p => p.PatientId == patientId)
+            .OrderByDescending(p => p.PaymentDate)
+            .Select(s => new PatientFinancialSummaryDto
+            {
+                PatientId = patientId,
+                PatientName = $"{patient.FirstName} {patient.LastName}",
+                TotalCharged = totalCharged,
+                TotalPaid = totalPaid,
+                TotalWrittenOff = totalWrittenOff,
+                Payments = dtos
+            }).ToListAsync();
+     
+
+       return summeries;
     }
 
     public async Task<ServiceResult<IEnumerable<PaymentDto>>> GetPaymentsByDateRangeAsync(
