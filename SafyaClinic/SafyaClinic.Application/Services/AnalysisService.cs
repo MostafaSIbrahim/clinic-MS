@@ -5,6 +5,7 @@ using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Entities.Analysis;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace SafyaClinic.Application.Services;
 
@@ -88,32 +89,120 @@ public class AnalysisService : IAnalysisService
         return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(dtos);
     }
 
-    public async Task<ServiceResult<MedicalAnalysisDto>> GetAnalysisByIdAsync(int analysisId)
+    public async Task<ServiceResult<MedicalAnalysisDto>> GetAnalysisByIdAsync(
+     int analysisId)
     {
-        var analysis = await _uow.MedicalAnalyses.GetByIdAsync(analysisId);
+        var analysis = await _uow.MedicalAnalyses.Query()
+            .Where(a => a.Id == analysisId)
+            .Select(a => new MedicalAnalysisDto
+            {
+                Id = a.Id,
+                PatientId = a.PatientId,
+                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                DoctorId = a.DoctorId,
+                DoctorName = a.Doctor.FullName,
+                RecordId = a.RecordId,
+                AnalysisTypeId = a.AnalysisTypeId,
+                AnalysisTypeName = a.Type.TypeName,
+                PreparationInstructions = a.Type.PreparationInstructions,
+                Status = a.Status.ToString(),
+                IsUrgent = a.IsUrgent,
+                RequestDate = a.RequestDate,
+                ResultDate = a.ResultDate,
+                ResultNotes = a.ResultNotes,
+
+                Attachments = a.Attachments.Select(att => new AttachmentDto
+                {
+                    Id = att.Id,
+                    FileName = att.FileName,
+                    FilePath = att.FilePath,
+                    ContentType = att.ContentType,
+                    FileSizeBytes = (long)att.FileSizeBytes,
+                    UploadedAt = att.UploadedAt
+                })
+            })
+            .FirstOrDefaultAsync();
+
         if (analysis is null)
             return ServiceResult<MedicalAnalysisDto>.Failure("Analysis not found.");
-        return ServiceResult<MedicalAnalysisDto>.Success(await BuildAnalysisDtoAsync(analysis));
+
+        return ServiceResult<MedicalAnalysisDto>.Success(analysis);
     }
 
     public async Task<ServiceResult<IEnumerable<MedicalAnalysisDto>>> GetPatientAnalysesAsync(
-        int patientId)
+     int patientId)
     {
-        var analyses = await _uow.MedicalAnalyses.FindAsync(a => a.PatientId == patientId);
-        var dtos = new List<MedicalAnalysisDto>();
-        foreach (var a in analyses.OrderByDescending(a => a.RequestDate))
-            dtos.Add(await BuildAnalysisDtoAsync(a));
-        return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(dtos);
+        var analyses = await _uow.MedicalAnalyses.Query()
+            .Where(a => a.PatientId == patientId)
+            .OrderByDescending(a => a.RequestDate)
+            .Select(a => new MedicalAnalysisDto
+            {
+                Id = a.Id,
+                PatientId = a.PatientId,
+                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                DoctorId = a.DoctorId,
+                DoctorName = a.Doctor.FullName,
+                RecordId = a.RecordId,
+                AnalysisTypeId = a.AnalysisTypeId,
+                AnalysisTypeName = a.Type.TypeName,
+                PreparationInstructions = a.Type.PreparationInstructions,
+                Status = a.Status.ToString(),
+                IsUrgent = a.IsUrgent,
+                RequestDate = a.RequestDate,
+                ResultDate = a.ResultDate,
+                ResultNotes = a.ResultNotes,
+
+                Attachments = a.Attachments.Select(att => new AttachmentDto
+                {
+                    Id = att.Id,
+                    FileName = att.FileName,
+                    FilePath = att.FilePath,
+                    ContentType = att.ContentType,
+                    FileSizeBytes = (long)att.FileSizeBytes,
+                    UploadedAt = att.UploadedAt
+                })
+            })
+            .ToListAsync();
+
+        return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(analyses);
     }
 
     public async Task<ServiceResult<IEnumerable<MedicalAnalysisDto>>> GetAnalysesByRecordAsync(
-        int recordId)
+     int recordId)
     {
-        var analyses = await _uow.MedicalAnalyses.FindAsync(a => a.RecordId == recordId);
-        var dtos = new List<MedicalAnalysisDto>();
-        foreach (var a in analyses.OrderByDescending(a => a.RequestDate))
-            dtos.Add(await BuildAnalysisDtoAsync(a));
-        return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(dtos);
+        var analyses = await _uow.MedicalAnalyses.Query()
+            .Where(a => a.RecordId == recordId)
+            .OrderByDescending(a => a.RequestDate)
+            .Select(a => new MedicalAnalysisDto
+            {
+                Id = a.Id,
+                PatientId = a.PatientId,
+                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                DoctorId = a.DoctorId,
+                DoctorName = a.Doctor.FullName,
+                RecordId = a.RecordId,
+                AnalysisTypeId = a.AnalysisTypeId,
+                AnalysisTypeName = a.Type.TypeName,
+                PreparationInstructions = a.Type.PreparationInstructions,
+                Status = a.Status.ToString(),
+                IsUrgent = a.IsUrgent,
+                RequestDate = a.RequestDate,
+                ResultDate = a.ResultDate,
+                ResultNotes = a.ResultNotes,
+
+                Attachments = a.Attachments.Select(att => new AttachmentDto
+                {
+                    Id = att.Id,
+                    FileName = att.FileName,
+                    FilePath = att.FilePath,
+                    ContentType = att.ContentType,
+                    FileSizeBytes = (long)att.FileSizeBytes,
+                    UploadedAt = att.UploadedAt
+                })
+            })
+            .ToListAsync();
+
+        return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(analyses);
     }
 
     public async Task<ServiceResult<PagedResult<MedicalAnalysisDto>>> SearchAnalysesAsync(
