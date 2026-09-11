@@ -532,17 +532,60 @@ public class PaymentService : IPaymentService
         }
 
         var reservationsDict = reservations.ToDictionary(r => r.Id, r => r);
-        var fullyPaidPayments = new List<PaymentDto>();
-        foreach (var p in activePayments.Where(p =>
-    !p.ReservationId.HasValue ||
-    (
-        paidByReservation.TryGetValue(p.ReservationId.Value, out var paidAmt) &&
-        paidAmt + (writtenOffByReservation.TryGetValue(p.ReservationId.Value, out var woAmt) ? woAmt : 0m)
-        >= (reservationsDict.TryGetValue(p.ReservationId.Value, out var res) ? res.TotalAmount ?? 0m : 0m)
-    )))
-        {
-            fullyPaidPayments.Add(await GetPaymentDtoByIdAsync(p.Id));
-        }
+
+        var fullyPaidPaymentIds = activePayments
+        .Where(p =>
+            !p.ReservationId.HasValue ||
+            (
+                paidByReservation.TryGetValue(p.ReservationId.Value, out var paidAmt) &&
+                paidAmt +
+                    (writtenOffByReservation.TryGetValue(
+                        p.ReservationId.Value,
+                        out var woAmt)
+                        ? woAmt
+                        : 0m)
+                >=
+                (reservationsDict.TryGetValue(
+                    p.ReservationId.Value,
+                    out var res)
+                    ? res.TotalAmount ?? 0m
+                    : 0m)
+            ))
+        .Select(p => p.Id)
+        .ToList();
+        var fullyPaidPayments = await _uow.Payments.Query()
+     .Where(p => fullyPaidPaymentIds.Contains(p.Id))
+     .OrderByDescending(p => p.PaymentDate)
+     .Select(p => new PaymentDto
+     {
+         Id = p.Id,
+         PatientId = p.PatientId,
+         PatientName = $"{p.Patient.FirstName} {p.Patient.LastName}",
+         ReservationId = p.ReservationId,
+         EnrollmentId = p.EnrollmentId,
+         CollectorName = p.Collector.FullName,
+         Amount = p.Amount,
+         PaymentMethod = p.PaymentMethod.ToString(),
+         PaymentDate = p.PaymentDate,
+         ReferenceNumber = p.ReferenceNumber,
+         Notes = p.Notes,
+         ClinicId = p.ClinicId,
+         ClinicName = p.ClinicId.HasValue ? p.Clinic.Name : null,
+         PatientSourceId = p.PatientSourceId,
+         PatientSourceName = p.PatientSourceId.HasValue
+             ? p.PatientSource.Name
+             : null,
+         IsFirstVisitDeduction = p.IsFirstVisitDeduction,
+         DeductionPercentage = p.DeductionPercentage,
+         SourceDeductionAmount = p.SourceDeductionAmount,
+         ClinicNetAmount = p.ClinicNetAmount,
+         Status = p.Status.ToString(),
+         CancelledAt = p.CancelledAt,
+         CancellationReason = p.CancellationReason,
+         OriginalAmount = p.OriginalAmount,
+         LastModifiedAt = p.LastModifiedAt
+     })
+     .ToListAsync();
 
         // ── Amount by source ─────────────────────────────────────
         var bySource = new List<SourceAmountDto>();
