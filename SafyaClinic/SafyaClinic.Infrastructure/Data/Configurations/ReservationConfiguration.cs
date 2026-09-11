@@ -21,6 +21,13 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.HasIndex(r => r.DoctorId);
             builder.HasIndex(r => r.ClinicId);
             builder.HasIndex(r => r.ReservationDate);
+            builder.HasIndex(r => new
+            {
+                r.DoctorId,
+                r.ReservationDate,
+                r.ReservationTime,
+                r.Id
+            });
             builder.HasIndex(r => r.StatusId);
             builder.HasIndex(r => r.Category);
             builder.HasIndex(r => r.TreatmentTypeId);
