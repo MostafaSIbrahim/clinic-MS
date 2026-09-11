@@ -455,13 +455,19 @@ public class PaymentService : IPaymentService
                 .Where(p => p.PaymentDate <= toInclusive.Value);
         }
 
-        
 
-        var activePayments = paymentsQuery
-            .Where(p => p.Status == PaymentStatusEnum.Active).ToList();
-        var cancelledPayments = paymentsQuery
-            .Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
 
+        var reservations = await reservationsQuery.ToListAsync();
+
+        var payments = await paymentsQuery.ToListAsync();
+
+        var activePayments = payments
+            .Where(p => p.Status == PaymentStatusEnum.Active)
+            .ToList();
+
+        var cancelledPayments = payments
+            .Where(p => p.Status == PaymentStatusEnum.Cancelled)
+            .ToList();
         var paidByReservation = activePayments
             .Where(p => p.ReservationId.HasValue)
             .GroupBy(p => p.ReservationId!.Value)
@@ -477,7 +483,7 @@ public class PaymentService : IPaymentService
         var unpaidCompleted = new List<UnpaidReservationDto>();
         var unpaidPending = new List<UnpaidReservationDto>();
 
-        foreach (var r in reservationsQuery)
+        foreach (var r in reservations)
         {
             var statusEntity = await _uow.ReservationStatuses.GetByIdAsync(r.StatusId);
             var statusName = statusEntity?.StatusName ?? "";
@@ -512,8 +518,7 @@ public class PaymentService : IPaymentService
             else unpaidPending.Add(dto);
         }
 
-        var reservationsDict = await _uow.Reservations.Query()
-         .ToDictionaryAsync(r => r.Id, r => r);
+        var reservationsDict = reservations.ToDictionary(r => r.Id, r => r);
         var fullyPaidPayments = new List<PaymentDto>();
         foreach (var p in activePayments.Where(p =>
     !p.ReservationId.HasValue ||
