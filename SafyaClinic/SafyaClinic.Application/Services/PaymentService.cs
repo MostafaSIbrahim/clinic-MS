@@ -622,11 +622,54 @@ public class PaymentService : IPaymentService
                 }
        
         // ── Amount by clinic ─────────────────────────────────────
-        var byClinic = new List<ClinicAmountDto>();
-        foreach (var grp in activePayments.GroupBy(p => p.ClinicId))
+        var clinicIds = activePayments
+                .Where(p => p.ClinicId.HasValue)
+                .Select(p => p.ClinicId!.Value)
+                .Distinct()
+                .ToList();
+
+                var clinicNames = await _uow.Clinics.Query()
+                    .Where(c => clinicIds.Contains(c.Id))
+                    .ToDictionaryAsync(c => c.Id, c => c.Name);
+
+                var byClinic = new List<ClinicAmountDto>();
+
+                foreach (var grp in activePayments.GroupBy(p => p.ClinicId))
+                {
+                    string name = "No Clinic";
+
+                    if (grp.Key.HasValue)
+                    {
+                        name = clinicNames.TryGetValue(grp.Key.Value, out var clinicName)
+                            ? clinicName
+                            : "Unknown Clinic";
+                    }
+
+                    byClinic.Add(new ClinicAmountDto
+                    {
+                        ClinicId = grp.Key,
+                        ClinicName = name,
+                        TotalCollected = grp.Sum(p => p.Amount),
+                        TotalClinicNet = grp.Sum(p => p.ClinicNetAmount),
+                        PaymentCount = grp.Count()
+                    });
+                }
+
+        return ServiceResult<PaymentDashboardDto>.Success(new PaymentDashboardDto
         {
-            string name = "No Clinic";
-            if (grp.Key.HasValue)
+            UnpaidCompletedReservations = unpaidCompleted.OrderByDescending(r => r.ReservationDate),
+            UnpaidPendingReservations = unpaidPending.OrderByDescending(r => r.ReservationDate),
+            FullyPaidPayments = fullyPaidPayments.OrderByDescending(p => p.PaymentDate),
+            TotalUnpaidCompleted = unpaidCompleted.Sum(r => r.Balance),
+            TotalUnpaidPending = unpaidPending.Sum(r => r.Balance),
+            TotalFullyPaid = fullyPaidPayments.Sum(p => p.Amount),
+            AmountBySource = bySource.OrderByDescending(s => s.TotalCollected),
+            AmountByClinic = byClinic.OrderByDescending(c => c.TotalCollected)
+        });
+    }
+*/
+        // ── Collect-form helper ─────────────────────────────────────
+
             {
                 var c = await _uow.Clinics.GetByIdAsync(grp.Key.Value);
                 name = c?.Name ?? "Unknown Clinic";
@@ -653,8 +696,8 @@ public class PaymentService : IPaymentService
             AmountByClinic = byClinic.OrderByDescending(c => c.TotalCollected)
         });
     }
-
-    // ── Collect-form helper ─────────────────────────────────────
+*/
+        // ── Collect-form helper ─────────────────────────────────────
 
     public async Task<ServiceResult<decimal>> GetDueAmountAsync(int patientId, int? reservationId, int? enrollmentId)
     {
