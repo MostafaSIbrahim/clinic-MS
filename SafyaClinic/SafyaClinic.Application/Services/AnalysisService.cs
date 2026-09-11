@@ -337,16 +337,19 @@ public class AnalysisService : IAnalysisService
 
     public async Task<ServiceResult<IEnumerable<AnalysisTypeDto>>> GetAnalysisTypesAsync()
     {
-        var types = await _uow.AnalysisTypes.GetAllAsync();
-        return ServiceResult<IEnumerable<AnalysisTypeDto>>.Success(
-            types.Select(t => new AnalysisTypeDto
+        var types = await _uow.AnalysisTypes.Query()
+            .OrderBy(t => t.TypeName)
+            .Select(t => new AnalysisTypeDto
             {
                 Id = t.Id,
                 TypeName = t.TypeName,
                 Description = t.Description,
                 DefaultCost = t.DefaultCost,
                 PreparationInstructions = t.PreparationInstructions
-            }));
+            })
+            .ToListAsync();
+
+        return ServiceResult<IEnumerable<AnalysisTypeDto>>.Success(types);
     }
 
     // ── Mapper ────────────────────────────────────────────────
