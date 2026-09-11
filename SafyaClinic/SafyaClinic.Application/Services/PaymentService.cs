@@ -437,23 +437,29 @@ public class PaymentService : IPaymentService
 
     public async Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null)
     {
-        var reservations = (await _uow.Reservations.GetAllAsync()).ToList();
-        var allPayments = (await _uow.Payments.GetAllAsync()).ToList();
-
-        // BUGFIX: use the SAME inclusive-of-the-whole-"to"-day semantics as
-        // GetDashboardLineDetailsAsync (NormalizeDateRange). Previously this compared
-        // PaymentDate <= to.Value directly — since 'to' comes in as a plain date
-        // (midnight), that silently excluded every payment made later in the day on the
-        // end date, so the dashboard's own totals/counts for a given range could
-        // disagree with what a drill-down over the exact same range returned.
         var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
-        if (fromInclusive.HasValue)
-            allPayments = allPayments.Where(p => p.PaymentDate >= fromInclusive.Value).ToList();
-        if (toInclusive.HasValue)
-            allPayments = allPayments.Where(p => p.PaymentDate <= toInclusive.Value).ToList();
 
-        var activePayments = allPayments.Where(p => p.Status == PaymentStatusEnum.Active).ToList();
-        var cancelledPayments = allPayments.Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
+        var reservationsQuery = _uow.Reservations.Query();
+
+        var paymentsQuery = _uow.Payments.Query();
+
+        if (fromInclusive.HasValue)
+        {
+            paymentsQuery = paymentsQuery
+                .Where(p => p.PaymentDate >= fromInclusive.Value);
+        }
+
+        if (toInclusive.HasValue)
+        {
+            paymentsQuery = paymentsQuery
+                .Where(p => p.PaymentDate <= toInclusive.Value);
+        }
+
+        var reservations = await reservationsQuery.ToListAsync();
+var payments = await paymentsQuery.ToListAsync();
+
+var activePayments = payments.Where(p => p.Status == PaymentStatusEnum.Active).ToList();
+var cancelledPayments = payments.Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
 
         var paidByReservation = activePayments
             .Where(p => p.ReservationId.HasValue)
@@ -470,7 +476,7 @@ public class PaymentService : IPaymentService
         var unpaidCompleted = new List<UnpaidReservationDto>();
         var unpaidPending = new List<UnpaidReservationDto>();
 
-        foreach (var r in reservations)
+        foreach (var r in reservationsQuery)
         {
             var statusEntity = await _uow.ReservationStatuses.GetByIdAsync(r.StatusId);
             var statusName = statusEntity?.StatusName ?? "";
@@ -509,7 +515,7 @@ public class PaymentService : IPaymentService
         foreach (var p in activePayments.Where(p => !p.ReservationId.HasValue ||
                     (paidByReservation.TryGetValue(p.ReservationId!.Value, out var paidAmt) &&
                      paidAmt + (writtenOffByReservation.TryGetValue(p.ReservationId!.Value, out var woAmt) ? woAmt : 0m) >=
-                        (reservations.FirstOrDefault(r => r.Id == p.ReservationId)?.TotalAmount ?? 0m))))
+                        (reservationsQuery.FirstOrDefault(r => r.Id == p.ReservationId)?.TotalAmount ?? 0m))))
         {
             fullyPaidPayments.Add(await GetPaymentDtoByIdAsync(p.Id));
         }
