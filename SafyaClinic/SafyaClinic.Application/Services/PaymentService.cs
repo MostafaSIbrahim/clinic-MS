@@ -471,7 +471,19 @@ public class PaymentService : IPaymentService
             })
             .ToListAsync();
 
-        var payments = await paymentsQuery.ToListAsync();
+        var payments = await paymentsQuery
+            .Select(p => new
+            {
+                p.Id,
+                p.ReservationId,
+                p.Amount,
+                p.ClinicId,
+                p.PatientSourceId,
+                p.SourceDeductionAmount,
+                p.ClinicNetAmount,
+                p.Status
+            })
+            .ToListAsync();
 
         var activePayments = payments
             .Where(p => p.Status == PaymentStatusEnum.Active)
