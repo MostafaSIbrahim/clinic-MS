@@ -1264,6 +1264,8 @@ namespace SafyaClinic.Infrastructure.Migrations
 
                     b.HasIndex("TreatmentTypeId");
 
+                    b.HasIndex("DoctorId", "ReservationDate", "ReservationTime", "Id");
+
                     b.ToTable("Reservations", (string)null);
                 });
 
