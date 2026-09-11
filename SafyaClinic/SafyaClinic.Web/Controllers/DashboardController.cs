@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Interfaces.Services;
 
 namespace SafyaClinic.Web.Controllers;
@@ -21,15 +22,28 @@ public class DashboardController : BaseController
 
     public async Task<IActionResult> Index()
     {
-        var doctorId = (IsDoctor || IsNutritionist) ? CurrentUserId : (int?)null;
+        var doctorId = (IsDoctor || IsNutritionist)
+            ? CurrentUserId
+            : (int?)null;
 
         var todayResult = await _reservationService.GetTodayReservationsAsync(doctorId);
-        var todayPayments = await _paymentService.GetRevenueByDateRangeAsync(
-            DateTime.Today, DateTime.Today.AddDays(1).AddSeconds(-1));
 
-        ViewBag.TodayReservations = todayResult.IsSuccess ? todayResult.Data : Enumerable.Empty<object>();
+        var reservations = todayResult.IsSuccess
+            ? todayResult.Data?.ToList() ?? new List<ReservationSummaryDto>()
+            : new List<ReservationSummaryDto>();
+
+        ViewBag.TodayReservations = reservations;
+        ViewBag.TodayReservationCount = reservations.Count;
+        ViewBag.TodayPendingCount = reservations.Count(r => r.StatusName == "Pending");
+        ViewBag.TodayUnpaidCount = reservations.Count(r => !r.IsPaid);
+
+        var todayPayments = await _paymentService.GetRevenueByDateRangeAsync(
+            DateTime.Today,
+            DateTime.Today.AddDays(1).AddSeconds(-1));
+
         ViewBag.TodayRevenue = todayPayments.IsSuccess
-            ? todayPayments.Data! : 0m;
+            ? todayPayments.Data
+            : 0m;
 
         return View();
     }
