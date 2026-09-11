@@ -457,7 +457,19 @@ public class PaymentService : IPaymentService
 
 
 
-        var reservations = await reservationsQuery.ToListAsync();
+        var reservations = await reservationsQuery
+            .Select(r => new
+            {
+                r.Id,
+                r.PatientId,
+                PatientName = $"{r.Patient.FirstName} {r.Patient.LastName}",
+                DoctorName = r.Doctor.FullName,
+                ClinicName = r.Clinic.Name,
+                StatusName = r.Status.StatusName,
+                r.ReservationDate,
+                r.TotalAmount
+            })
+            .ToListAsync();
 
         var payments = await paymentsQuery.ToListAsync();
 
@@ -485,48 +497,40 @@ public class PaymentService : IPaymentService
 
         foreach (var r in reservations)
         {
-            var statusEntity = await _uow.ReservationStatuses.Query()
-                .Where(s => s.Id == r.StatusId)
-                .Select(s => new UnpaidReservationDto
-                {
-                    StatusName = s.StatusName
-                }).ToListAsync();
-            var statusName = statusEntity.FirstOrDefault()?.StatusName ?? "Unknown";
+            var statusName = r.StatusName ?? "Unknown";
             if (statusName is "Cancelled" or "NoShow") continue;
 
             var paid = paidByReservation.TryGetValue(r.Id, out var amt) ? amt : 0m;
             var writtenOff = writtenOffByReservation.TryGetValue(r.Id, out var wo) ? wo : 0m;
             var total = r.TotalAmount ?? 0m;
-            // Also skips genuinely free reservations (total == 0, e.g. a nutrition
-            // "Follow-up" visit) — there's nothing owed, so it shouldn't show as unpaid.
-            if (paid + writtenOff >= total) continue; // fully covered, skip
+
+            if (paid + writtenOff >= total)
+                continue;
 
             var patient = await _uow.Patients.Query()
                 .Where(p => p.Id == r.PatientId)
                 .Select(p => new { p.FirstName, p.LastName })
                 .FirstOrDefaultAsync();
-            var doctor = await _uow.Users.Query()
-                .Where(u => u.Id == r.DoctorId)
-                .Select(u => u.FullName)
-                .FirstOrDefaultAsync();
-            var clinic = await _uow.Clinics.Query()
-                .Where(c => c.Id == r.ClinicId)
-                .Select(c => c.Name)
-                .FirstOrDefaultAsync();
+           
 
             var dto = new UnpaidReservationDto
             {
                 ReservationId = r.Id,
                 PatientId = r.PatientId,
-                PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-                DoctorName = doctor ?? "",
-                ClinicName = clinic ??"",
+                PatientName = r.PatientName,
+                DoctorName = r.DoctorName,
+                ClinicName = r.ClinicName,
                 ReservationDate = r.ReservationDate,
                 StatusName = statusName,
                 TotalAmount = r.TotalAmount,
                 AmountPaid = paid,
                 WrittenOff = writtenOff
             };
+
+            if (statusName == "Completed")
+                unpaidCompleted.Add(dto);
+            else
+                unpaidPending.Add(dto);
 
             if (statusName == "Completed") unpaidCompleted.Add(dto);
             else unpaidPending.Add(dto);
