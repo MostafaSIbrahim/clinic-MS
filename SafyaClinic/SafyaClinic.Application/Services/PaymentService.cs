@@ -434,6 +434,25 @@ public class PaymentService : IPaymentService
         return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(payment.Id), "Payment amount updated.");
     }
 
+    //-----Aggrigate method-----//
+    public async Task<ServiceResult<decimal>> GetRevenueByDateRangeAsync(DateTime? from = null, DateTime? to = null)
+    {
+        var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
+        var paymentsQuery = _uow.Payments.Query()
+            .Where(p => p.Status == PaymentStatusEnum.Active);
+        if (fromInclusive.HasValue)
+        {
+            paymentsQuery = paymentsQuery
+                .Where(p => p.PaymentDate >= fromInclusive.Value);
+        }
+        if (toInclusive.HasValue)
+        {
+            paymentsQuery = paymentsQuery
+                .Where(p => p.PaymentDate <= toInclusive.Value);
+        }
+        var totalCollected = await paymentsQuery.SumAsync(p => p.Amount);
+        return ServiceResult<decimal>.Success(totalCollected);
+    }
     // ── Payment dashboard ─────────────────────────────────────────
 
     public async Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null)
