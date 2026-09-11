@@ -455,11 +455,12 @@ public class PaymentService : IPaymentService
                 .Where(p => p.PaymentDate <= toInclusive.Value);
         }
 
-        var reservations = await reservationsQuery.ToListAsync();
-var payments = await paymentsQuery.ToListAsync();
+        
 
-var activePayments = payments.Where(p => p.Status == PaymentStatusEnum.Active).ToList();
-var cancelledPayments = payments.Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
+        var activePayments = paymentsQuery
+            .Where(p => p.Status == PaymentStatusEnum.Active).ToList();
+        var cancelledPayments = paymentsQuery
+            .Where(p => p.Status == PaymentStatusEnum.Cancelled).ToList();
 
         var paidByReservation = activePayments
             .Where(p => p.ReservationId.HasValue)
@@ -511,11 +512,16 @@ var cancelledPayments = payments.Where(p => p.Status == PaymentStatusEnum.Cancel
             else unpaidPending.Add(dto);
         }
 
+        var reservationsDict = await _uow.Reservations.Query()
+         .ToDictionaryAsync(r => r.Id, r => r);
         var fullyPaidPayments = new List<PaymentDto>();
-        foreach (var p in activePayments.Where(p => !p.ReservationId.HasValue ||
-                    (paidByReservation.TryGetValue(p.ReservationId!.Value, out var paidAmt) &&
-                     paidAmt + (writtenOffByReservation.TryGetValue(p.ReservationId!.Value, out var woAmt) ? woAmt : 0m) >=
-                        (reservationsQuery.FirstOrDefault(r => r.Id == p.ReservationId)?.TotalAmount ?? 0m))))
+        foreach (var p in activePayments.Where(p =>
+    !p.ReservationId.HasValue ||
+    (
+        paidByReservation.TryGetValue(p.ReservationId.Value, out var paidAmt) &&
+        paidAmt + (writtenOffByReservation.TryGetValue(p.ReservationId.Value, out var woAmt) ? woAmt : 0m)
+        >= (reservationsDict.TryGetValue(p.ReservationId.Value, out var res) ? res.TotalAmount ?? 0m : 0m)
+    )))
         {
             fullyPaidPayments.Add(await GetPaymentDtoByIdAsync(p.Id));
         }
