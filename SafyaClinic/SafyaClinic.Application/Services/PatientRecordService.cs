@@ -189,18 +189,59 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult<PrescriptionDetailDto>> GetPrescriptionByIdAsync(int prescriptionId)
     {
-        var prescription = await _uow.Prescriptions.GetByIdAsync(prescriptionId);
+        var prescription = await _uow.Prescriptions.Query()
+            .Where(p => p.Id == prescriptionId)
+            .Select(p => new PrescriptionDetailDto
+            {
+                Id = p.Id,
+                RecordId = p.RecordId,
+                PrescriptionDate = p.PrescriptionDate,
+                Notes = p.Notes,
+                IsPrinted = p.IsPrinted,
+                CreatedAt = p.CreatedAt,
+
+                PatientName = $"{p.Record.Patient.FirstName} {p.Record.Patient.LastName}",
+                PatientAge = p.Record.Patient.DateOfBirth.HasValue
+                    ? (int)((DateTime.Today - p.Record.Patient.DateOfBirth.Value).TotalDays / 365.25)
+                    : null,
+                PatientGender = p.Record.Patient.Gender != null
+                    ? p.Record.Patient.Gender.ToString()
+                    : null,
+
+                Diagnosis = p.Record.Diagnosis,
+
+                DoctorName = p.Record.Doctor.FullName,
+                DoctorSpecialization = p.Record.Doctor.Specialization,
+                DoctorLicenseNumber = p.Record.Doctor.LicenseNumber,
+
+                Items = p.Items.Select(i => new PrescriptionItemDto
+                {
+                    Id = i.Id,
+                    MedicationName = i.MedicationName,
+                    Dosage = i.Dosage,
+                    Frequency = i.Frequency,
+                    Duration = i.Duration,
+                    RouteOfAdministration = i.RouteOfAdministration,
+                    Instructions = i.Instructions
+                }),
+
+                Attachments = p.Attachments.Select(a => new AttachmentDto
+                {
+                    Id = a.Id,
+                    FileName = a.FileName,
+                    FilePath = a.FilePath,
+                    ContentType = a.ContentType,
+                    FileSizeBytes = (long)a.FileSizeBytes!,
+                    UploadedAt = a.UploadedAt
+                    
+                })
+            })
+            .FirstOrDefaultAsync();
+
         if (prescription is null)
             return ServiceResult<PrescriptionDetailDto>.Failure("Prescription not found.");
 
-        // Explicitly load child collections since generic repo GetById doesn't Include()
-        var items = await _uow.PrescriptionItems.FindAsync(i => i.PrescriptionId == prescriptionId);
-        prescription.Items = items.ToList();
-
-        var attachments = await _uow.PrescriptionAttachments.FindAsync(a => a.PrescriptionId == prescriptionId);
-        prescription.Attachments = attachments.ToList();
-
-        return ServiceResult<PrescriptionDetailDto>.Success(await BuildPrescriptionDetailDtoAsync(prescription));
+        return ServiceResult<PrescriptionDetailDto>.Success(prescription);
     }
 
     public async Task<ServiceResult<IEnumerable<PrescriptionListDto>>> GetPrescriptionsByRecordAsync(int recordId)
