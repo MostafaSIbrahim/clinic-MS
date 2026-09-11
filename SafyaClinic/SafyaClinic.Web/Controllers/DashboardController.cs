@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Models;
 
@@ -10,9 +9,7 @@ namespace SafyaClinic.Web.Controllers;
 public class DashboardController : BaseController
 {
     private readonly IReservationService _reservationService;
- 
-    private readonly IPaymentService _paymentService;
-
+     private readonly IPaymentService _paymentService;
     public DashboardController(
         IReservationService reservationService,
         IPaymentService paymentService)
@@ -30,12 +27,14 @@ public class DashboardController : BaseController
         var todayResult = await _reservationService.GetTodayReservationsAsync(doctorId);
 
         var reservations = todayResult.IsSuccess
-            ? todayResult.Data?.ToList() ?? new List<ReservationSummaryDto>()
-            : new List<ReservationSummaryDto>();
+            ? todayResult.Data?.ToList() ?? []
+            : [];
+        var today = DateTime.Today;
+        var endOfToday = today.AddDays(1).AddSeconds(-1);
 
         var todayPayments = await _paymentService.GetRevenueByDateRangeAsync(
-            DateTime.Today,
-            DateTime.Today.AddDays(1).AddSeconds(-1));
+            today,
+            endOfToday);
 
         var model = new DashboardViewModel
         {
