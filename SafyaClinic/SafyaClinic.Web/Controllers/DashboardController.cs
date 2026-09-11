@@ -9,7 +9,8 @@ namespace SafyaClinic.Web.Controllers;
 public class DashboardController : BaseController
 {
     private readonly IReservationService _reservationService;
-     private readonly IPaymentService _paymentService;
+    private readonly IPaymentService _paymentService;
+
     public DashboardController(
         IReservationService reservationService,
         IPaymentService paymentService)
