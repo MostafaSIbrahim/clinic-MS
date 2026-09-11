@@ -82,8 +82,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var r in todayReservations.OrderBy(r => r.ReservationTime))
-                        {
+                        @foreach (var r in todayReservations)
+                           {
                             <tr>
                                 <td>@r.ReservationTime.ToString(@"hh\:mm")</td>
                                 <td>@r.PatientName</td>
