@@ -1019,6 +1019,8 @@ namespace SafyaClinic.Infrastructure.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("Status", "PaymentDate");
+
                     b.ToTable("Payments", (string)null);
                 });
 
