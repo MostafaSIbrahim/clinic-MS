@@ -41,6 +41,11 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
                    .WithMany(s => s.Payments)
                    .HasForeignKey(p => p.PatientSourceId)
                    .OnDelete(DeleteBehavior.Restrict);
+            builder.HasIndex(p => new
+            {
+                p.Status,
+                p.PaymentDate
+            });
         }
     }
 }
