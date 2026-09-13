@@ -79,6 +79,12 @@
         @if (Model != null && Model.TotalPages > 1)
         {
             ViewData["PaginationAction"] = "Index";
+            ViewData["PaginationRouteValues"] = new Dictionary<string, string>
+            {
+                ["DateFrom"] = filter?.DateFrom?.ToString("yyyy-MM-dd") ?? string.Empty,
+                ["DateTo"] = filter?.DateTo?.ToString("yyyy-MM-dd") ?? string.Empty,
+                ["Category"] = filter?.Category ?? string.Empty
+            };
             var paginationModel = new PagedResult<object>
             {
                 TotalCount = Model.TotalCount,
