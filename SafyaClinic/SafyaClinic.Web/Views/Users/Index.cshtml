@@ -117,5 +117,18 @@
                 </table>
             </div>
         }
+
+        @if (Model.TotalPages > 1)
+        {
+            ViewData["PaginationAction"] = "Index";
+            ViewData["PaginationRouteValues"] = new Dictionary<string, string>();
+            var paginationModel = new PagedResult<object>
+            {
+                TotalCount = Model.TotalCount,
+                Page = Model.Page,
+                PageSize = Model.PageSize
+            };
+            @await Html.PartialAsync("_Pagination", paginationModel)
+        }
     </div>
 </div>
