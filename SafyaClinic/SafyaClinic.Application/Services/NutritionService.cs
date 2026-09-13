@@ -469,13 +469,11 @@ public class NutritionService : INutritionService
         // Delete related records first
         var administeredItems = await _uow.WeeklyAdministeredItems
             .FindAsync(a => a.FollowUpId == followUpId);
-        foreach (var item in administeredItems)
-            _uow.WeeklyAdministeredItems.Delete(item);
+        _uow.WeeklyAdministeredItems.DeleteRange(administeredItems);
 
         var labResults = await _uow.WeeklyFollowUpLabResults
             .FindAsync(l => l.FollowUpId == followUpId);
-        foreach (var lab in labResults)
-            _uow.WeeklyFollowUpLabResults.Delete(lab);
+        _uow.WeeklyFollowUpLabResults.DeleteRange(labResults);
 
         _uow.WeeklyFollowUps.Delete(followUp);
         await _uow.SaveChangesAsync();
