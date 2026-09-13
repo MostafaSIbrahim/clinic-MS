@@ -1,4 +1,5 @@
-﻿using SafyaClinic.Application.DTOs.Common;
+﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Nutrition;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Entities.Nutrition;
@@ -148,27 +149,74 @@ public class NutritionService : INutritionService
 
         await _uow.NutritionEnrollments.AddAsync(enrollment);
         await _uow.SaveChangesAsync();
-        return ServiceResult<PatientEnrollmentDto>.Success(
-            await BuildEnrollmentDtoAsync(enrollment));
+
+        return await GetEnrollmentByIdAsync(enrollment.Id);
     }
 
-    public async Task<ServiceResult<PatientEnrollmentDto>> GetEnrollmentByIdAsync(int enrollmentId)
+    public async Task<ServiceResult<PatientEnrollmentDto>> GetEnrollmentByIdAsync(
+    int enrollmentId)
     {
-        var enrollment = await _uow.NutritionEnrollments.GetByIdAsync(enrollmentId);
+        var enrollment = await _uow.NutritionEnrollments
+            .Query()
+            .AsSplitQuery()
+            .Include(e => e.Patient)
+            .Include(e => e.Package)
+            .Include(e => e.Doctor)
+            .Include(e => e.WeeklyFollowUps)
+                .ThenInclude(f => f.AdministeredItems)
+                    .ThenInclude(a => a.PackageItem)
+                        .ThenInclude(pi => pi.Injection)
+            .Include(e => e.WeeklyFollowUps)
+                .ThenInclude(f => f.AdministeredItems)
+                    .ThenInclude(a => a.PackageItem)
+                        .ThenInclude(pi => pi.Vitamin)
+            .Include(e => e.WeeklyFollowUps)
+                .ThenInclude(f => f.AdministeredItems)
+                    .ThenInclude(a => a.AdministerByUser)
+            .Include(e => e.WeeklyFollowUps)
+                .ThenInclude(f => f.LabResults)
+                    .ThenInclude(l => l.AnalysisType)
+            .FirstOrDefaultAsync(e => e.Id == enrollmentId);
+
         if (enrollment is null)
             return ServiceResult<PatientEnrollmentDto>.Failure("Enrollment not found.");
+
         return ServiceResult<PatientEnrollmentDto>.Success(
             await BuildEnrollmentDtoAsync(enrollment));
     }
 
     public async Task<ServiceResult<IEnumerable<PatientEnrollmentDto>>> GetPatientEnrollmentsAsync(
-        int patientId)
+    int patientId)
     {
-        var enrollments = await _uow.NutritionEnrollments.FindAsync(
-            e => e.PatientId == patientId);
+        var enrollments = await _uow.NutritionEnrollments
+            .Query()
+            .AsSplitQuery()
+            .Where(e => e.PatientId == patientId)
+            .OrderByDescending(e => e.StartDate)
+            .Include(e => e.Patient)
+            .Include(e => e.Package)
+            .Include(e => e.Doctor)
+            .Include(e => e.WeeklyFollowUps)
+                .ThenInclude(f => f.AdministeredItems)
+                    .ThenInclude(a => a.PackageItem)
+                        .ThenInclude(pi => pi.Injection)
+            .Include(e => e.WeeklyFollowUps)
+                .ThenInclude(f => f.AdministeredItems)
+                    .ThenInclude(a => a.PackageItem)
+                        .ThenInclude(pi => pi.Vitamin)
+            .Include(e => e.WeeklyFollowUps)
+                .ThenInclude(f => f.AdministeredItems)
+                    .ThenInclude(a => a.AdministerByUser)
+            .Include(e => e.WeeklyFollowUps)
+                .ThenInclude(f => f.LabResults)
+                    .ThenInclude(l => l.AnalysisType)
+            .ToListAsync();
+
         var dtos = new List<PatientEnrollmentDto>();
-        foreach (var e in enrollments.OrderByDescending(e => e.StartDate))
-            dtos.Add(await BuildEnrollmentDtoAsync(e));
+
+        foreach (var enrollment in enrollments)
+            dtos.Add(await BuildEnrollmentDtoAsync(enrollment));
+
         return ServiceResult<IEnumerable<PatientEnrollmentDto>>.Success(dtos);
     }
 
@@ -617,33 +665,38 @@ public class NutritionService : INutritionService
         return MapPackageDto(p!);
     }
 
-    private async Task<PatientEnrollmentDto> BuildEnrollmentDtoAsync(PatientNutritionEnrollment e)
+    private async Task<PatientEnrollmentDto> BuildEnrollmentDtoAsync(
+    PatientNutritionEnrollment e)
     {
-        var patient = await _uow.Patients.GetByIdAsync(e.PatientId);
-        var doctor = await _uow.Users.GetByIdAsync(e.DoctorId);
-        var package = await _uow.NutritionPackages.GetByIdAsync(e.PackageId);
-        var followUps = await _uow.WeeklyFollowUps.GetByEnrollmentAsync(e.Id);
-
         var followUpDtos = new List<WeeklyFollowUpDto>();
-        foreach (var f in followUps)
+
+        foreach (var f in e.WeeklyFollowUps.OrderBy(f => f.WeekNumber))
             followUpDtos.Add(await BuildFollowUpDtoAsync(f));
 
         return new PatientEnrollmentDto
         {
             Id = e.Id,
             PatientId = e.PatientId,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
+            PatientName = e.Patient is null
+                ? ""
+                : $"{e.Patient.FirstName} {e.Patient.LastName}",
+
             PackageId = e.PackageId,
-            PackageName = package?.PackageName ?? "",
+            PackageName = e.Package?.PackageName ?? "",
+
             DoctorId = e.DoctorId,
-            DoctorName = doctor?.FullName ?? "",
+            DoctorName = e.Doctor?.FullName ?? "",
+
             StartDate = e.StartDate,
             EndDate = e.EndDate,
+
             BasePrice = e.BasePrice,
             DiscountPercent = e.DiscountPercent,
             FinalPrice = e.FinalPrice,
+
             Status = e.Status.ToString(),
             TotalPaid = e.TotalPaid,
+
             WeeklyFollowUps = followUpDtos
         };
     }
