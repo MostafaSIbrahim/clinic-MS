@@ -1,4 +1,5 @@
-﻿using SafyaClinic.Application.DTOs.Common;
+﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Identity;
@@ -65,13 +66,40 @@ public class UserService : IUserService
         return ServiceResult<UserDto>.Success(await MapUserDtoAsync(user));
     }
 
-    public async Task<ServiceResult<IEnumerable<UserDto>>> GetAllUsersAsync()
+    public async Task<ServiceResult<PagedResult<UserDto>>> GetAllUsersAsync(
+    PaginationRequest request)
     {
-        var users = await _uow.Users.GetAllAsync();
-        var dtos = new List<UserDto>();
-        foreach (var u in users)
-            dtos.Add(await MapUserDtoAsync(u));
-        return ServiceResult<IEnumerable<UserDto>>.Success(dtos);
+        var query = _uow.Users.Query();
+
+        var totalCount = await query.CountAsync();
+
+        var users = await query
+            .OrderBy(u => u.Id)
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .Select(u => new UserDto
+            {
+                Id = u.Id,
+                FullName = u.FullName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                Specialization = u.Specialization,
+                IsActive = u.IsActive,
+                LastLoginAt = u.LastLoginAt,
+                Roles = u.UserRoles
+                    .OrderBy(ur => ur.RoleId)
+                    .Select(ur => ur.Role.RoleName)
+            })
+            .ToListAsync();
+
+        return ServiceResult<PagedResult<UserDto>>.Success(
+            new PagedResult<UserDto>
+            {
+                Items = users,
+                TotalCount = totalCount,
+                Page = request.Page,
+                PageSize = request.PageSize
+            });
     }
 
     public async Task<ServiceResult<IEnumerable<UserDto>>> GetDoctorsAsync()

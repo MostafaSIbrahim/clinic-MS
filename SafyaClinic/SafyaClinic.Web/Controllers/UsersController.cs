@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Application.DTOs.Common;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -13,10 +14,23 @@ public class UsersController : BaseController
     public UsersController(IUserService userService) =>
         _userService = userService;
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(PaginationRequest request)
     {
-        var result = await _userService.GetAllUsersAsync();
-        return View(result.IsSuccess ? result.Data : Enumerable.Empty<UserDto>());
+        var result = await _userService.GetAllUsersAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            return View(new PagedResult<UserDto>
+            {
+                Items = [],
+                TotalCount = 0,
+                Page = request.Page,
+                PageSize = request.PageSize
+            });
+        }
+
+        return View(result.Data);
     }
 
     [HttpGet]
