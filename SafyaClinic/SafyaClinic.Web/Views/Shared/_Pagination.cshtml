@@ -1,26 +1,92 @@
 @model PagedResult<object>
 @{
     var action = ViewData["PaginationAction"]?.ToString() ?? "Index";
+    var routeValues = ViewData["PaginationRouteValues"] as IDictionary<string, string>
+        ?? new Dictionary<string, string>();
+
+    string PageUrl(int page)
+    {
+        var values = new Dictionary<string, string>(routeValues)
+        {
+            ["page"] = page.ToString(),
+            ["pageSize"] = Model.PageSize.ToString()
+        };
+
+        return Url.Action(action, values) ?? "#";
+    }
+
+    IEnumerable<int?> PageNumbers()
+    {
+        if (Model.TotalPages <= 7)
+        {
+            for (var i = 1; i <= Model.TotalPages; i++)
+                yield return i;
+
+            yield break;
+        }
+
+        yield return 1;
+
+        var start = Math.Max(2, Model.Page - 1);
+        var end = Math.Min(Model.TotalPages - 1, Model.Page + 1);
+
+        if (start > 2)
+            yield return null;
+
+        for (var i = start; i <= end; i++)
+            yield return i;
+
+        if (end < Model.TotalPages - 1)
+            yield return null;
+
+        yield return Model.TotalPages;
+    }
 }
+
 @if (Model != null && Model.TotalPages > 1)
 {
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center mt-3">
             <li class="page-item @(Model.HasPrev ? "" : "disabled")">
-                <a class="page-link" asp-action="@action" asp-route-page="@(Model.Page - 1)" asp-route-pageSize="@Model.PageSize">
-                    <i class="bi bi-chevron-left"></i>
-                </a>
+                @if (Model.HasPrev)
+                {
+                    <a class="page-link" href="@PageUrl(Model.Page - 1)" aria-label="Previous">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                }
+                else
+                {
+                    <span class="page-link" aria-hidden="true"><i class="bi bi-chevron-left"></i></span>
+                }
             </li>
-            @for (int i = 1; i <= Model.TotalPages; i++)
+
+            @foreach (var page in PageNumbers())
             {
-                <li class="page-item @(i == Model.Page ? "active" : "")">
-                    <a class="page-link" asp-action="@action" asp-route-page="@i" asp-route-pageSize="@Model.PageSize">@i</a>
-                </li>
+                if (page.HasValue)
+                {
+                    <li class="page-item @(page.Value == Model.Page ? "active" : "")">
+                        <a class="page-link" href="@PageUrl(page.Value)">@page.Value</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">&hellip;</span>
+                    </li>
+                }
             }
+
             <li class="page-item @(Model.HasNext ? "" : "disabled")">
-                <a class="page-link" asp-action="@action" asp-route-page="@(Model.Page + 1)" asp-route-pageSize="@Model.PageSize">
-                    <i class="bi bi-chevron-right"></i>
-                </a>
+                @if (Model.HasNext)
+                {
+                    <a class="page-link" href="@PageUrl(Model.Page + 1)" aria-label="Next">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                }
+                else
+                {
+                    <span class="page-link" aria-hidden="true"><i class="bi bi-chevron-right"></i></span>
+                }
             </li>
         </ul>
     </nav>
