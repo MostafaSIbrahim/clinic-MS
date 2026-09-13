@@ -101,9 +101,8 @@ public class NutritionService : INutritionService
         await _uow.NutritionPackages.AddAsync(package);
         await _uow.SaveChangesAsync();
 
-        foreach (var item in request.Items)
-        {
-            await _uow.PackageItems.AddAsync(new PackageItem
+        var packageItems = request.Items
+            .Select(item => new PackageItem
             {
                 PackageId = package.Id,
                 InjectionId = item.InjectionId,
@@ -112,10 +111,13 @@ public class NutritionService : INutritionService
                 Unit = item.Unit?.Trim(),
                 WeekNumber = item.WeekNumber,
                 Notes = item.Notes?.Trim()
-            });
-        }
+            })
+            .ToList();
+
+        await _uow.PackageItems.AddRangeAsync(packageItems);
 
         await _uow.SaveChangesAsync();
+
         return ServiceResult<NutritionPackageDto>.Success(
             await BuildPackageDtoAsync(package.Id));
     }
