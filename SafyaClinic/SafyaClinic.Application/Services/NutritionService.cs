@@ -652,11 +652,13 @@ public class NutritionService : INutritionService
     {
         var administeredItems = f.AdministeredItems.Any()
             ? f.AdministeredItems
-            : await _uow.WeeklyAdministeredItems.FindAsync(a => a.FollowUpId == f.Id);
+            : await _uow.WeeklyFollowUps
+                .GetAdministeredItemsWithDetailsAsync(f.Id);
 
         var labResults = f.LabResults.Any()
             ? f.LabResults
-            : await _uow.WeeklyFollowUpLabResults.FindAsync(l => l.FollowUpId == f.Id);
+            : await _uow.WeeklyFollowUps
+                .GetLabResultsWithDetailsAsync(f.Id);
 
         var administeredDtos = new List<AdministeredItemDto>();
         foreach (var a in administeredItems)

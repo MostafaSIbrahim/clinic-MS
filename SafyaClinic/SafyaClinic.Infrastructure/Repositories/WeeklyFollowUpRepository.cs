@@ -49,4 +49,24 @@ public class WeeklyFollowUpRepository
             .Include(f => f.LabResults)
                 .ThenInclude(l => l.AnalysisType)
             .FirstOrDefaultAsync(f => f.Id == followUpId);
+
+    public async Task<IEnumerable<WeeklyAdministeredItem>> GetAdministeredItemsWithDetailsAsync(
+    int followUpId)
+    => await _context.Set<WeeklyAdministeredItem>()
+        .AsNoTracking()
+        .Where(a => a.FollowUpId == followUpId)
+        .Include(a => a.PackageItem)
+            .ThenInclude(pi => pi.Injection)
+        .Include(a => a.PackageItem)
+            .ThenInclude(pi => pi.Vitamin)
+        .Include(a => a.AdministerByUser)
+        .ToListAsync();
+
+    public async Task<IEnumerable<WeeklyFollowUpLabResult>> GetLabResultsWithDetailsAsync(
+        int followUpId)
+        => await _context.Set<WeeklyFollowUpLabResult>()
+            .AsNoTracking()
+            .Where(l => l.FollowUpId == followUpId)
+            .Include(l => l.AnalysisType)
+            .ToListAsync();
 }
