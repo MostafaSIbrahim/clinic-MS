@@ -1,4 +1,4 @@
-@model IEnumerable<UserDto>
+@model PagedResult<UserDto>
 @{
     ViewData["Title"] = "Users";
     var allRoles = new[]
@@ -19,7 +19,7 @@
         </a>
     </div>
     <div class="card-body p-0">
-        @if (!Model.Any())
+        @if (!Model.Items.Any())
         {
             <div class="text-center text-muted py-5">
                 <i class="bi bi-people fs-1 d-block mb-2 opacity-50"></i>
@@ -43,7 +43,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var u in Model)
+                        @foreach (var u in Model.Items)
                         {
                             <tr>
                                 <td class="fw-semibold">@u.FullName</td>
