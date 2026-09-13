@@ -661,18 +661,16 @@ public class NutritionService : INutritionService
         var administeredDtos = new List<AdministeredItemDto>();
         foreach (var a in administeredItems)
         {
-            var packageItem = await _uow.PackageItems.GetByIdAsync(a.PackageItemId);
-            var administerer = await _uow.Users.GetByIdAsync(a.AdministeredBy);
+            var packageItem = a.PackageItem;
+            var administerer = a.AdministerByUser;
             string itemName = "";
             if (packageItem?.InjectionId.HasValue == true)
             {
-                var inj = await _uow.InjectionTypes.GetByIdAsync(packageItem.InjectionId.Value);
-                itemName = inj?.InjectionName ?? "";
+                itemName = packageItem.Injection?.InjectionName ?? "";
             }
             else if (packageItem?.VitaminId.HasValue == true)
             {
-                var vit = await _uow.VitaminTypes.GetByIdAsync(packageItem.VitaminId.Value);
-                itemName = vit?.VitaminName ?? "";
+                itemName = packageItem.Vitamin?.VitaminName ?? "";
             }
 
             administeredDtos.Add(new AdministeredItemDto
@@ -680,7 +678,7 @@ public class NutritionService : INutritionService
                 Id = a.Id,
                 ItemName = itemName,
                 ActualQuantity = a.ActualQuantity,
-                AdministeredByName = administerer?.FullName,
+                AdministeredByName = administerer?.FullName ?? "",
                 AdministeredAt = a.AdministeredAt
             });
         }
@@ -688,7 +686,7 @@ public class NutritionService : INutritionService
         var labDtos = new List<LabResultDto>();
         foreach (var l in labResults)
         {
-            var aType = await _uow.AnalysisTypes.GetByIdAsync(l.AnalysisTypeId);
+            var aType = l.AnalysisType;
             labDtos.Add(new LabResultDto
             {
                 Id = l.Id,
