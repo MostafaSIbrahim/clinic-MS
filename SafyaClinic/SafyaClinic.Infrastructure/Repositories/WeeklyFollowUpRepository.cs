@@ -20,6 +20,8 @@ public class WeeklyFollowUpRepository
             .Include(f => f.AdministeredItems)
                 .ThenInclude(a => a.PackageItem)
                     .ThenInclude(pi => pi.Vitamin)
+           .Include(f => f.AdministeredItems)
+                    .ThenInclude(a => a.AdministerByUser)
             .Include(f => f.LabResults)
                 .ThenInclude(l => l.AnalysisType)
             .OrderBy(f => f.WeekNumber)
