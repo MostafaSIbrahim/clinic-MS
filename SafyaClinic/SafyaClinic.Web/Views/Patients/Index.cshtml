@@ -70,6 +70,10 @@
         @if (Model != null && Model.TotalPages > 1)
         {
             ViewData["PaginationAction"] = "Index";
+            ViewData["PaginationRouteValues"] = new Dictionary<string, string>
+            {
+                ["search"] = ViewBag.Search?.ToString() ?? string.Empty
+            };
             var paginationModel = new PagedResult<object>
             {
                 TotalCount = Model.TotalCount,
