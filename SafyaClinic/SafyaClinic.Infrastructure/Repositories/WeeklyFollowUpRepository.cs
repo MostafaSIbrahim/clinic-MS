@@ -25,6 +25,12 @@ public class WeeklyFollowUpRepository
             .OrderBy(f => f.WeekNumber)
             .ToListAsync();
 
+    public async Task<int?> GetMaxWeekNumberAsync(int enrollmentId)
+    => await _dbSet
+        .AsNoTracking()
+        .Where(f => f.EnrollmentId == enrollmentId)
+        .MaxAsync(f => (int?)f.WeekNumber);
+
     public async Task<WeeklyFollowUp?> GetFollowUpWithDetailsAsync(int followUpId)
         => await _dbSet
             .AsNoTracking()

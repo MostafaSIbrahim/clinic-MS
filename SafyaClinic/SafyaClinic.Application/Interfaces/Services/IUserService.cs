@@ -7,7 +7,8 @@ public interface IUserService
 {
     Task<ServiceResult<UserDto>> CreateUserAsync(CreateUserRequest request, int createdByUserId);
     Task<ServiceResult<UserDto>> GetUserByIdAsync(int userId);
-    Task<ServiceResult<PagedResult<UserDto>>> GetAllUsersAsync( PaginationRequest request);
+    Task<ServiceResult<PagedResult<UserDto>>> GetAllUsersAsync( 
+            PaginationRequest request);
     Task<ServiceResult<IEnumerable<UserDto>>> GetDoctorsAsync();
     Task<ServiceResult> SetUserActiveAsync(int userId, bool isActive);
     Task<ServiceResult> AssignRoleAsync(int userId, int roleId, int assignedBy);

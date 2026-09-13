@@ -1,4 +1,5 @@
-﻿using SafyaClinic.Application.DTOs.Common;
+﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Settings;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Entities.Settings;
@@ -12,24 +13,52 @@ public class ClinicService : IClinicService
 
     public ClinicService(IUnitOfWork uow) => _uow = uow;
 
-    public async Task<ServiceResult<IEnumerable<ClinicDto>>> GetAllAsync(bool includeInactive = true)
+    public async Task<ServiceResult<IEnumerable<ClinicDto>>> GetAllAsync(
+     bool includeInactive = true)
     {
-        var clinics = await _uow.Clinics.GetAllAsync();
-        if (!includeInactive) clinics = clinics.Where(c => c.IsActive);
+        var query = _uow.Clinics.Query();
 
-        var dtos = new List<ClinicDto>();
-        foreach (var c in clinics.OrderBy(c => c.Name))
-            dtos.Add(await BuildClinicDtoAsync(c.Id, c.Name, c.Address, c.Phone, c.IsActive));
+        if (!includeInactive)
+            query = query.Where(c => c.IsActive);
+
+        var dtos = await query
+            .OrderBy(c => c.Name)
+            .Select(c => new ClinicDto
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Address = c.Address,
+                Phone = c.Phone,
+                IsActive = c.IsActive,
+
+                Agreements = c.SourceAgreements
+                    .Select(a => new ClinicSourceAgreementDto
+                    {
+                        Id = a.Id,
+                        ClinicId = a.ClinicId,
+                        ClinicName = c.Name,
+                        PatientSourceId = a.PatientSourceId,
+                        PatientSourceName = a.PatientSource.Name,
+                        DeductionPercentage = a.DeductionPercentage,
+                        IsActive = a.IsActive,
+                        Notes = a.Notes
+                    })
+                    .OrderBy(a => a.PatientSourceName)
+                    .ToList()
+            })
+            .ToListAsync();
 
         return ServiceResult<IEnumerable<ClinicDto>>.Success(dtos);
     }
 
     public async Task<ServiceResult<ClinicDto>> GetByIdAsync(int id)
     {
-        var clinic = await _uow.Clinics.GetByIdAsync(id);
-        if (clinic is null) return ServiceResult<ClinicDto>.Failure("Clinic not found.");
-        return ServiceResult<ClinicDto>.Success(
-            await BuildClinicDtoAsync(clinic.Id, clinic.Name, clinic.Address, clinic.Phone, clinic.IsActive));
+        var clinic = await BuildClinicDtoAsync(id);
+
+        if (clinic is null)
+            return ServiceResult<ClinicDto>.Failure("Clinic not found.");
+
+        return ServiceResult<ClinicDto>.Success(clinic);
     }
 
     public async Task<ServiceResult<ClinicDto>> CreateAsync(CreateClinicRequest request)
@@ -53,8 +82,10 @@ public class ClinicService : IClinicService
 
         await _uow.Clinics.AddAsync(clinic);
         await _uow.SaveChangesAsync();
+        var createdClinic = await BuildClinicDtoAsync(clinic.Id);
+
         return ServiceResult<ClinicDto>.Success(
-            await BuildClinicDtoAsync(clinic.Id, clinic.Name, clinic.Address, clinic.Phone, clinic.IsActive),
+            createdClinic!,
             "Clinic created.");
     }
 
@@ -170,34 +201,33 @@ public class ClinicService : IClinicService
 
     // ── Helpers ──────────────────────────────────────────────────
 
-    private async Task<ClinicDto> BuildClinicDtoAsync(int id, string name, string? address, string? phone, bool isActive)
+    private async Task<ClinicDto?> BuildClinicDtoAsync(int id)
     {
-        var agreements = await _uow.ClinicSourceAgreements.FindAsync(a => a.ClinicId == id);
-        var agreementDtos = new List<ClinicSourceAgreementDto>();
-        foreach (var a in agreements)
-        {
-            var source = await _uow.PatientSources.GetByIdAsync(a.PatientSourceId);
-            agreementDtos.Add(new ClinicSourceAgreementDto
+        return await _uow.Clinics.Query()
+            .Where(c => c.Id == id)
+            .Select(c => new ClinicDto
             {
-                Id = a.Id,
-                ClinicId = a.ClinicId,
-                ClinicName = name,
-                PatientSourceId = a.PatientSourceId,
-                PatientSourceName = source?.Name ?? "",
-                DeductionPercentage = a.DeductionPercentage,
-                IsActive = a.IsActive,
-                Notes = a.Notes
-            });
-        }
+                Id = c.Id,
+                Name = c.Name,
+                Address = c.Address,
+                Phone = c.Phone,
+                IsActive = c.IsActive,
 
-        return new ClinicDto
-        {
-            Id = id,
-            Name = name,
-            Address = address,
-            Phone = phone,
-            IsActive = isActive,
-            Agreements = agreementDtos.OrderBy(a => a.PatientSourceName)
-        };
+                Agreements = c.SourceAgreements
+                    .Select(a => new ClinicSourceAgreementDto
+                    {
+                        Id = a.Id,
+                        ClinicId = a.ClinicId,
+                        ClinicName = c.Name,
+                        PatientSourceId = a.PatientSourceId,
+                        PatientSourceName = a.PatientSource.Name,
+                        DeductionPercentage = a.DeductionPercentage,
+                        IsActive = a.IsActive,
+                        Notes = a.Notes
+                    })
+                    .OrderBy(a => a.PatientSourceName)
+                    .ToList()
+            })
+            .FirstOrDefaultAsync();
     }
 }

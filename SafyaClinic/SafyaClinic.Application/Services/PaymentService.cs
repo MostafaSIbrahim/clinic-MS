@@ -231,10 +231,10 @@ public class PaymentService : IPaymentService
             .ToListAsync();
 
         var totalEnrollmentCharges = await _uow.NutritionEnrollments.Query()
-        .Where(e => e.PatientId == patientId)
-         .SumAsync(e => e.FinalPrice);
-        
-      
+            .Where(e => e.PatientId == patientId)
+            .SumAsync(e => e.BasePrice * (1 - e.DiscountPercent / 100));
+
+
         var totalReservationCharges = await _uow.Reservations.Query()
              .Where(r => r.PatientId == patientId &&
                 !cancelledStatusIds.Contains(r.StatusId))

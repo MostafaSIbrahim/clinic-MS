@@ -1,4 +1,5 @@
-﻿using SafyaClinic.Application.DTOs.Common;
+﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Settings;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Entities.Settings;
@@ -12,17 +13,26 @@ public class PatientSourceService : IPatientSourceService
 
     public PatientSourceService(IUnitOfWork uow) => _uow = uow;
 
-    public async Task<ServiceResult<IEnumerable<PatientSourceDto>>> GetAllAsync(bool includeInactive = true)
+    public async Task<ServiceResult<IEnumerable<PatientSourceDto>>> GetAllAsync(
+    bool includeInactive = true)
     {
-        var sources = await _uow.PatientSources.GetAllAsync();
-        if (!includeInactive) sources = sources.Where(s => s.IsActive);
+        var query = _uow.PatientSources.Query();
 
-        var dtos = new List<PatientSourceDto>();
-        foreach (var s in sources.OrderBy(s => s.Name))
-        {
-            var count = await _uow.Patients.CountAsync(p => p.PatientSourceId == s.Id);
-            dtos.Add(ToDto(s, count));
-        }
+        if (!includeInactive)
+            query = query.Where(s => s.IsActive);
+
+        var dtos = await query
+            .OrderBy(s => s.Name)
+            .Select(s => new PatientSourceDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Description = s.Description,
+                DefaultDeductionPercentage = s.DefaultDeductionPercentage,
+                IsActive = s.IsActive,
+                PatientCount = s.Patients.Count()
+            })
+            .ToListAsync();
 
         return ServiceResult<IEnumerable<PatientSourceDto>>.Success(dtos);
     }
