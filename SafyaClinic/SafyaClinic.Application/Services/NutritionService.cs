@@ -199,10 +199,10 @@ public class NutritionService : INutritionService
             return ServiceResult<WeeklyFollowUpDto>.Failure("Enrollment is not active.");
 
         // Determine next week number
-        var existingFollowUps = await _uow.WeeklyFollowUps.GetByEnrollmentAsync(enrollmentId);
-        var nextWeek = existingFollowUps.Any()
-            ? existingFollowUps.Max(f => f.WeekNumber) + 1
-            : 1;
+        var maxWeekNumber = await _uow.WeeklyFollowUps
+            .GetMaxWeekNumberAsync(enrollmentId);
+
+        var nextWeek = (maxWeekNumber ?? 0) + 1;
 
         if (nextWeek > 4)
             return ServiceResult<WeeklyFollowUpDto>.Failure(

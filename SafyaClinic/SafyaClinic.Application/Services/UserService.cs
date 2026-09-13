@@ -67,7 +67,7 @@ public class UserService : IUserService
     }
 
     public async Task<ServiceResult<PagedResult<UserDto>>> GetAllUsersAsync(
-    PaginationRequest request)
+         PaginationRequest request)
     {
         var query = _uow.Users.Query();
 
