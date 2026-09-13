@@ -346,40 +346,40 @@ public class NutritionService : INutritionService
                 .ToListAsync())
                 .ToHashSet();
 
-        foreach (var item in request.AdministeredItems)
-        {
-            if (!item.PackageItemId.HasValue)
-                continue;
+        var administeredItems = request.AdministeredItems
+                .Where(item =>
+                    item.PackageItemId.HasValue &&
+                    existingPackageItemIds.Contains(item.PackageItemId.Value))
+                .Select(item => new WeeklyAdministeredItem
+                {
+                    FollowUpId = followUp.Id,
+                    PackageItemId = item.PackageItemId!.Value,
+                    ActualQuantity = (decimal)item.ActualQuantity,
+                    AdministeredBy = recordedBy,
+                    AdministeredAt = DateTime.UtcNow,
+                    Notes = item.Notes?.Trim()
+                })
+                .ToList();
 
-            if (!existingPackageItemIds.Contains(item.PackageItemId.Value))
-                continue;
-
-            await _uow.WeeklyAdministeredItems.AddAsync(new WeeklyAdministeredItem
-            {
-                FollowUpId = followUp.Id,
-                PackageItemId = item.PackageItemId.Value,
-                ActualQuantity = (decimal)item.ActualQuantity,
-                AdministeredBy = recordedBy,
-                AdministeredAt = DateTime.UtcNow,
-                Notes = item.Notes?.Trim()
-            });
-        }
+        await _uow.WeeklyAdministeredItems.AddRangeAsync(administeredItems);
 
         // Lab results
-        foreach (var lab in request.LabResults)
-        {
-            if (!lab.AnalysisTypeId.HasValue) continue;
-            await _uow.WeeklyFollowUpLabResults.AddAsync(new WeeklyFollowUpLabResult
-            {
-                FollowUpId = followUp.Id,
-                AnalysisTypeId = (int)lab.AnalysisTypeId,
-                ResultValue = lab.ResultValue?.Trim(),
-                ReferenceRange = lab.ReferenceRange?.Trim(),
-                IsNormal = lab.IsNormal,
-                Notes = lab.Notes?.Trim(),
-                CreatedAt = DateTime.UtcNow
-            });
-        }
+
+        var labResults = request.LabResults
+                .Where(lab => lab.AnalysisTypeId.HasValue)
+                .Select(lab => new WeeklyFollowUpLabResult
+                {
+                    FollowUpId = followUp.Id,
+                    AnalysisTypeId = lab.AnalysisTypeId!.Value,
+                    ResultValue = lab.ResultValue?.Trim(),
+                    ReferenceRange = lab.ReferenceRange?.Trim(),
+                    IsNormal = lab.IsNormal,
+                    Notes = lab.Notes?.Trim(),
+                    CreatedAt = DateTime.UtcNow
+                })
+                .ToList();
+
+        await _uow.WeeklyFollowUpLabResults.AddRangeAsync(labResults);
 
         await _uow.SaveChangesAsync();
 
