@@ -25,20 +25,64 @@ public class NutritionService : INutritionService
             return ServiceResult<NutritionPackageDto>.Failure("Max discount must be between 0 and 100.");
 
         // Validate items reference valid injection/vitamin IDs
+        // Validate package items
         foreach (var item in request.Items)
         {
             if (item.InjectionId is null && item.VitaminId is null)
                 return ServiceResult<NutritionPackageDto>.Failure(
                     "Each package item must have either an injection or a vitamin.");
-            if (item.InjectionId.HasValue && !await _uow.InjectionTypes.ExistsAsync(item.InjectionId.Value))
+
+            if (item.InjectionId.HasValue && item.VitaminId.HasValue)
                 return ServiceResult<NutritionPackageDto>.Failure(
-                    $"Injection type ID {item.InjectionId} not found.");
-            if (item.VitaminId.HasValue && !await _uow.VitaminTypes.ExistsAsync(item.VitaminId.Value))
-                return ServiceResult<NutritionPackageDto>.Failure(
-                    $"Vitamin type ID {item.VitaminId} not found.");
+                    "Each package item must have either an injection or a vitamin, not both.");
+
             if (item.WeekNumber < 1 || item.WeekNumber > 4)
                 return ServiceResult<NutritionPackageDto>.Failure(
                     "Week number must be between 1 and 4.");
+        }
+
+        var injectionIds = request.Items
+            .Where(i => i.InjectionId.HasValue)
+            .Select(i => i.InjectionId!.Value)
+            .Distinct()
+            .ToList();
+
+        var vitaminIds = request.Items
+            .Where(i => i.VitaminId.HasValue)
+            .Select(i => i.VitaminId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (injectionIds.Count > 0)
+        {
+            var existingInjectionIds = await _uow.InjectionTypes
+                .Query()
+                .Where(i => injectionIds.Contains(i.Id))
+                .Select(i => i.Id)
+                .ToListAsync();
+
+            var missingInjectionId = injectionIds
+                .FirstOrDefault(id => !existingInjectionIds.Contains(id));
+
+            if (missingInjectionId != 0)
+                return ServiceResult<NutritionPackageDto>.Failure(
+                    $"Injection type ID {missingInjectionId} not found.");
+        }
+
+        if (vitaminIds.Count > 0)
+        {
+            var existingVitaminIds = await _uow.VitaminTypes
+                .Query()
+                .Where(v => vitaminIds.Contains(v.Id))
+                .Select(v => v.Id)
+                .ToListAsync();
+
+            var missingVitaminId = vitaminIds
+                .FirstOrDefault(id => !existingVitaminIds.Contains(id));
+
+            if (missingVitaminId != 0)
+                return ServiceResult<NutritionPackageDto>.Failure(
+                    $"Vitamin type ID {missingVitaminId} not found.");
         }
 
         var package = new NutritionPackage
@@ -284,19 +328,39 @@ public class NutritionService : INutritionService
         await _uow.SaveChangesAsync();
 
         // Administered items
+
+        var packageItemIds = request.AdministeredItems
+            .Where(i => i.PackageItemId.HasValue)
+            .Select(i => i.PackageItemId!.Value)
+            .Distinct()
+            .ToList();
+
+        var existingPackageItemIds = packageItemIds.Count == 0
+            ? new HashSet<int>()
+            : (await _uow.PackageItems
+                .Query()
+                .Where(p => packageItemIds.Contains(p.Id))
+                .Select(p => p.Id)
+                .ToListAsync())
+                .ToHashSet();
+
         foreach (var item in request.AdministeredItems)
         {
-            if (!item.PackageItemId.HasValue) continue;
-            if (await _uow.PackageItems.ExistsAsync(item.PackageItemId.Value))
-                await _uow.WeeklyAdministeredItems.AddAsync(new WeeklyAdministeredItem
-                {
-                    FollowUpId = followUp.Id,
-                    PackageItemId = (int)item.PackageItemId,
-                    ActualQuantity = (decimal)item.ActualQuantity,
-                    AdministeredBy = recordedBy,
-                    AdministeredAt = DateTime.UtcNow,
-                    Notes = item.Notes?.Trim()
-                });
+            if (!item.PackageItemId.HasValue)
+                continue;
+
+            if (!existingPackageItemIds.Contains(item.PackageItemId.Value))
+                continue;
+
+            await _uow.WeeklyAdministeredItems.AddAsync(new WeeklyAdministeredItem
+            {
+                FollowUpId = followUp.Id,
+                PackageItemId = item.PackageItemId.Value,
+                ActualQuantity = (decimal)item.ActualQuantity,
+                AdministeredBy = recordedBy,
+                AdministeredAt = DateTime.UtcNow,
+                Notes = item.Notes?.Trim()
+            });
         }
 
         // Lab results
