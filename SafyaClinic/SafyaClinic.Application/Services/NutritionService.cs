@@ -488,9 +488,14 @@ public class NutritionService : INutritionService
         bool includeInactive = false)
     {
         var items = await _uow.InjectionTypes.GetAllAsync();
-        var packageItems = await _uow.PackageItems.GetAllAsync();
-        var usedIds = packageItems.Where(pi => pi.InjectionId.HasValue)
-            .Select(pi => pi.InjectionId!.Value).ToHashSet();
+        var usedInjectionIds = await _uow.PackageItems
+                .Query()
+                .Where(pi => pi.InjectionId.HasValue)
+                .Select(pi => pi.InjectionId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+        var usedIds = usedInjectionIds.ToHashSet();
 
         var result = items
             .Where(i => includeInactive || i.IsActive)
@@ -585,9 +590,14 @@ public class NutritionService : INutritionService
         bool includeInactive = false)
     {
         var items = await _uow.VitaminTypes.GetAllAsync();
-        var packageItems = await _uow.PackageItems.GetAllAsync();
-        var usedIds = packageItems.Where(pi => pi.VitaminId.HasValue)
-            .Select(pi => pi.VitaminId!.Value).ToHashSet();
+        var usedVitaminIds = await _uow.PackageItems
+                .Query()
+                .Where(pi => pi.VitaminId.HasValue)
+                .Select(pi => pi.VitaminId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+        var usedIds = usedVitaminIds.ToHashSet();
 
         var result = items
             .Where(v => includeInactive || v.IsActive)
