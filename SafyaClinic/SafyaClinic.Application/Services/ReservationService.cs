@@ -316,16 +316,20 @@ public class ReservationService : IReservationService
     }
 
     public async Task<ServiceResult<IEnumerable<TreatmentTypeDto>>> GetTreatmentTypesAsync(
-        string? category = null)
+    string? category = null)
     {
-        var types = await _uow.TreatmentTypes.FindAsync(t => t.IsActive);
+        var query = _uow.TreatmentTypes
+            .Query()
+            .Where(t => t.IsActive);
 
         if (!string.IsNullOrWhiteSpace(category) &&
             Enum.TryParse<TreatmentCategory>(category, out var cat))
-            types = types.Where(t => t.Category == cat);
+        {
+            query = query.Where(t => t.Category == cat);
+        }
 
-        return ServiceResult<IEnumerable<TreatmentTypeDto>>.Success(
-            types.Select(t => new TreatmentTypeDto
+        var types = await query
+            .Select(t => new TreatmentTypeDto
             {
                 Id = t.Id,
                 Category = t.Category.ToString(),
@@ -334,7 +338,10 @@ public class ReservationService : IReservationService
                 DefaultCost = t.DefaultCost,
                 DurationMinutes = t.DurationMinutes,
                 IsActive = t.IsActive
-            }));
+            })
+            .ToListAsync();
+
+        return ServiceResult<IEnumerable<TreatmentTypeDto>>.Success(types);
     }
 
     // ── Mappers ──────────────────────────────────────────────
