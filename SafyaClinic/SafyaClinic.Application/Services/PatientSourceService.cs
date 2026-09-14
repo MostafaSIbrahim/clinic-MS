@@ -103,7 +103,10 @@ public class PatientSourceService : IPatientSourceService
 
         // If the source is already referenced by payment history, deactivate instead of a hard delete
         // to keep historical financial records intact.
-        var hasPaymentHistory = (await _uow.Payments.FindAsync(p => p.PatientSourceId == id)).Any();
+        var hasPaymentHistory = await _uow.Payments
+            .Query()
+            .Where(p => p.PatientSourceId == id)
+            .AnyAsync();
         if (hasPaymentHistory)
         {
             source.IsActive = false;
