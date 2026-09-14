@@ -523,8 +523,10 @@ public class NutritionService : INutritionService
         if (string.IsNullOrWhiteSpace(request.Unit))
             return ServiceResult<InjectionTypeDto>.Failure("Unit is required.");
 
-        var duplicate = (await _uow.InjectionTypes.FindAsync(
-            i => i.InjectionName.ToLower() == request.InjectionName.Trim().ToLower())).Any();
+        var duplicate = await _uow.InjectionTypes
+            .Query()
+            .Where(i => i.InjectionName.ToLower() == request.InjectionName.Trim().ToLower())
+            .AnyAsync();
         if (duplicate)
             return ServiceResult<InjectionTypeDto>.Failure("An injection type with this name already exists.");
 
@@ -634,8 +636,10 @@ public class NutritionService : INutritionService
         if (string.IsNullOrWhiteSpace(request.Unit))
             return ServiceResult<VitaminTypeDto>.Failure("Unit is required.");
 
-        var duplicate = (await _uow.VitaminTypes.FindAsync(
-            v => v.VitaminName.ToLower() == request.VitaminName.Trim().ToLower())).Any();
+        var duplicate = await _uow.VitaminTypes
+            .Query()
+            .Where(v => v.VitaminName.ToLower() == request.VitaminName.Trim().ToLower())
+            .AnyAsync();
         if (duplicate)
             return ServiceResult<VitaminTypeDto>.Failure("A vitamin type with this name already exists.");
 
