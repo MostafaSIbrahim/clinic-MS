@@ -117,8 +117,14 @@ public class ClinicService : IClinicService
         var clinic = await _uow.Clinics.GetByIdAsync(id);
         if (clinic is null) return ServiceResult.Failure("Clinic not found.");
 
-        var hasReservations = (await _uow.Reservations.FindAsync(r => r.ClinicId == id)).Any();
-        var hasPayments = (await _uow.Payments.FindAsync(p => p.ClinicId == id)).Any();
+        var hasReservations = await _uow.Reservations
+            .Query()
+            .Where(r => r.ClinicId == id)
+            .AnyAsync();
+        var hasPayments = await _uow.Payments
+            .Query()
+            .Where(p => p.ClinicId == id)
+            .AnyAsync();
 
         if (hasReservations || hasPayments)
         {
