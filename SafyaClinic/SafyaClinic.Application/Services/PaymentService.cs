@@ -48,9 +48,11 @@ public class PaymentService : IPaymentService
         }
 
         // ── First-visit source/clinic deduction ─────────────────
-        var priorActivePayments = await _uow.Payments.FindAsync(
-            p => p.PatientId == request.PatientId && p.Status == PaymentStatusEnum.Active);
-        var isFirstVisit = !priorActivePayments.Any();
+        var isFirstVisit = !await _uow.Payments
+                .Query()
+                .Where(p => p.PatientId == request.PatientId &&
+                            p.Status == PaymentStatusEnum.Active)
+                .AnyAsync();
 
         decimal deductionPercentage = 0m;
         decimal sourceDeduction = 0m;
