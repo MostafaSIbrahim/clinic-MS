@@ -168,9 +168,11 @@ public class NutritionService : INutritionService
                 $"Discount cannot exceed {package.MaxDiscountPercent}% for this package.");
 
         // Business rule: no active enrollment for same patient in overlapping dates
-        var existing = await _uow.NutritionEnrollments.FindAsync(
-            e => e.PatientId == request.PatientId && e.Status == EnrollmentStatus.Active);
-        if (existing.Any())
+        var existing = await _uow.NutritionEnrollments
+            .Query()
+            .Where(e => e.PatientId == request.PatientId && e.Status == EnrollmentStatus.Active)
+            .AnyAsync();
+        if (existing)
             return ServiceResult<PatientEnrollmentDto>.Failure(
                 "Patient already has an active nutrition enrollment.");
 
