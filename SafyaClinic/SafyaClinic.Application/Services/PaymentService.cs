@@ -63,11 +63,10 @@ public class PaymentService : IPaymentService
             var source = await _uow.PatientSources.GetByIdAsync(patient.PatientSourceId.Value);
             if (source is not null && source.IsActive)
             {
-                var agreement = (await _uow.ClinicSourceAgreements.FindAsync(a =>
+                var agreement = await _uow.ClinicSourceAgreements.FirstOrDefaultAsync(a =>
                         a.ClinicId == request.ClinicId &&
                         a.PatientSourceId == patient.PatientSourceId.Value &&
-                        a.IsActive))
-                    .FirstOrDefault();
+                        a.IsActive);
 
                 deductionPercentage = agreement?.DeductionPercentage ?? source.DefaultDeductionPercentage;
                 if (deductionPercentage > 0)
