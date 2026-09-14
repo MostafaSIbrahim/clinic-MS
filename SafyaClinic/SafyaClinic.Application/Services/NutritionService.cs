@@ -508,7 +508,10 @@ public class NutritionService : INutritionService
     {
         var item = await _uow.InjectionTypes.GetByIdAsync(id);
         if (item is null) return ServiceResult<InjectionTypeDto>.Failure("Injection type not found.");
-        var inUse = (await _uow.PackageItems.FindAsync(pi => pi.InjectionId == id)).Any();
+        var inUse = await _uow.PackageItems
+            .Query()
+            .Where(pi => pi.InjectionId == id)
+            .AnyAsync();
         return ServiceResult<InjectionTypeDto>.Success(MapInjectionDto(item, inUse));
     }
 
@@ -558,7 +561,10 @@ public class NutritionService : INutritionService
         _uow.InjectionTypes.Update(entity);
         await _uow.SaveChangesAsync();
 
-        var inUse = (await _uow.PackageItems.FindAsync(pi => pi.InjectionId == id)).Any();
+        var inUse = await _uow.PackageItems
+            .Query()
+            .Where(pi => pi.InjectionId == id)
+            .AnyAsync();
         return ServiceResult<InjectionTypeDto>.Success(MapInjectionDto(entity, inUse), "Injection type updated.");
     }
 
@@ -567,7 +573,10 @@ public class NutritionService : INutritionService
         var entity = await _uow.InjectionTypes.GetByIdAsync(id);
         if (entity is null) return ServiceResult.Failure("Injection type not found.");
 
-        var inUse = (await _uow.PackageItems.FindAsync(pi => pi.InjectionId == id)).Any();
+        var inUse = await _uow.PackageItems
+            .Query()
+            .Where(pi => pi.InjectionId == id)
+            .AnyAsync();
         if (inUse)
         {
             // Referenced by one or more nutrition packages — deactivate instead
@@ -610,7 +619,10 @@ public class NutritionService : INutritionService
     {
         var item = await _uow.VitaminTypes.GetByIdAsync(id);
         if (item is null) return ServiceResult<VitaminTypeDto>.Failure("Vitamin type not found.");
-        var inUse = (await _uow.PackageItems.FindAsync(pi => pi.VitaminId == id)).Any();
+        var inUse = await _uow.PackageItems
+            .Query()
+            .Where(pi => pi.VitaminId == id)
+            .AnyAsync();
         return ServiceResult<VitaminTypeDto>.Success(MapVitaminDto(item, inUse));
     }
 
@@ -660,7 +672,10 @@ public class NutritionService : INutritionService
         _uow.VitaminTypes.Update(entity);
         await _uow.SaveChangesAsync();
 
-        var inUse = (await _uow.PackageItems.FindAsync(pi => pi.VitaminId == id)).Any();
+        var inUse = await _uow.PackageItems
+            .Query()
+            .Where(pi => pi.VitaminId == id)
+            .AnyAsync();
         return ServiceResult<VitaminTypeDto>.Success(MapVitaminDto(entity, inUse), "Vitamin type updated.");
     }
 
@@ -669,7 +684,10 @@ public class NutritionService : INutritionService
         var entity = await _uow.VitaminTypes.GetByIdAsync(id);
         if (entity is null) return ServiceResult.Failure("Vitamin type not found.");
 
-        var inUse = (await _uow.PackageItems.FindAsync(pi => pi.VitaminId == id)).Any();
+        var inUse = await _uow.PackageItems
+            .Query()
+            .Where(pi => pi.VitaminId == id)
+            .AnyAsync();
         if (inUse)
         {
             entity.IsActive = false;
