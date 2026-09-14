@@ -752,11 +752,20 @@ public class PaymentService : IPaymentService
 
         // Only Active + Cancelled payments count as "coverage" — see the note in
         // RecalculateReservationPaidStatusAsync for why Cancelled is included here.
-        var coverageByReservation = (await _uow.Payments.FindAsync(
-                p => p.ReservationId != null &&
-                     (p.Status == PaymentStatusEnum.Active || p.Status == PaymentStatusEnum.Cancelled)))
-            .GroupBy(p => p.ReservationId!.Value)
-            .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
+        var coverageByReservation = await _uow.Payments
+                .Query()
+                .Where(p => p.ReservationId != null &&
+                            (p.Status == PaymentStatusEnum.Active ||
+                             p.Status == PaymentStatusEnum.Cancelled))
+                .GroupBy(p => p.ReservationId!.Value)
+                .Select(g => new
+                {
+                    ReservationId = g.Key,
+                    TotalCoverage = g.Sum(p => p.Amount)
+                })
+                .ToDictionaryAsync(
+                    x => x.ReservationId,
+                    x => x.TotalCoverage);
 
         var changedCount = 0;
 
