@@ -151,9 +151,9 @@ public class ClinicService : IClinicService
         if (request.DeductionPercentage < 0 || request.DeductionPercentage > 100)
             return ServiceResult<ClinicSourceAgreementDto>.Failure("Deduction percentage must be between 0 and 100.");
 
-        var existing = (await _uow.ClinicSourceAgreements.FindAsync(a =>
-                a.ClinicId == request.ClinicId && a.PatientSourceId == request.PatientSourceId))
-            .FirstOrDefault();
+        var existing = await _uow.ClinicSourceAgreements.FirstOrDefaultAsync(
+             a => a.ClinicId == request.ClinicId &&
+                a.PatientSourceId == request.PatientSourceId);
 
         if (existing is not null)
         {
