@@ -229,8 +229,10 @@ public class ReservationService : IReservationService
         // Guarded so switching back and forth doesn't create duplicate $0 rows.
         if (totalAmount.HasValue && totalAmount.Value == 0m)
         {
-            var alreadyRecorded = (await _uow.Payments.FindAsync(
-                p => p.ReservationId == r.Id && p.Status == PaymentStatusEnum.Active)).Any();
+            var alreadyRecorded = await _uow.Payments
+                .Query()
+                .Where(p => p.ReservationId == r.Id && p.Status == PaymentStatusEnum.Active)
+                .AnyAsync();
             if (!alreadyRecorded)
                 await RecordZeroCostPaymentAsync(r, r.CreatedBy);
         }
