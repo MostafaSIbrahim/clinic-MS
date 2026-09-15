@@ -105,14 +105,26 @@ public class UserService : IUserService
     public async Task<ServiceResult<IEnumerable<UserDto>>> GetDoctorsAsync()
     {
         // Doctor role = ID 2, Nutritionist = ID 5
-        var doctorRoles = await _uow.UserRoles.FindAsync(ur => ur.RoleId == 2 || ur.RoleId == 5);
-        var doctorUserIds = doctorRoles.Select(ur => ur.UserId).Distinct().ToList();
-        var doctors = await _uow.Users.FindAsync(u => doctorUserIds.Contains(u.Id) && u.IsActive);
+        var doctors = await _uow.Users
+            .Query()
+            .Where(u => u.IsActive &&
+                        u.UserRoles.Any(ur => ur.RoleId == 2 || ur.RoleId == 5))
+            .Select(u => new UserDto
+            {
+                Id = u.Id,
+                FullName = u.FullName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                Specialization = u.Specialization,
+                IsActive = u.IsActive,
+                LastLoginAt = u.LastLoginAt,
+                Roles = u.UserRoles
+                    .OrderBy(ur => ur.RoleId)
+                    .Select(ur => ur.Role.RoleName)
+            })
+            .ToListAsync();
 
-        var dtos = new List<UserDto>();
-        foreach (var u in doctors)
-            dtos.Add(await MapUserDtoAsync(u));
-        return ServiceResult<IEnumerable<UserDto>>.Success(dtos);
+        return ServiceResult<IEnumerable<UserDto>>.Success(doctors);
     }
 
     public async Task<ServiceResult> SetUserActiveAsync(int userId, bool isActive)
