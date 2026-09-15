@@ -800,13 +800,15 @@ public class PaymentService : IPaymentService
         {
             var reservationIds = reservationsToUpdate.Keys.ToList();
 
-            var reservationEntities = await _uow.Reservations.Query()
+            var reservationEntities = await _uow.Reservations
+                .Query()
                 .Where(r => reservationIds.Contains(r.Id))
                 .ToListAsync();
 
             foreach (var reservation in reservationEntities)
             {
                 reservation.IsPaid = reservationsToUpdate[reservation.Id];
+                reservation.UpdatedAt = DateTime.UtcNow;
             }
         }
         if (changedCount > 0)
