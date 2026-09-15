@@ -801,7 +801,7 @@ public class PaymentService : IPaymentService
             var reservationIds = reservationsToUpdate.Keys.ToList();
 
             var reservationEntities = await _uow.Reservations
-                .Query()
+                .Query(false)
                 .Where(r => reservationIds.Contains(r.Id))
                 .ToListAsync();
 
