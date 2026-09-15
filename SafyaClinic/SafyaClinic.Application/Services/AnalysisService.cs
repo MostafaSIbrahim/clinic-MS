@@ -6,12 +6,41 @@ using SafyaClinic.Domain.Entities.Analysis;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace SafyaClinic.Application.Services;
 
 public class AnalysisService : IAnalysisService
 {
     private readonly IUnitOfWork _uow;
+
+    private static readonly Expression<Func<MedicalAnalysis, MedicalAnalysisDto>>
+    AnalysisDtoProjection = a => new MedicalAnalysisDto
+    {
+        Id = a.Id,
+        PatientId = a.PatientId,
+        PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+        DoctorId = a.DoctorId,
+        DoctorName = a.Doctor.FullName,
+        RecordId = a.RecordId,
+        AnalysisTypeId = a.AnalysisTypeId,
+        AnalysisTypeName = a.Type.TypeName,
+        PreparationInstructions = a.Type.PreparationInstructions,
+        Status = a.Status.ToString(),
+        IsUrgent = a.IsUrgent,
+        RequestDate = a.RequestDate,
+        ResultDate = a.ResultDate,
+        ResultNotes = a.ResultNotes,
+        Attachments = a.Attachments.Select(att => new AttachmentDto
+        {
+            Id = att.Id,
+            FileName = att.FileName,
+            FilePath = att.FilePath,
+            ContentType = att.ContentType,
+            FileSizeBytes = (long)att.FileSizeBytes,
+            UploadedAt = att.UploadedAt
+        })
+    };
 
     public AnalysisService(IUnitOfWork uow) => _uow = uow;
 
@@ -100,33 +129,7 @@ public class AnalysisService : IAnalysisService
             .Query()
             .Where(a => createdIds.Contains(a.Id))
             .OrderBy(a => a.Id)
-            .Select(a => new MedicalAnalysisDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor.FullName,
-                RecordId = a.RecordId,
-                AnalysisTypeId = a.AnalysisTypeId,
-                AnalysisTypeName = a.Type.TypeName,
-                PreparationInstructions = a.Type.PreparationInstructions,
-                Status = a.Status.ToString(),
-                IsUrgent = a.IsUrgent,
-                RequestDate = a.RequestDate,
-                ResultDate = a.ResultDate,
-                ResultNotes = a.ResultNotes,
-
-                Attachments = a.Attachments.Select(att => new AttachmentDto
-                {
-                    Id = att.Id,
-                    FileName = att.FileName,
-                    FilePath = att.FilePath,
-                    ContentType = att.ContentType,
-                    FileSizeBytes = (long)att.FileSizeBytes,
-                    UploadedAt = att.UploadedAt
-                })
-            })
+            .Select(AnalysisDtoProjection)
             .ToListAsync();
 
         return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(dtos);
@@ -137,33 +140,7 @@ public class AnalysisService : IAnalysisService
     {
         var analysis = await _uow.MedicalAnalyses.Query()
             .Where(a => a.Id == analysisId)
-            .Select(a => new MedicalAnalysisDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor.FullName,
-                RecordId = a.RecordId,
-                AnalysisTypeId = a.AnalysisTypeId,
-                AnalysisTypeName = a.Type.TypeName,
-                PreparationInstructions = a.Type.PreparationInstructions,
-                Status = a.Status.ToString(),
-                IsUrgent = a.IsUrgent,
-                RequestDate = a.RequestDate,
-                ResultDate = a.ResultDate,
-                ResultNotes = a.ResultNotes,
-
-                Attachments = a.Attachments.Select(att => new AttachmentDto
-                {
-                    Id = att.Id,
-                    FileName = att.FileName,
-                    FilePath = att.FilePath,
-                    ContentType = att.ContentType,
-                    FileSizeBytes = (long)att.FileSizeBytes,
-                    UploadedAt = att.UploadedAt
-                })
-            })
+            .Select(AnalysisDtoProjection)
             .FirstOrDefaultAsync();
 
         if (analysis is null)
@@ -178,33 +155,7 @@ public class AnalysisService : IAnalysisService
         var analyses = await _uow.MedicalAnalyses.Query()
             .Where(a => a.PatientId == patientId)
             .OrderByDescending(a => a.RequestDate)
-            .Select(a => new MedicalAnalysisDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor.FullName,
-                RecordId = a.RecordId,
-                AnalysisTypeId = a.AnalysisTypeId,
-                AnalysisTypeName = a.Type.TypeName,
-                PreparationInstructions = a.Type.PreparationInstructions,
-                Status = a.Status.ToString(),
-                IsUrgent = a.IsUrgent,
-                RequestDate = a.RequestDate,
-                ResultDate = a.ResultDate,
-                ResultNotes = a.ResultNotes,
-
-                Attachments = a.Attachments.Select(att => new AttachmentDto
-                {
-                    Id = att.Id,
-                    FileName = att.FileName,
-                    FilePath = att.FilePath,
-                    ContentType = att.ContentType,
-                    FileSizeBytes = (long)att.FileSizeBytes,
-                    UploadedAt = att.UploadedAt
-                })
-            })
+            .Select(AnalysisDtoProjection)
             .ToListAsync();
 
         return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(analyses);
@@ -216,33 +167,7 @@ public class AnalysisService : IAnalysisService
         var analyses = await _uow.MedicalAnalyses.Query()
             .Where(a => a.RecordId == recordId)
             .OrderByDescending(a => a.RequestDate)
-            .Select(a => new MedicalAnalysisDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor.FullName,
-                RecordId = a.RecordId,
-                AnalysisTypeId = a.AnalysisTypeId,
-                AnalysisTypeName = a.Type.TypeName,
-                PreparationInstructions = a.Type.PreparationInstructions,
-                Status = a.Status.ToString(),
-                IsUrgent = a.IsUrgent,
-                RequestDate = a.RequestDate,
-                ResultDate = a.ResultDate,
-                ResultNotes = a.ResultNotes,
-
-                Attachments = a.Attachments.Select(att => new AttachmentDto
-                {
-                    Id = att.Id,
-                    FileName = att.FileName,
-                    FilePath = att.FilePath,
-                    ContentType = att.ContentType,
-                    FileSizeBytes = (long)att.FileSizeBytes,
-                    UploadedAt = att.UploadedAt
-                })
-            })
+            .Select(AnalysisDtoProjection)
             .ToListAsync();
 
         return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(analyses);
@@ -275,33 +200,7 @@ public class AnalysisService : IAnalysisService
             .ThenByDescending(a => a.Id)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(a => new MedicalAnalysisDto
-            {
-                Id = a.Id,
-                PatientId = a.PatientId,
-                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor.FullName,
-                RecordId = a.RecordId,
-                AnalysisTypeId = a.AnalysisTypeId,
-                AnalysisTypeName = a.Type.TypeName,
-                PreparationInstructions = a.Type.PreparationInstructions,
-                Status = a.Status.ToString(),
-                IsUrgent = a.IsUrgent,
-                RequestDate = a.RequestDate,
-                ResultDate = a.ResultDate,
-                ResultNotes = a.ResultNotes,
-
-                Attachments = a.Attachments.Select(att => new AttachmentDto
-                {
-                    Id = att.Id,
-                    FileName = att.FileName,
-                    FilePath = att.FilePath,
-                    ContentType = att.ContentType,
-                    FileSizeBytes = (long)att.FileSizeBytes,
-                    UploadedAt = att.UploadedAt
-                })
-            })
+            .Select(AnalysisDtoProjection)
             .ToListAsync();
 
         return ServiceResult<PagedResult<MedicalAnalysisDto>>.Success(
@@ -402,33 +301,7 @@ public class AnalysisService : IAnalysisService
         var dto = await _uow.MedicalAnalyses
             .Query()
             .Where(x => x.Id == a.Id)
-            .Select(x => new MedicalAnalysisDto
-            {
-                Id = x.Id,
-                PatientId = x.PatientId,
-                PatientName = $"{x.Patient.FirstName} {x.Patient.LastName}",
-                DoctorId = x.DoctorId,
-                DoctorName = x.Doctor.FullName,
-                RecordId = x.RecordId,
-                AnalysisTypeId = x.AnalysisTypeId,
-                AnalysisTypeName = x.Type.TypeName,
-                PreparationInstructions = x.Type.PreparationInstructions,
-                Status = x.Status.ToString(),
-                IsUrgent = x.IsUrgent,
-                RequestDate = x.RequestDate,
-                ResultDate = x.ResultDate,
-                ResultNotes = x.ResultNotes,
-
-                Attachments = x.Attachments.Select(att => new AttachmentDto
-                {
-                    Id = att.Id,
-                    FileName = att.FileName,
-                    FilePath = att.FilePath,
-                    ContentType = att.ContentType,
-                    FileSizeBytes = (long)att.FileSizeBytes,
-                    UploadedAt = att.UploadedAt
-                })
-            })
+            .Select(AnalysisDtoProjection)
             .FirstOrDefaultAsync();
 
         if (dto is not null)
