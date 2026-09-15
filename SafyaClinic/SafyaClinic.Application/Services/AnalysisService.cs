@@ -366,36 +366,60 @@ public class AnalysisService : IAnalysisService
 
     private async Task<MedicalAnalysisDto> BuildAnalysisDtoAsync(MedicalAnalysis a)
     {
-        var patient = await _uow.Patients.GetByIdAsync(a.PatientId);
-        var doctor = await _uow.Users.GetByIdAsync(a.DoctorId);
-        var aType = await _uow.AnalysisTypes.GetByIdAsync(a.AnalysisTypeId);
-        var attachments = await _uow.AnalysisAttachments.FindAsync(att => att.AnalysisId == a.Id);
+        var dto = await _uow.MedicalAnalyses
+            .Query()
+            .Where(x => x.Id == a.Id)
+            .Select(x => new MedicalAnalysisDto
+            {
+                Id = x.Id,
+                PatientId = x.PatientId,
+                PatientName = $"{x.Patient.FirstName} {x.Patient.LastName}",
+                DoctorId = x.DoctorId,
+                DoctorName = x.Doctor.FullName,
+                RecordId = x.RecordId,
+                AnalysisTypeId = x.AnalysisTypeId,
+                AnalysisTypeName = x.Type.TypeName,
+                PreparationInstructions = x.Type.PreparationInstructions,
+                Status = x.Status.ToString(),
+                IsUrgent = x.IsUrgent,
+                RequestDate = x.RequestDate,
+                ResultDate = x.ResultDate,
+                ResultNotes = x.ResultNotes,
 
+                Attachments = x.Attachments.Select(att => new AttachmentDto
+                {
+                    Id = att.Id,
+                    FileName = att.FileName,
+                    FilePath = att.FilePath,
+                    ContentType = att.ContentType,
+                    FileSizeBytes = (long)att.FileSizeBytes,
+                    UploadedAt = att.UploadedAt
+                })
+            })
+            .FirstOrDefaultAsync();
+
+        if (dto is not null)
+            return dto;
+
+        // Preserve the existing mapper's behavior if the analysis
+        // cannot be reloaded for some unexpected reason.
         return new MedicalAnalysisDto
         {
             Id = a.Id,
             PatientId = a.PatientId,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
+            PatientName = "",
             DoctorId = a.DoctorId,
-            DoctorName = doctor?.FullName ?? "",
+            DoctorName = "",
             RecordId = a.RecordId,
             AnalysisTypeId = a.AnalysisTypeId,
-            AnalysisTypeName = aType?.TypeName ?? "",
-            PreparationInstructions = aType?.PreparationInstructions,
+            AnalysisTypeName = "",
+            PreparationInstructions = null,
             Status = a.Status.ToString(),
             IsUrgent = a.IsUrgent,
             RequestDate = a.RequestDate,
             ResultDate = a.ResultDate,
             ResultNotes = a.ResultNotes,
-            Attachments = attachments.Select(att => new AttachmentDto
-            {
-                Id = att.Id,
-                FileName = att.FileName,
-                FilePath = att.FilePath,
-                ContentType = att.ContentType,
-                FileSizeBytes = (long)att.FileSizeBytes,
-                UploadedAt = att.UploadedAt
-            })
+            Attachments = Enumerable.Empty<AttachmentDto>()
         };
     }
 }
