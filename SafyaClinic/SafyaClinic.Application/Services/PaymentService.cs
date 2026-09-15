@@ -822,31 +822,48 @@ public class PaymentService : IPaymentService
 
     public async Task<ServiceResult<int>> BackfillZeroCostPaymentsAsync(int currentUserId)
     {
-        var freeReservations = (await _uow.Reservations.GetAllAsync())
+        var freeReservations = (await _uow.Reservations
+            .Query()
             .Where(r => r.TotalAmount.HasValue && r.TotalAmount.Value == 0m)
-            .ToList();
+            .Select(r => new
+            {
+                r.Id,
+                r.PatientId,
+                r.ClinicId,
+                r.CreatedAt,
+                r.Patient.PatientSourceId
+            })
+            .ToListAsync());
 
         if (freeReservations.Count == 0)
             return ServiceResult<int>.Success(0, "No zero-cost reservations found.");
 
-        var reservationIdsWithPayment = (await _uow.Payments.FindAsync(
-                p => p.ReservationId != null && p.Status == PaymentStatusEnum.Active))
-            .Select(p => p.ReservationId!.Value)
-            .ToHashSet();
+        var reservationIds = freeReservations
+            .Select(r => r.Id)
+            .ToList();
 
-        var createdCount = 0;
+        var reservationIdsWithPayment = await _uow.Payments
+            .Query()
+            .Where(p =>
+                p.ReservationId.HasValue &&
+                p.Status == PaymentStatusEnum.Active &&
+                reservationIds.Contains(p.ReservationId.Value))
+            .Select(p => p.ReservationId!.Value)
+            .ToHashSetAsync();
+
+        var paymentsToCreate = new List<Payment>();
+
         foreach (var reservation in freeReservations)
         {
             if (reservationIdsWithPayment.Contains(reservation.Id))
                 continue;
 
-            var patient = await _uow.Patients.GetByIdAsync(reservation.PatientId);
-            await _uow.Payments.AddAsync(new Payment
+            paymentsToCreate.Add(new Payment
             {
                 PatientId = reservation.PatientId,
                 ReservationId = reservation.Id,
                 ClinicId = reservation.ClinicId,
-                PatientSourceId = patient?.PatientSourceId,
+                PatientSourceId = reservation.PatientSourceId,
                 CollectedBy = currentUserId > 0 ? currentUserId : 1,
                 Amount = 0m,
                 OriginalAmount = 0m,
@@ -858,11 +875,17 @@ public class PaymentService : IPaymentService
                 ClinicNetAmount = 0m,
                 Status = PaymentStatusEnum.Active
             });
-            createdCount++;
         }
 
+        var createdCount = paymentsToCreate.Count;
+
         if (createdCount > 0)
+        {
+            await _uow.Payments.AddRangeAsync(paymentsToCreate);
             await _uow.SaveChangesAsync();
+        }
+
+        
 
         return ServiceResult<int>.Success(createdCount,
             createdCount == 0
