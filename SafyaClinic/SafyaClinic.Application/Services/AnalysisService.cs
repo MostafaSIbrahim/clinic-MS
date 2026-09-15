@@ -92,9 +92,42 @@ public class AnalysisService : IAnalysisService
 
         await _uow.SaveChangesAsync();
 
-        var dtos = new List<MedicalAnalysisDto>();
-        foreach (var a in created)
-            dtos.Add(await BuildAnalysisDtoAsync(a));
+        var createdIds = created
+            .Select(a => a.Id)
+            .ToList();
+
+        var dtos = await _uow.MedicalAnalyses
+            .Query()
+            .Where(a => createdIds.Contains(a.Id))
+            .OrderBy(a => a.Id)
+            .Select(a => new MedicalAnalysisDto
+            {
+                Id = a.Id,
+                PatientId = a.PatientId,
+                PatientName = $"{a.Patient.FirstName} {a.Patient.LastName}",
+                DoctorId = a.DoctorId,
+                DoctorName = a.Doctor.FullName,
+                RecordId = a.RecordId,
+                AnalysisTypeId = a.AnalysisTypeId,
+                AnalysisTypeName = a.Type.TypeName,
+                PreparationInstructions = a.Type.PreparationInstructions,
+                Status = a.Status.ToString(),
+                IsUrgent = a.IsUrgent,
+                RequestDate = a.RequestDate,
+                ResultDate = a.ResultDate,
+                ResultNotes = a.ResultNotes,
+
+                Attachments = a.Attachments.Select(att => new AttachmentDto
+                {
+                    Id = att.Id,
+                    FileName = att.FileName,
+                    FilePath = att.FilePath,
+                    ContentType = att.ContentType,
+                    FileSizeBytes = (long)att.FileSizeBytes,
+                    UploadedAt = att.UploadedAt
+                })
+            })
+            .ToListAsync();
 
         return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Success(dtos);
     }
