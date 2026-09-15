@@ -748,7 +748,17 @@ public class PaymentService : IPaymentService
     /// </summary>
     public async Task<ServiceResult<int>> RecalculateAllReservationsPaidStatusAsync()
     {
-        var reservations = (await _uow.Reservations.GetAllAsync()).ToList();
+        var reservations = (await _uow.Reservations
+            .Query()
+            .Select(r => new
+            {
+                r.Id,
+                r.TotalAmount,
+                r.IsPaid
+            })
+            .ToListAsync());
+
+        var reservationsToUpdate = new Dictionary<int, bool>();
 
         // Only Active + Cancelled payments count as "coverage" — see the note in
         // RecalculateReservationPaidStatusAsync for why Cancelled is included here.
@@ -781,13 +791,24 @@ public class PaymentService : IPaymentService
 
             if (reservation.IsPaid != shouldBePaid)
             {
-                reservation.IsPaid = shouldBePaid;
-                reservation.UpdatedAt = DateTime.UtcNow;
-                _uow.Reservations.Update(reservation);
+                reservationsToUpdate[reservation.Id] = shouldBePaid;
                 changedCount++;
             }
         }
 
+        if (reservationsToUpdate.Count > 0)
+        {
+            var reservationIds = reservationsToUpdate.Keys.ToList();
+
+            var reservationEntities = await _uow.Reservations.Query()
+                .Where(r => reservationIds.Contains(r.Id))
+                .ToListAsync();
+
+            foreach (var reservation in reservationEntities)
+            {
+                reservation.IsPaid = reservationsToUpdate[reservation.Id];
+            }
+        }
         if (changedCount > 0)
             await _uow.SaveChangesAsync();
 
