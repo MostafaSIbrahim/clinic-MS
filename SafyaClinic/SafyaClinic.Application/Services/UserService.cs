@@ -59,11 +59,28 @@ public class UserService : IUserService
 
     public async Task<ServiceResult<UserDto>> GetUserByIdAsync(int userId)
     {
-        var user = await _uow.Users.GetByIdAsync(userId);
+        var user = await _uow.Users
+            .Query()
+            .Where(u => u.Id == userId)
+            .Select(u => new UserDto
+            {
+                Id = u.Id,
+                FullName = u.FullName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                Specialization = u.Specialization,
+                IsActive = u.IsActive,
+                LastLoginAt = u.LastLoginAt,
+                Roles = u.UserRoles
+                    .OrderBy(ur => ur.RoleId)
+                    .Select(ur => ur.Role.RoleName)
+            })
+            .FirstOrDefaultAsync();
+
         if (user is null)
             return ServiceResult<UserDto>.Failure("User not found.");
 
-        return ServiceResult<UserDto>.Success(await MapUserDtoAsync(user));
+        return ServiceResult<UserDto>.Success(user);
     }
 
     public async Task<ServiceResult<PagedResult<UserDto>>> GetAllUsersAsync(
