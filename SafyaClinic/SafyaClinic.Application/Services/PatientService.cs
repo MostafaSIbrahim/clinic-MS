@@ -58,21 +58,21 @@ public class PatientService : IPatientService
         await _uow.SaveChangesAsync();
 
         // Phones
-        foreach (var ph in request.Phones)
-        {
-            await _uow.PatientPhones.AddAsync(new PatientPhone
+        var phones = request.Phones
+            .Select(ph => new PatientPhone
             {
                 PatientId = patient.Id,
                 PhoneNumber = ph.PhoneNumber.Trim(),
                 PhoneType = ph.PhoneType,
                 IsPrimary = ph.IsPrimary
-            });
-        }
+            })
+            .ToList();
+
+        await _uow.PatientPhones.AddRangeAsync(phones);
 
         // Addresses
-        foreach (var addr in request.Addresses)
-        {
-            await _uow.PatientAddresses.AddAsync(new PatientAddress
+        var addresses = request.Addresses
+            .Select(addr => new PatientAddress
             {
                 PatientId = patient.Id,
                 Street = addr.Street?.Trim(),
@@ -80,10 +80,13 @@ public class PatientService : IPatientService
                 Governorate = addr.Governorate?.Trim(),
                 PostalCode = addr.PostalCode?.Trim(),
                 IsPrimary = addr.IsPrimary
-            });
-        }
+            })
+            .ToList();
+
+        await _uow.PatientAddresses.AddRangeAsync(addresses);
 
         await _uow.SaveChangesAsync();
+
         var createdPatient = await GetPatientDtoByIdAsync(patient.Id);
         return ServiceResult<PatientDto>.Success(
             createdPatient,
