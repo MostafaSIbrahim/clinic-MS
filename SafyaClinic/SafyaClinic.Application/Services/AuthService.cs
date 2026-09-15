@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using SafyaClinic.Application.DTOs.Auth;
@@ -78,25 +79,28 @@ public class AuthService : IAuthService
 
     public async Task<ServiceResult<UserDto>> GetCurrentUserAsync(int userId)
     {
-        var user = await _uow.Users.GetByIdAsync(userId);
+        var user = await _uow.Users
+            .Query()
+            .Where(u => u.Id == userId)
+            .Select(u => new UserDto
+            {
+                Id = u.Id,
+                FullName = u.FullName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                Specialization = u.Specialization,
+                IsActive = u.IsActive,
+                LastLoginAt = u.LastLoginAt,
+                Roles = u.UserRoles
+                    .OrderBy(ur => ur.RoleId)
+                    .Select(ur => ur.Role.RoleName)
+            })
+            .FirstOrDefaultAsync();
+
         if (user is null)
             return ServiceResult<UserDto>.Failure("User not found.");
 
-        var userRoles = await _uow.UserRoles.FindAsync(ur => ur.UserId == userId);
-        var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
-        var roles = await _uow.Roles.FindAsync(r => roleIds.Contains(r.Id));
-
-        return ServiceResult<UserDto>.Success(new UserDto
-        {
-            Id = user.Id,
-            FullName = user.FullName,
-            Email = user.Email,
-            PhoneNumber = user.PhoneNumber,
-            Specialization = user.Specialization,
-            IsActive = user.IsActive,
-            LastLoginAt = user.LastLoginAt,
-            Roles = roles.Select(r => r.RoleName)
-        });
+        return ServiceResult<UserDto>.Success(user);
     }
 
     // ── Helpers ──────────────────────────────────────────────
