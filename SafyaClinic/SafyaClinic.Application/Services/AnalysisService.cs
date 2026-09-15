@@ -55,16 +55,26 @@ public class AnalysisService : IAnalysisService
         if (!await _uow.Users.ExistsAsync(request.DoctorId))
             return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Failure("Doctor not found.");
 
-        var distinctTypeIds = request.AnalysisTypeIds.Distinct().ToList();
-        var created = new List<MedicalAnalysis>();
+        var distinctTypeIds = request.AnalysisTypeIds
+            .Distinct()
+            .ToList();
+
+        var existingTypeIds = (await _uow.AnalysisTypes
+            .Query()
+            .Where(t => distinctTypeIds.Contains(t.Id))
+            .Select(t => t.Id)
+            .ToListAsync())
+            .ToHashSet();
 
         foreach (var typeId in distinctTypeIds)
         {
-            if (!await _uow.AnalysisTypes.ExistsAsync(typeId))
+            if (!existingTypeIds.Contains(typeId))
                 return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Failure(
                     $"Analysis type ID {typeId} not found.");
+        }
 
-            var analysis = new MedicalAnalysis
+        var created = distinctTypeIds
+            .Select(typeId => new MedicalAnalysis
             {
                 PatientId = request.PatientId,
                 DoctorId = request.DoctorId,
@@ -75,10 +85,10 @@ public class AnalysisService : IAnalysisService
                 IsUrgent = request.IsUrgent,
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = requestedBy
-            };
-            await _uow.MedicalAnalyses.AddAsync(analysis);
-            created.Add(analysis);
-        }
+            })
+            .ToList();
+
+        await _uow.MedicalAnalyses.AddRangeAsync(created);
 
         await _uow.SaveChangesAsync();
 
