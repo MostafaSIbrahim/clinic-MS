@@ -80,32 +80,69 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult> UpdateRecordAsync(int recordId, UpdatePatientRecordRequest request)
     {
-        var record = await _uow.PatientRecords.GetByIdAsync(recordId);
-        if (record is null) return ServiceResult.Failure("Record not found.");
-        if (record.IsLocked) return ServiceResult.Failure("Record is locked and cannot be edited.");
+        var recordState = await _uow.PatientRecords
+            .Query()
+            .Where(r => r.Id == recordId)
+            .Select(r => new
+            {
+                r.IsLocked
+            })
+            .FirstOrDefaultAsync();
+        if (recordState is null) 
+            return ServiceResult.Failure("Record not found.");
+        if (recordState.IsLocked) 
+            return ServiceResult.Failure("Record is locked and cannot be edited.");
 
-        record.ChiefComplaint = request.ChiefComplaint?.Trim();
-        record.PresentIllnessHistory = request.PresentIllnessHistory?.Trim();
-        record.Diagnosis = request.Diagnosis?.Trim();
-        record.DifferentialDiagnosis = request.DifferentialDiagnosis?.Trim();
-        record.TreatmentPlan = request.TreatmentPlan?.Trim();
-        record.Notes = request.Notes?.Trim();
-        record.FollowUpDate = request.FollowUpDate;
-        record.UpdatedAt = DateTime.UtcNow;
-
-        _uow.PatientRecords.Update(record);
+        var affectedrecord = _uow.PatientRecords
+            .Query()
+            .Where(r => r.Id == recordId && !r.IsLocked)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.ChiefComplaint, request.ChiefComplaint == null
+                                    ? null
+                                    : request.ChiefComplaint.Trim())
+                .SetProperty(r => r.PresentIllnessHistory, request.PresentIllnessHistory == null
+                                    ? null
+                                    : request.PresentIllnessHistory.Trim())
+                .SetProperty(r => r.Diagnosis, request.Diagnosis == null
+                                    ? null
+                                    : request.Diagnosis.Trim())
+                .SetProperty(r => r.DifferentialDiagnosis, request.DifferentialDiagnosis == null
+                                    ? null
+                                    : request.DifferentialDiagnosis.Trim())
+                .SetProperty(r => r.TreatmentPlan, request.TreatmentPlan == null
+                                    ? null
+                                    : request.TreatmentPlan.Trim())
+                .SetProperty(r => r.Notes, request.Notes == null
+                                    ? null
+                                    : request.Notes.Trim())
+                .SetProperty(r => r.FollowUpDate, request.FollowUpDate)
+                .SetProperty(r => r.UpdatedAt, DateTime.UtcNow));
+        
+        if (affectedrecord is null || affectedrecord.Result == 0)
+            return ServiceResult.Failure("Record not found or locked.");
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Record updated.");
     }
 
     public async Task<ServiceResult> LockRecordAsync(int recordId)
     {
-        var record = await _uow.PatientRecords.GetByIdAsync(recordId);
-        if (record is null) return ServiceResult.Failure("Record not found.");
+        var recordState = await _uow.PatientRecords
+            .Query()
+            .Where(r => r.Id == recordId)
+            .Select(r => new
+            {
+                r.IsLocked
+            })
+            .FirstOrDefaultAsync();
+        if (recordState is null) 
+            return ServiceResult.Failure("Record not found.");
 
-        record.IsLocked = true;
-        record.UpdatedAt = DateTime.UtcNow;
-        _uow.PatientRecords.Update(record);
+        var affectedRecord = _uow.PatientRecords
+            .Query()
+            .Where(r => r.Id == recordId)
+            .ExecuteUpdateAsync(setters => 
+                setters.SetProperty(r => r.IsLocked, true)
+                .SetProperty(r => r.UpdatedAt, DateTime.UtcNow));
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Record locked.");
     }
