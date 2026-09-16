@@ -182,6 +182,10 @@ public class PatientRecordService : IPatientRecordService
         var record = await _uow.PatientRecords
             .Query()
             .Where(r => r.Id == request.RecordId)
+            .Select(r => new
+            {
+                r.IsLocked
+            })
             .FirstOrDefaultAsync();
         if (record is null) 
             return ServiceResult<PrescriptionDetailDto>.Failure("Record not found.");
@@ -326,15 +330,16 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult> MarkPrescriptionPrintedAsync(int prescriptionId)
     {
-        var p = await _uow.Prescriptions.GetByIdAsync(prescriptionId);
-        if (p is null) return ServiceResult.Failure("Prescription not found.");
+        var affectedRows = await _uow.Prescriptions.Query()
+            .Where(p => p.Id == prescriptionId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(p => p.IsPrinted, true));
 
-        p.IsPrinted = true;
-        _uow.Prescriptions.Update(p);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success();
+        return affectedRows == 0
+            ? ServiceResult.Failure("Prescription not found.")
+            : ServiceResult.Success();
     }
- 
+
     // Attachments now link to Prescription (document)
     public async Task<ServiceResult> AddPrescriptionAttachmentAsync(
         int prescriptionId, string filePath, string fileName,
