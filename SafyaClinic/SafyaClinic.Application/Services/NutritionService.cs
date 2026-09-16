@@ -356,7 +356,7 @@ public class NutritionService : INutritionService
                 {
                     FollowUpId = followUp.Id,
                     PackageItemId = item.PackageItemId!.Value,
-                    ActualQuantity = item.ActualQuantity.Value,
+                    ActualQuantity = item.ActualQuantity!.Value,
                     AdministeredBy = recordedBy,
                     AdministeredAt = DateTime.UtcNow,
                     Notes = item.Notes?.Trim()
