@@ -93,7 +93,7 @@ public class PatientRecordService : IPatientRecordService
         if (recordState.IsLocked) 
             return ServiceResult.Failure("Record is locked and cannot be edited.");
 
-        var affectedrecord = _uow.PatientRecords
+        var affectedRecord = await _uow.PatientRecords
             .Query()
             .Where(r => r.Id == recordId && !r.IsLocked)
             .ExecuteUpdateAsync(setters => setters
@@ -117,10 +117,10 @@ public class PatientRecordService : IPatientRecordService
                                     : request.Notes.Trim())
                 .SetProperty(r => r.FollowUpDate, request.FollowUpDate)
                 .SetProperty(r => r.UpdatedAt, DateTime.UtcNow));
-        
-        if (affectedrecord is null || affectedrecord.Result == 0)
+
+        if (affectedRecord == 0)
             return ServiceResult.Failure("Record not found or locked.");
-        await _uow.SaveChangesAsync();
+
         return ServiceResult.Success("Record updated.");
     }
 
