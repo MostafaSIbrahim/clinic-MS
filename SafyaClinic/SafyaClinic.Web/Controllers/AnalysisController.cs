@@ -55,7 +55,8 @@ namespace SafyaClinic.Web.Controllers
         // ── Request (now supports selecting several analysis types at once) ──
 
         [HttpGet]
-        public async Task<IActionResult> Request(int patientId, int? recordId)
+        [ActionName("Request")]
+        public async Task<IActionResult> GetRequest(int patientId, int? recordId)
         {
             var types = await _analysisService.GetAnalysisTypesAsync();
             ViewBag.AnalysisTypes = types.Data;
@@ -69,7 +70,8 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Request(RequestAnalysisBatchRequest model)
+        [ActionName("Request")]
+        public async Task<IActionResult> PostRequest(RequestAnalysisBatchRequest model)
         {
             if (!ModelState.IsValid || model.AnalysisTypeIds is null || !model.AnalysisTypeIds.Any())
             {
