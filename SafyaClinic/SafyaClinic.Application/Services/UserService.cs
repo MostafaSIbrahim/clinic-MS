@@ -54,7 +54,7 @@ public class UserService : IUserService
         await _uow.SaveChangesAsync();
 
         // Assign roles
-        foreach (var roleId in request.RoleIds)
+        foreach (var roleId in requestedRoleIds)
         {
             await _uow.UserRoles.AddAsync(new UserRole
             {
@@ -222,9 +222,26 @@ public class UserService : IUserService
 
     private async Task<UserDto> MapUserDtoAsync(User user)
     {
-        var userRoles = await _uow.UserRoles.FindAsync(ur => ur.UserId == user.Id);
-        var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
-        var roles = await _uow.Roles.FindAsync(r => roleIds.Contains(r.Id));
+        var dto = await _uow.Users
+                .Query()
+                .Where(u => u.Id == user.Id)
+                .Select(u => new UserDto
+                {
+                    Id = u.Id,
+                    FullName = u.FullName,
+                    Email = u.Email,
+                    PhoneNumber = u.PhoneNumber,
+                    Specialization = u.Specialization,
+                    IsActive = u.IsActive,
+                    LastLoginAt = u.LastLoginAt,
+                    Roles = u.UserRoles
+                        .OrderBy(ur => ur.RoleId)
+                        .Select(ur => ur.Role.RoleName)
+                })
+                .FirstOrDefaultAsync();
+
+        if (dto is not null)
+            return dto;
 
         return new UserDto
         {
@@ -235,7 +252,7 @@ public class UserService : IUserService
             Specialization = user.Specialization,
             IsActive = user.IsActive,
             LastLoginAt = user.LastLoginAt,
-            Roles = roles.Select(r => r.RoleName)
+            Roles = Enumerable.Empty<string>()
         };
     }
 }
