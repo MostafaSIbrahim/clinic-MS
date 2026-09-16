@@ -411,18 +411,27 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult<AttachmentDto>> GetAttachmentAsync(int attachmentId)
     {
-        var a = await _uow.PrescriptionAttachments.GetByIdAsync(attachmentId);
+        var users = _uow.Users.Query();
+        var a = await _uow.PrescriptionAttachments
+            .Query()
+            .Where(attachment => attachment.Id == attachmentId)
+            .Select(attachment => new AttachmentDto
+            {
+                Id = attachment.Id,
+                FileName = attachment.FileName,
+                FilePath = attachment.FilePath,
+                ContentType = attachment.ContentType ?? string.Empty,
+                FileSizeBytes = attachment.FileSizeBytes ?? 0,
+                UploadedAt = attachment.UploadedAt,
+                UploadedBy = users
+                    .Where(u => u.Id == attachment.UploadedBy)
+                    .Select(u => u.FullName)
+                    .FirstOrDefault() ?? string.Empty
+            })
+            .FirstOrDefaultAsync();
         if (a is null) return ServiceResult<AttachmentDto>.Failure("Attachment not found.");
 
-        return ServiceResult<AttachmentDto>.Success(new AttachmentDto
-        {
-            Id = a.Id,
-            FileName = a.FileName,
-            FilePath = a.FilePath,
-            ContentType = a.ContentType,
-            FileSizeBytes = (long)a.FileSizeBytes!,
-            UploadedAt = a.UploadedAt
-        });
+        return ServiceResult<AttachmentDto>.Success(a);
     }
 
     public async Task<ServiceResult<PrescriptionPrintDto>> GetPrescriptionForPrintAsync(
