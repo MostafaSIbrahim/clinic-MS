@@ -938,11 +938,9 @@ public class PaymentService : IPaymentService
                 p.SourceDeductionAmount,
                 p.ClinicNetAmount,
                 p.ClinicId,
-                ClinicName = p.ClinicId.HasValue ? p.Clinic.Name : null,
+                ClinicName = p.Clinic != null ? p.Clinic.Name : null,
                 p.PatientSourceId,
-                PatientSourceName = p.PatientSourceId.HasValue
-                    ? p.PatientSource.Name
-                    : null,
+                PatientSourceName = p.PatientSource != null ? p.PatientSource.Name : null,
                 p.PaymentMethod,
                 p.ReferenceNumber
             })
@@ -1083,9 +1081,9 @@ public class PaymentService : IPaymentService
                 ReferenceNumber = p.ReferenceNumber,
                 Notes = p.Notes,
                 ClinicId = p.ClinicId,
-                ClinicName = p.ClinicId.HasValue ? p.Clinic.Name : null,
+                ClinicName = p.Clinic != null ? p.Clinic.Name : null,
                 PatientSourceId = p.PatientSourceId,
-                PatientSourceName = p.PatientSourceId.HasValue ? p.PatientSource.Name : null,
+                PatientSourceName = p.PatientSource != null ? p.PatientSource.Name : null,
                 IsFirstVisitDeduction = p.IsFirstVisitDeduction,
                 DeductionPercentage = p.DeductionPercentage,
                 SourceDeductionAmount = p.SourceDeductionAmount,
