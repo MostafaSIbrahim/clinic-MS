@@ -211,6 +211,7 @@ public class PatientRecordService : IPatientRecordService
     public async Task<ServiceResult<IEnumerable<PrescriptionListDto>>> GetPrescriptionsByRecordAsync(
       int recordId)
     {
+        var users = _uow.Users.Query();
         var dtos = await _uow.Prescriptions.Query()
             .Where(p => p.RecordId == recordId)
             .OrderByDescending(p => p.PrescriptionDate)
@@ -223,9 +224,12 @@ public class PatientRecordService : IPatientRecordService
                 DrugCount = p.Items.Count(),
                 CreatedAt = p.CreatedAt,
                 CreatedByName = p.CreatedBy > 0
-                    ? p.CreatedBy.ToString()
+                    ? (users
+                        .Where(u => u.Id == p.CreatedBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault() ?? string.Empty)
                     : string.Empty
-            })
+                            })
             .ToListAsync();
 
         return ServiceResult<IEnumerable<PrescriptionListDto>>.Success(dtos);
