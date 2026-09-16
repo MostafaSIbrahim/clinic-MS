@@ -401,12 +401,13 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult> DeleteAttachmentAsync(int attachmentId)
     {
-        var a = await _uow.PrescriptionAttachments.GetByIdAsync(attachmentId);
-        if (a is null) return ServiceResult.Failure("Attachment not found.");
+        var affectedRows = await _uow.PrescriptionAttachments.Query()
+            .Where(a => a.Id == attachmentId)
+            .ExecuteDeleteAsync();
 
-        _uow.PrescriptionAttachments.Delete(a);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Attachment deleted.");
+        return affectedRows == 0
+            ? ServiceResult.Failure("Attachment not found.")
+            : ServiceResult.Success("Attachment deleted.");
     }
 
     public async Task<ServiceResult<AttachmentDto>> GetAttachmentAsync(int attachmentId)
