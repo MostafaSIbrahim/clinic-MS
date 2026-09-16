@@ -184,62 +184,17 @@ public class PatientRecordService : IPatientRecordService
         await _uow.Prescriptions.AddAsync(prescription);
         await _uow.SaveChangesAsync();
 
-        return ServiceResult<PrescriptionDetailDto>.Success(await BuildPrescriptionDetailDtoAsync(prescription));
+        var dto = await BuildPrescriptionDetailDtoAsync(prescription.Id);
+        if (dto is null)
+            return ServiceResult<PrescriptionDetailDto>.Failure(
+                "Prescription could not be loaded after creation.");
+        return ServiceResult<PrescriptionDetailDto>.Success(dto!);
     }
 
     public async Task<ServiceResult<PrescriptionDetailDto>> GetPrescriptionByIdAsync(int prescriptionId)
     {
-        var prescription = await _uow.Prescriptions.Query()
-            .Where(p => p.Id == prescriptionId)
-            .Select(p => new PrescriptionDetailDto
-            {
-                Id = p.Id,
-                RecordId = p.RecordId,
-                PrescriptionDate = p.PrescriptionDate,
-                Notes = p.Notes,
-                IsPrinted = p.IsPrinted,
-                CreatedAt = p.CreatedAt,
-
-                PatientName = $"{p.Record.Patient.FirstName} {p.Record.Patient.LastName}",
-                PatientAge = p.Record.Patient.DateOfBirth.HasValue
-                    ? (int)((DateTime.Today - p.Record.Patient.DateOfBirth.Value).TotalDays / 365.25)
-                    : null,
-                PatientGender = p.Record.Patient.Gender != null
-                    ? p.Record.Patient.Gender.ToString()
-                    : null,
-
-                Diagnosis = p.Record.Diagnosis,
-
-                DoctorName = p.Record.Doctor.FullName,
-                DoctorSpecialization = p.Record.Doctor.Specialization,
-                DoctorLicenseNumber = p.Record.Doctor.LicenseNumber,
-
-                Items = p.Items.Select(i => new PrescriptionItemDto
-                {
-                    Id = i.Id,
-                    MedicationName = i.MedicationName,
-                    Dosage = i.Dosage,
-                    Frequency = i.Frequency,
-                    Duration = i.Duration,
-                    RouteOfAdministration = i.RouteOfAdministration,
-                    Instructions = i.Instructions
-                }),
-
-                Attachments = p.Attachments.Select(a => new AttachmentDto
-                {
-                    Id = a.Id,
-                    FileName = a.FileName,
-                    FilePath = a.FilePath,
-                    ContentType = a.ContentType,
-                    FileSizeBytes = (long)a.FileSizeBytes!,
-                    UploadedAt = a.UploadedAt,
-                    UploadedBy = p.CreatedBy > 0
-                                           ? p.CreatedBy.ToString()
-                                        : ""
-                })
-            })
-            .FirstOrDefaultAsync();
-
+        var prescription = await PrescriptionDetailDtoQuery()
+            .FirstOrDefaultAsync(p => p.Id == prescriptionId);
         if (prescription is null)
             return ServiceResult<PrescriptionDetailDto>.Failure("Prescription not found.");
 
@@ -330,138 +285,7 @@ public class PatientRecordService : IPatientRecordService
         await _uow.SaveChangesAsync();
         return ServiceResult.Success();
     }
-    /*public async Task<ServiceResult<PrescriptionDto>> AddPrescriptionAsync(
-        int recordId, AddPrescriptionRequest request, int createdBy)
-    {
-        var record = await _uow.PatientRecords.GetByIdAsync(recordId);
-        if (record is null) return ServiceResult<PrescriptionDto>.Failure("Record not found.");
-        if (record.IsLocked) return ServiceResult<PrescriptionDto>.Failure("Record is locked.");
-
-        var prescription = new Prescription
-        {
-            RecordId = recordId,
-            MedicationName = request.MedicationName.Trim(),
-            Dosage = request.Dosage?.Trim(),
-            Frequency = request.Frequency?.Trim(),
-            Duration = request.Duration?.Trim(),
-            RouteOfAdministration = request.RouteOfAdministration?.Trim(),
-            Instructions = request.Instructions?.Trim(),
-            IsPrinted = false,
-            CreatedAt = DateTime.UtcNow,
-            CreatedBy = createdBy
-        };
-
-        await _uow.Prescriptions.AddAsync(prescription);
-        await _uow.SaveChangesAsync();
-
-        return ServiceResult<PrescriptionDto>.Success(new PrescriptionDto
-        {
-            Id = prescription.Id,
-            MedicationName = prescription.MedicationName,
-            Dosage = prescription.Dosage,
-            Frequency = prescription.Frequency,
-            Duration = prescription.Duration,
-            RouteOfAdministration = prescription.RouteOfAdministration,
-            Instructions = prescription.Instructions,
-            IsPrinted = prescription.IsPrinted,
-            CreatedAt = prescription.CreatedAt
-        });
-    }*/
-
-    /*public async Task<ServiceResult> MarkPrescriptionPrintedAsync(int prescriptionId)
-    {
-        var p = await _uow.Prescriptions.GetByIdAsync(prescriptionId);
-        if (p is null) return ServiceResult.Failure("Prescription not found.");
-
-        p.IsPrinted = true;
-        _uow.Prescriptions.Update(p);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success();
-    }*/
-
-    /* public async Task<ServiceResult> AddPrescriptionAttachmentAsync(
-         int prescriptionId, string filePath, string fileName,
-         string contentType, long fileSize, int uploadedBy)
-     {
-         if (!await _uow.Prescriptions.ExistsAsync(prescriptionId))
-             return ServiceResult.Failure("Prescription not found.");
-
-         await _uow.PrescriptionAttachments.AddAsync(new PrescriptionAttachment
-         {
-             PrescriptionId = prescriptionId,
-             FileName = fileName,
-             FilePath = filePath,
-             ContentType = contentType,
-             FileSizeBytes = fileSize,
-             UploadedAt = DateTime.UtcNow,
-             UploadedBy = uploadedBy
-         });
-         await _uow.SaveChangesAsync();
-         return ServiceResult.Success("Attachment added.");
-     }
-
-     public async Task<ServiceResult> DeleteAttachmentAsync(int attachmentId)
-     {
-         var a = await _uow.PrescriptionAttachments.GetByIdAsync(attachmentId);
-         if (a is null) return ServiceResult.Failure("Attachment not found.");
-
-         _uow.PrescriptionAttachments.Delete(a);
-         await _uow.SaveChangesAsync();
-         return ServiceResult.Success("Attachment deleted.");
-     }
-
-     public async Task<ServiceResult<AttachmentDto>> GetAttachmentAsync(int attachmentId)
-     {
-         var a = await _uow.PrescriptionAttachments.GetByIdAsync(attachmentId);
-         if (a is null) return ServiceResult<AttachmentDto>.Failure("Attachment not found.");
-
-         return ServiceResult<AttachmentDto>.Success(new AttachmentDto
-         {
-             Id = a.Id,
-             FileName = a.FileName,
-             FilePath = a.FilePath,
-             ContentType = a.ContentType,
-             FileSizeBytes = (long)a.FileSizeBytes,
-             UploadedAt = a.UploadedAt
-         });
-     }
-
-     public async Task<ServiceResult<PrescriptionPrintDto>> GetPrescriptionForPrintAsync(int prescriptionId)
-     {
-         var prescription = await _uow.Prescriptions.GetByIdAsync(prescriptionId);
-         if (prescription is null)
-             return ServiceResult<PrescriptionPrintDto>.Failure("Prescription not found.");
-
-         var record = await _uow.PatientRecords.GetByIdAsync(prescription.RecordId);
-         if (record is null)
-             return ServiceResult<PrescriptionPrintDto>.Failure("Medical record not found.");
-
-         var patient = await _uow.Patients.GetByIdAsync(record.PatientId);
-         var doctor = await _uow.Users.GetByIdAsync(record.DoctorId);
-
-         return ServiceResult<PrescriptionPrintDto>.Success(new PrescriptionPrintDto
-         {
-             Id = prescription.Id,
-             MedicationName = prescription.MedicationName,
-             Dosage = prescription.Dosage,
-             Frequency = prescription.Frequency,
-             Duration = prescription.Duration,
-             RouteOfAdministration = prescription.RouteOfAdministration,
-             Instructions = prescription.Instructions,
-             CreatedAt = prescription.CreatedAt,
-             RecordId = record.Id,
-             Diagnosis = record.Diagnosis,
-             PatientId = record.PatientId,
-             PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-             PatientAge = patient?.DateOfBirth.HasValue == true
-                 ? (int)((DateTime.Today - patient.DateOfBirth!.Value).TotalDays / 365.25)
-                 : null,
-             PatientGender = patient?.Gender?.ToString(),
-             DoctorName = doctor?.FullName ?? "",
-             DoctorSpecialization = doctor?.Specialization,
-             DoctorLicenseNumber = doctor?.LicenseNumber
-         });
-     }*/
+ 
     // Attachments now link to Prescription (document)
     public async Task<ServiceResult> AddPrescriptionAttachmentAsync(
         int prescriptionId, string filePath, string fileName,
@@ -510,46 +334,47 @@ public class PatientRecordService : IPatientRecordService
         });
     }
 
-    public async Task<ServiceResult<PrescriptionPrintDto>> GetPrescriptionForPrintAsync(int prescriptionId)
+    public async Task<ServiceResult<PrescriptionPrintDto>> GetPrescriptionForPrintAsync(
+    int prescriptionId)
     {
-        var prescription = await _uow.Prescriptions.GetByIdAsync(prescriptionId);
-        if (prescription is null)
-            return ServiceResult<PrescriptionPrintDto>.Failure("Prescription not found.");
+        var prescription = await _uow.Prescriptions.Query()
+            .Where(p => p.Id == prescriptionId)
+            .Select(p => new PrescriptionPrintDto
+            {
+                Id = p.Id,
+                PrescriptionDate = p.PrescriptionDate,
+                Notes = p.Notes,
 
-        var record = await _uow.PatientRecords.GetByIdAsync(prescription.RecordId);
-        if (record is null)
-            return ServiceResult<PrescriptionPrintDto>.Failure("Medical record not found.");
+                PatientName = $"{p.Record.Patient.FirstName} {p.Record.Patient.LastName}",
+                PatientAge = p.Record.Patient.DateOfBirth.HasValue
+                    ? (int)((DateTime.Today - p.Record.Patient.DateOfBirth.Value)
+                        .TotalDays / 365.25)
+                    : null,
+                PatientGender = p.Record.Patient.Gender != null
+                    ? p.Record.Patient.Gender.ToString()
+                    : null,
 
-        var patient = await _uow.Patients.GetByIdAsync(record.PatientId);
-        var doctor = await _uow.Users.GetByIdAsync(record.DoctorId);
+                Diagnosis = p.Record.Diagnosis,
+                DoctorName = p.Record.Doctor.FullName,
+                DoctorSpecialization = p.Record.Doctor.Specialization,
+                DoctorLicenseNumber = p.Record.Doctor.LicenseNumber,
 
-        var items = prescription.Items.Select(i => new PrescriptionItemDto
-        {
-            Id = i.Id,
-            MedicationName = i.MedicationName,
-            Dosage = i.Dosage,
-            Frequency = i.Frequency,
-            Duration = i.Duration,
-            RouteOfAdministration = i.RouteOfAdministration,
-            Instructions = i.Instructions
-        });
+                Items = p.Items.Select(i => new PrescriptionItemDto
+                {
+                    Id = i.Id,
+                    MedicationName = i.MedicationName,
+                    Dosage = i.Dosage,
+                    Frequency = i.Frequency,
+                    Duration = i.Duration,
+                    RouteOfAdministration = i.RouteOfAdministration,
+                    Instructions = i.Instructions
+                })
+            })
+            .FirstOrDefaultAsync();
 
-        return ServiceResult<PrescriptionPrintDto>.Success(new PrescriptionPrintDto
-        {
-            Id = prescription.Id,
-            PrescriptionDate = prescription.PrescriptionDate,
-            Notes = prescription.Notes,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-            PatientAge = patient?.DateOfBirth.HasValue == true
-                ? (int)((DateTime.Today - patient.DateOfBirth.Value).TotalDays / 365.25)
-                : null,
-            PatientGender = patient?.Gender?.ToString(),
-            Diagnosis = record.Diagnosis,
-            DoctorName = doctor?.FullName ?? "",
-            DoctorSpecialization = doctor?.Specialization,
-            DoctorLicenseNumber = doctor?.LicenseNumber,
-            Items = items
-        });
+        return prescription is null
+            ? ServiceResult<PrescriptionPrintDto>.Failure("Prescription not found.")
+            : ServiceResult<PrescriptionPrintDto>.Success(prescription);
     }
     // ── Mapper ────────────────────────────────────────────────
 
@@ -574,55 +399,7 @@ public class PatientRecordService : IPatientRecordService
         }
 
         var prescriptionDtos = new List<PrescriptionDto>();
-        /*foreach (var p in prescriptions)
-        {
-            var attachments = await _uow.PrescriptionAttachments.FindAsync(a => a.PrescriptionId == p.Id);
-            var uploader = p.CreatedBy > 0 ? await _uow.Users.GetByIdAsync(p.CreatedBy) : null;
-            prescriptionDtos.Add(new PrescriptionDto
-            {
-                Id = p.Id,
-                MedicationName = p.MedicationName,
-                Dosage = p.Dosage,
-                Frequency = p.Frequency,
-                Duration = p.Duration,
-                RouteOfAdministration = p.RouteOfAdministration,
-                Instructions = p.Instructions,
-                IsPrinted = p.IsPrinted,
-                CreatedAt = p.CreatedAt,
-                Attachments = attachments.Select(a => new AttachmentDto
-                {
-                    Id = a.Id,
-                    FileName = a.FileName,
-                    FilePath = a.FilePath,
-                    ContentType = a.ContentType,
-                    FileSizeBytes = (long)a.FileSizeBytes,
-                    UploadedAt = a.UploadedAt,
-                    UploadedBy = uploader?.FullName ?? ""
-                })
-            });
-        }
-
-        return new PatientRecordDto
-        {
-            Id = record.Id,
-            PatientId = record.PatientId,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-            DoctorId = record.DoctorId,
-            DoctorName = doctor?.FullName ?? "",
-            ReservationId = record.ReservationId,
-            Category = record.Category.ToString(),
-            ChiefComplaint = record.ChiefComplaint,
-            PresentIllnessHistory = record.PresentIllnessHistory,
-            Diagnosis = record.Diagnosis,
-            DifferentialDiagnosis = record.DifferentialDiagnosis,
-            TreatmentPlan = record.TreatmentPlan,
-            Notes = record.Notes,
-            FollowUpDate = record.FollowUpDate,
-            IsLocked = record.IsLocked,
-            CreatedAt = record.CreatedAt,
-            Treatments = treatmentDtos,
-            Prescriptions = prescriptionDtos
-        };*/
+        
         return new PatientRecordDto
         {
             Id = record.Id,
@@ -669,54 +446,63 @@ public class PatientRecordService : IPatientRecordService
                 CreatedAt = r.CreatedAt
             });
     }
-    private async Task<PrescriptionDetailDto> BuildPrescriptionDetailDtoAsync(Prescription p)
+    private Task<PrescriptionDetailDto?> BuildPrescriptionDetailDtoAsync(int prescriptionId)
     {
-        var record = await _uow.PatientRecords.GetByIdAsync(p.RecordId);
-        var patient = record != null ? await _uow.Patients.GetByIdAsync(record.PatientId) : null;
-        var doctor = record != null ? await _uow.Users.GetByIdAsync(record.DoctorId) : null;
-        var creator = p.CreatedBy > 0 ? await _uow.Users.GetByIdAsync(p.CreatedBy) : null;
+        return PrescriptionDetailDtoQuery()
+            .FirstOrDefaultAsync(p => p.Id == prescriptionId);
+    }
+    private IQueryable<PrescriptionDetailDto> PrescriptionDetailDtoQuery()
+    {
+        var users = _uow.Users.Query();
 
-        var itemDtos = p.Items?.Select(i => new PrescriptionItemDto
-        {
-            Id = i.Id,
-            MedicationName = i.MedicationName,
-            Dosage = i.Dosage,
-            Frequency = i.Frequency,
-            Duration = i.Duration,
-            RouteOfAdministration = i.RouteOfAdministration,
-            Instructions = i.Instructions
-        }) ?? Enumerable.Empty<PrescriptionItemDto>();
+        return _uow.Prescriptions.Query()
+            .Select(p => new PrescriptionDetailDto
+            {
+                Id = p.Id,
+                RecordId = p.RecordId,
+                PrescriptionDate = p.PrescriptionDate,
+                Notes = p.Notes,
+                IsPrinted = p.IsPrinted,
+                CreatedAt = p.CreatedAt,
 
-        var attachmentDtos = p.Attachments?.Select(a => new AttachmentDto
-        {
-            Id = a.Id,
-            FileName = a.FileName,
-            FilePath = a.FilePath,
-            ContentType = a.ContentType,
-            FileSizeBytes = (long)a.FileSizeBytes!,
-            UploadedAt = a.UploadedAt,
-            UploadedBy = creator?.FullName ?? ""
-        }) ?? Enumerable.Empty<AttachmentDto>();
+                PatientName = $"{p.Record.Patient.FirstName} {p.Record.Patient.LastName}",
+                PatientAge = p.Record.Patient.DateOfBirth.HasValue
+                    ? (int)((DateTime.Today - p.Record.Patient.DateOfBirth.Value)
+                        .TotalDays / 365.25)
+                    : null,
+                PatientGender = p.Record.Patient.Gender != null
+                    ? p.Record.Patient.Gender.ToString()
+                    : null,
 
-        return new PrescriptionDetailDto
-        {
-            Id = p.Id,
-            RecordId = p.RecordId,
-            PrescriptionDate = p.PrescriptionDate,
-            Notes = p.Notes,
-            IsPrinted = p.IsPrinted,
-            CreatedAt = p.CreatedAt,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-            PatientAge = patient?.DateOfBirth.HasValue == true
-                ? (int)((DateTime.Today - patient.DateOfBirth.Value).TotalDays / 365.25)
-                : null,
-            PatientGender = patient?.Gender?.ToString(),
-            Diagnosis = record?.Diagnosis,
-            DoctorName = doctor?.FullName ?? "",
-            DoctorSpecialization = doctor?.Specialization,
-            DoctorLicenseNumber = doctor?.LicenseNumber,
-            Items = itemDtos,
-            Attachments = attachmentDtos
-        };
+                Diagnosis = p.Record.Diagnosis,
+                DoctorName = p.Record.Doctor.FullName,
+                DoctorSpecialization = p.Record.Doctor.Specialization,
+                DoctorLicenseNumber = p.Record.Doctor.LicenseNumber,
+
+                Items = p.Items.Select(i => new PrescriptionItemDto
+                {
+                    Id = i.Id,
+                    MedicationName = i.MedicationName,
+                    Dosage = i.Dosage,
+                    Frequency = i.Frequency,
+                    Duration = i.Duration,
+                    RouteOfAdministration = i.RouteOfAdministration,
+                    Instructions = i.Instructions
+                }),
+
+                Attachments = p.Attachments.Select(a => new AttachmentDto
+                {
+                    Id = a.Id,
+                    FileName = a.FileName,
+                    FilePath = a.FilePath,
+                    ContentType = a.ContentType ?? string.Empty,
+                    FileSizeBytes = a.FileSizeBytes ?? 0,
+                    UploadedAt = a.UploadedAt,
+                    UploadedBy = users
+                        .Where(u => u.Id == a.UploadedBy)
+                        .Select(u => u.FullName)
+                        .FirstOrDefault() ?? string.Empty
+                })
+            });
     }
 }
