@@ -270,14 +270,18 @@ public class ReservationService : IReservationService
     /// </summary>
     private async Task RecordZeroCostPaymentAsync(Reservation reservation, int collectedBy)
     {
-        var patient = await _uow.Patients.GetByIdAsync(reservation.PatientId);
+        var patientSourceId = await _uow.Patients
+            .Query()
+            .Where(p => p.Id == reservation.PatientId)
+            .Select(p => p.PatientSourceId)
+            .FirstOrDefaultAsync();
 
         var zeroPayment = new Payment
         {
             PatientId = reservation.PatientId,
             ReservationId = reservation.Id,
             ClinicId = reservation.ClinicId,
-            PatientSourceId = patient?.PatientSourceId,
+            PatientSourceId = patientSourceId,
             CollectedBy = collectedBy > 0 ? collectedBy : 1,
             Amount = 0m,
             OriginalAmount = 0m,
