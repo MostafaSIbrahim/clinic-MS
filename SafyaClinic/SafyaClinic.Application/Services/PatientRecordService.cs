@@ -46,7 +46,14 @@ public class PatientRecordService : IPatientRecordService
 
         await _uow.PatientRecords.AddAsync(record);
         await _uow.SaveChangesAsync();
-        return ServiceResult<PatientRecordDto>.Success(await BuildRecordDtoAsync(record));
+        var dto = await PatientRecordDtoQuery()
+     .FirstOrDefaultAsync(r => r.Id == record.Id);
+
+        if (dto is null)
+            return ServiceResult<PatientRecordDto>.Failure(
+                "Medical record could not be loaded after creation.");
+
+        return ServiceResult<PatientRecordDto>.Success(dto);
     }
 
     public async Task<ServiceResult<PatientRecordDto>> GetRecordByIdAsync(int recordId)
@@ -378,50 +385,7 @@ public class PatientRecordService : IPatientRecordService
     }
     // ── Mapper ────────────────────────────────────────────────
 
-    private async Task<PatientRecordDto> BuildRecordDtoAsync(PatientRecord record)
-    {
-        var patient = await _uow.Patients.GetByIdAsync(record.PatientId);
-        var doctor = await _uow.Users.GetByIdAsync(record.DoctorId);
-        var treatments = await _uow.Treatments.FindAsync(t => t.RecordId == record.Id);
-        var prescriptions = await _uow.Prescriptions.FindAsync(p => p.RecordId == record.Id);
-
-        var treatmentDtos = new List<TreatmentDto>();
-        foreach (var t in treatments)
-        {
-            treatmentDtos.Add(new TreatmentDto
-            {
-                Id = t.Id,
-                Description = t.Description,
-                Cost = t.Cost,
-                PerformedDate = t.PerformedDate,
-                Notes = t.Notes
-            });
-        }
-
-        var prescriptionDtos = new List<PrescriptionDto>();
-        
-        return new PatientRecordDto
-        {
-            Id = record.Id,
-            PatientId = record.PatientId,
-            PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
-            DoctorId = record.DoctorId,
-            DoctorName = doctor?.FullName ?? "",
-            ReservationId = record.ReservationId,
-            Category = record.Category.ToString(),
-            ChiefComplaint = record.ChiefComplaint,
-            PresentIllnessHistory = record.PresentIllnessHistory,
-            Diagnosis = record.Diagnosis,
-            DifferentialDiagnosis = record.DifferentialDiagnosis,
-            TreatmentPlan = record.TreatmentPlan,
-            Notes = record.Notes,
-            FollowUpDate = record.FollowUpDate,
-            IsLocked = record.IsLocked,
-            CreatedAt = record.CreatedAt,
-            Treatments = treatmentDtos,
-            Prescriptions = prescriptionDtos
-        };
-    }
+    
     // ── Private mapper ────────────────────────────────────────
     private IQueryable<PatientRecordDto> PatientRecordDtoQuery()
     {
