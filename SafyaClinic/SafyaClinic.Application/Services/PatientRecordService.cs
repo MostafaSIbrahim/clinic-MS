@@ -240,12 +240,19 @@ public class PatientRecordService : IPatientRecordService
     public async Task<ServiceResult<PrescriptionItemDto>> AddPrescriptionItemAsync(
         int prescriptionId, AddPrescriptionItemRequest request)
     {
-        var prescription = await _uow.Prescriptions.GetByIdAsync(prescriptionId);
-        if (prescription is null) return ServiceResult<PrescriptionItemDto>.Failure("Prescription not found.");
+        var prescriptionState = await _uow.Prescriptions.Query()
+                .Where(p => p.Id == prescriptionId)
+                .Select(p => new
+                {
+                    IsRecordLocked = p.Record.IsLocked
+                })
+                .FirstOrDefaultAsync();
 
-        var record = await _uow.PatientRecords.GetByIdAsync(prescription.RecordId);
-        if (record?.IsLocked == true) return ServiceResult<PrescriptionItemDto>.Failure("Record is locked.");
+        if (prescriptionState is null)
+            return ServiceResult<PrescriptionItemDto>.Failure("Prescription not found.");
 
+        if (prescriptionState.IsRecordLocked)
+            return ServiceResult<PrescriptionItemDto>.Failure("Record is locked.");
         var item = new PrescriptionItem
         {
             PrescriptionId = prescriptionId,
@@ -274,14 +281,22 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult> RemovePrescriptionItemAsync(int itemId)
     {
-        var item = await _uow.PrescriptionItems.GetByIdAsync(itemId);
-        if (item is null) return ServiceResult.Failure("Item not found.");
+        var itemState = await _uow.PrescriptionItems.Query(asNoTracking: false)
+                .Where(i => i.Id == itemId)
+                .Select(i => new
+                {
+                    Item = i,
+                    IsRecordLocked = i.Prescription.Record.IsLocked
+                })
+                .FirstOrDefaultAsync();
 
-        var prescription = await _uow.Prescriptions.GetByIdAsync(item.PrescriptionId);
-        var record = prescription != null ? await _uow.PatientRecords.GetByIdAsync(prescription.RecordId) : null;
-        if (record?.IsLocked == true) return ServiceResult.Failure("Record is locked.");
+        if (itemState is null)
+            return ServiceResult.Failure("Item not found.");
 
-        _uow.PrescriptionItems.Delete(item);
+        if (itemState.IsRecordLocked)
+            return ServiceResult.Failure("Record is locked.");
+
+        _uow.PrescriptionItems.Delete(itemState.Item);
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Item removed.");
     }
