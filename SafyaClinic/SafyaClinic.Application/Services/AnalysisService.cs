@@ -302,12 +302,14 @@ public class AnalysisService : IAnalysisService
 
     public async Task<ServiceResult> DeleteAttachmentAsync(int attachmentId)
     {
-        var a = await _uow.AnalysisAttachments.GetByIdAsync(attachmentId);
-        if (a is null) return ServiceResult.Failure("Attachment not found.");
+        var affectedRows = await _uow.AnalysisAttachments
+            .Query()
+            .Where(a => a.Id == attachmentId)
+            .ExecuteDeleteAsync();
 
-        _uow.AnalysisAttachments.Delete(a);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Attachment deleted.");
+        return affectedRows == 0
+            ? ServiceResult.Failure("Attachment not found.")
+            : ServiceResult.Success("Attachment deleted.");
     }
 
     public async Task<ServiceResult<IEnumerable<AnalysisTypeDto>>> GetAnalysisTypesAsync()
