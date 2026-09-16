@@ -36,8 +36,8 @@ public class AnalysisService : IAnalysisService
             Id = att.Id,
             FileName = att.FileName,
             FilePath = att.FilePath,
-            ContentType = att.ContentType,
-            FileSizeBytes = (long)att.FileSizeBytes,
+            ContentType = att.ContentType ?? string.Empty,
+            FileSizeBytes = att.FileSizeBytes ?? 0,
             UploadedAt = att.UploadedAt
         })
     };
