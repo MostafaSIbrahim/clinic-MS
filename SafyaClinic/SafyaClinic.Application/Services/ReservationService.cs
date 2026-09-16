@@ -333,17 +333,27 @@ public class ReservationService : IReservationService
             : ServiceResult.Success();
     }
 
-    public async Task<ServiceResult> CancelReservationAsync(int reservationId, string? reason = null)
+    public async Task<ServiceResult> CancelReservationAsync(
+    int reservationId, string? reason = null)
     {
-        var r = await _uow.Reservations.GetByIdAsync(reservationId);
-        if (r is null) return ServiceResult.Failure("Reservation not found.");
+        var updatedAt = DateTime.UtcNow;
+        var query = _uow.Reservations
+            .Query()
+            .Where(r => r.Id == reservationId);
 
-        r.StatusId = 4; // Cancelled
-        r.Notes = string.IsNullOrWhiteSpace(reason) ? r.Notes : $"{r.Notes} | Cancelled: {reason}";
-        r.UpdatedAt = DateTime.UtcNow;
-        _uow.Reservations.Update(r);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Reservation cancelled.");
+        var affectedRows = string.IsNullOrWhiteSpace(reason)
+            ? await query.ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.StatusId, 4)
+                .SetProperty(r => r.UpdatedAt, updatedAt))
+            : await query.ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.StatusId, 4)
+                .SetProperty(r => r.Notes,
+                    r => (r.Notes ?? string.Empty) + $" | Cancelled: {reason}")
+                .SetProperty(r => r.UpdatedAt, updatedAt));
+
+        return affectedRows == 0
+            ? ServiceResult.Failure("Reservation not found.")
+            : ServiceResult.Success("Reservation cancelled.");
     }
 
     public async Task<ServiceResult<IEnumerable<TreatmentTypeDto>>> GetTreatmentTypesAsync(
