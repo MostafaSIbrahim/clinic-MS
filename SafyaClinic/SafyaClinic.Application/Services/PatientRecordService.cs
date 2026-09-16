@@ -58,7 +58,7 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult<PatientRecordDto>> GetRecordByIdAsync(int recordId)
     {
-        var record = await PatientRecordDtoQuery()
+        var record = await PatientRecordDetailDtoQuery()
             .Where(r => r.Id == recordId)
             .FirstOrDefaultAsync();
 
@@ -408,6 +408,41 @@ public class PatientRecordService : IPatientRecordService
                 FollowUpDate = r.FollowUpDate,
                 IsLocked = r.IsLocked,
                 CreatedAt = r.CreatedAt
+            });
+    }
+
+    private IQueryable<PatientRecordDto> PatientRecordDetailDtoQuery()
+    {
+        return _uow.PatientRecords.Query()
+            .Select(r => new PatientRecordDto
+            {
+                Id = r.Id,
+                PatientId = r.PatientId,
+                PatientName = $"{r.Patient.FirstName} {r.Patient.LastName}",
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor.FullName,
+                ReservationId = r.ReservationId,
+                Category = r.Category.ToString(),
+                ChiefComplaint = r.ChiefComplaint,
+                PresentIllnessHistory = r.PresentIllnessHistory,
+                Diagnosis = r.Diagnosis,
+                DifferentialDiagnosis = r.DifferentialDiagnosis,
+                TreatmentPlan = r.TreatmentPlan,
+                Notes = r.Notes,
+                FollowUpDate = r.FollowUpDate,
+                IsLocked = r.IsLocked,
+                CreatedAt = r.CreatedAt,
+
+                Treatments = r.Treatments
+                    .OrderByDescending(t => t.PerformedDate)
+                    .Select(t => new TreatmentDto
+                    {
+                        Id = t.Id,
+                        Description = t.Description,
+                        Cost = t.Cost,
+                        PerformedDate = t.PerformedDate,
+                        Notes = t.Notes
+                    })
             });
     }
     private Task<PrescriptionDetailDto?> BuildPrescriptionDetailDtoAsync(int prescriptionId)
