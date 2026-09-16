@@ -126,25 +126,17 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult> LockRecordAsync(int recordId)
     {
-        var recordState = await _uow.PatientRecords
-            .Query()
-            .Where(r => r.Id == recordId)
-            .Select(r => new
-            {
-                r.IsLocked
-            })
-            .FirstOrDefaultAsync();
-        if (recordState is null) 
-            return ServiceResult.Failure("Record not found.");
+        var updatedAt = DateTime.UtcNow;
 
-        var affectedRecord = _uow.PatientRecords
-            .Query()
+        var affectedRows = await _uow.PatientRecords.Query()
             .Where(r => r.Id == recordId)
-            .ExecuteUpdateAsync(setters => 
-                setters.SetProperty(r => r.IsLocked, true)
-                .SetProperty(r => r.UpdatedAt, DateTime.UtcNow));
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Record locked.");
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.IsLocked, true)
+                .SetProperty(r => r.UpdatedAt, updatedAt));
+
+        return affectedRows == 0
+            ? ServiceResult.Failure("Record not found.")
+            : ServiceResult.Success("Record locked.");
     }
 
     // ── Treatments ────────────────────────────────────────────
