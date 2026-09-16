@@ -179,9 +179,14 @@ public class PatientRecordService : IPatientRecordService
     public async Task<ServiceResult<PrescriptionDetailDto>> CreatePrescriptionAsync(
         CreatePrescriptionRequest request, int createdBy)
     {
-        var record = await _uow.PatientRecords.GetByIdAsync(request.RecordId);
-        if (record is null) return ServiceResult<PrescriptionDetailDto>.Failure("Record not found.");
-        if (record.IsLocked) return ServiceResult<PrescriptionDetailDto>.Failure("Record is locked.");
+        var record = await _uow.PatientRecords
+            .Query()
+            .Where(r => r.Id == request.RecordId)
+            .FirstOrDefaultAsync();
+        if (record is null) 
+            return ServiceResult<PrescriptionDetailDto>.Failure("Record not found.");
+        if (record.IsLocked) 
+            return ServiceResult<PrescriptionDetailDto>.Failure("Record is locked.");
 
         var prescription = new Prescription
         {
