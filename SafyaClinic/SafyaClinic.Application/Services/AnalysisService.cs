@@ -241,18 +241,24 @@ public class AnalysisService : IAnalysisService
     }
     public async Task<ServiceResult<AttachmentDto>> GetAttachmentAsync(int attachmentId)
     {
-        var a = await _uow.AnalysisAttachments.GetByIdAsync(attachmentId);
-        if (a is null) return ServiceResult<AttachmentDto>.Failure("Attachment not found.");
+        var attachment = await _uow.AnalysisAttachments
+            .Query()
+            .Where(a => a.Id == attachmentId)
+            .Select(a => new AttachmentDto
+            {
+                Id = a.Id,
+                FileName = a.FileName,
+                FilePath = a.FilePath,
+                ContentType = a.ContentType ?? string.Empty,
+                FileSizeBytes = a.FileSizeBytes ?? 0,
+                UploadedAt = a.UploadedAt
+            })
+            .FirstOrDefaultAsync();
 
-        return ServiceResult<AttachmentDto>.Success(new AttachmentDto
-        {
-            Id = a.Id,
-            FileName = a.FileName,
-            FilePath = a.FilePath,
-            ContentType = a.ContentType,
-            FileSizeBytes = (long)a.FileSizeBytes,
-            UploadedAt = a.UploadedAt
-        });
+        if (attachment is null)
+            return ServiceResult<AttachmentDto>.Failure("Attachment not found.");
+
+        return ServiceResult<AttachmentDto>.Success(attachment);
     }
 
     public async Task<ServiceResult> UpdateStatusAsync(
