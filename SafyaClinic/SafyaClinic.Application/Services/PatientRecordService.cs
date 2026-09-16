@@ -19,9 +19,21 @@ public class PatientRecordService : IPatientRecordService
     public async Task<ServiceResult<PatientRecordDto>> CreateRecordAsync(
         CreatePatientRecordRequest request, int createdBy)
     {
-        if (!await _uow.Patients.ExistsAsync(request.PatientId))
+        var users = _uow.Users.Query();
+
+        var validation = await _uow.Patients
+            .Query()
+            .Where(p => p.Id == request.PatientId)
+            .Select(_ => new
+            {
+                DoctorExists = users.Any(u => u.Id == request.DoctorId)
+            })
+            .FirstOrDefaultAsync();
+
+        if (validation is null)
             return ServiceResult<PatientRecordDto>.Failure("Patient not found.");
-        if (!await _uow.Users.ExistsAsync(request.DoctorId))
+
+        if (!validation.DoctorExists)
             return ServiceResult<PatientRecordDto>.Failure("Doctor not found.");
         if (!Enum.TryParse<TreatmentCategory>(request.Category, out var category))
             return ServiceResult<PatientRecordDto>.Failure("Invalid category.");
@@ -183,11 +195,10 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult> RemoveTreatmentAsync(int treatmentId)
     {
-        var treatmentState = await _uow.Treatments.Query(asNoTracking: false)
+        var treatmentState = await _uow.Treatments.Query()
                 .Where(t => t.Id == treatmentId)
                 .Select(t => new
                 {
-                    Treatment = t,
                     IsRecordLocked = t.Record.IsLocked
                 })
                 .FirstOrDefaultAsync();
@@ -198,9 +209,13 @@ public class PatientRecordService : IPatientRecordService
         if (treatmentState.IsRecordLocked)
             return ServiceResult.Failure("Record is locked.");
 
-        _uow.Treatments.Delete(treatmentState.Treatment);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Treatment removed.");
+        var affectedRows = await _uow.Treatments.Query()
+            .Where(t => t.Id == treatmentId && !t.Record.IsLocked)
+            .ExecuteDeleteAsync();
+
+        return affectedRows == 0
+            ? ServiceResult.Failure("Treatment not found or record is locked.")
+            : ServiceResult.Success("Treatment removed.");
     }
 
     // ── Prescriptions ─────────────────────────────────────────
@@ -337,11 +352,10 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult> RemovePrescriptionItemAsync(int itemId)
     {
-        var itemState = await _uow.PrescriptionItems.Query(asNoTracking: false)
+        var itemState = await _uow.PrescriptionItems.Query()
                 .Where(i => i.Id == itemId)
                 .Select(i => new
                 {
-                    Item = i,
                     IsRecordLocked = i.Prescription.Record.IsLocked
                 })
                 .FirstOrDefaultAsync();
@@ -352,9 +366,13 @@ public class PatientRecordService : IPatientRecordService
         if (itemState.IsRecordLocked)
             return ServiceResult.Failure("Record is locked.");
 
-        _uow.PrescriptionItems.Delete(itemState.Item);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Item removed.");
+        var affectedRows = await _uow.PrescriptionItems.Query()
+            .Where(i => i.Id == itemId && !i.Prescription.Record.IsLocked)
+            .ExecuteDeleteAsync();
+
+        return affectedRows == 0
+            ? ServiceResult.Failure("Item not found or record is locked.")
+            : ServiceResult.Success("Item removed.");
     }
 
     public async Task<ServiceResult> MarkPrescriptionPrintedAsync(int prescriptionId)
