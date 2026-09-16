@@ -159,9 +159,21 @@ public class UserService : IUserService
 
     public async Task<ServiceResult> AssignRoleAsync(int userId, int roleId, int assignedBy)
     {
-        if (!await _uow.Users.ExistsAsync(userId))
+        var roles = _uow.Roles.Query();
+
+        var validation = await _uow.Users
+            .Query()
+            .Where(u => u.Id == userId)
+            .Select(_ => new
+            {
+                RoleExists = roles.Any(r => r.Id == roleId)
+            })
+            .FirstOrDefaultAsync();
+
+        if (validation is null)
             return ServiceResult.Failure("User not found.");
-        if (!await _uow.Roles.ExistsAsync(roleId))
+
+        if (!validation.RoleExists)
             return ServiceResult.Failure("Role not found.");
 
         var existing = await _uow.UserRoles.FirstOrDefaultAsync(
