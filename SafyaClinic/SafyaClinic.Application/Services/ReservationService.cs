@@ -45,7 +45,15 @@ public class ReservationService : IReservationService
         if (!Enum.TryParse<TreatmentCategory>(request.Category, out var category))
             return ServiceResult<ReservationDto>.Failure("Invalid category. Use 'InternalMedicine' or 'Nutritional'.");
 
-        var treatmentType = await _uow.TreatmentTypes.GetByIdAsync(request.TreatmentTypeId);
+        var treatmentType = await _uow.TreatmentTypes
+                .Query()
+                .Where(t => t.Id == request.TreatmentTypeId)
+                .Select(t => new
+                {
+                    t.DefaultCost
+                })
+                .FirstOrDefaultAsync();
+
         if (treatmentType is null)
             return ServiceResult<ReservationDto>.Failure("Treatment type not found.");
 
