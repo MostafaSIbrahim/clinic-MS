@@ -842,14 +842,15 @@ public class PaymentService : IPaymentService
             .Select(r => r.Id)
             .ToList();
 
-        var reservationIdsWithPayment = await _uow.Payments
-            .Query()
-            .Where(p =>
-                p.ReservationId.HasValue &&
-                p.Status == PaymentStatusEnum.Active &&
-                reservationIds.Contains(p.ReservationId.Value))
-            .Select(p => p.ReservationId!.Value)
-            .ToHashSetAsync();
+        var reservationIdsWithPayment = (await _uow.Payments
+             .Query()
+             .Where(p =>
+                 p.ReservationId.HasValue &&
+                 p.Status == PaymentStatusEnum.Active &&
+                 reservationIds.Contains(p.ReservationId.Value))
+             .Select(p => p.ReservationId!.Value)
+             .ToListAsync())
+             .ToHashSet();
 
         var paymentsToCreate = new List<Payment>();
 
@@ -919,13 +920,35 @@ public class PaymentService : IPaymentService
         // about which payments fall inside a given range.
         var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
 
-        var payments = (await _uow.Payments.FindAsync(p =>
+        var payments = await _uow.Payments
+            .Query()
+            .Where(p =>
                 p.Status == PaymentStatusEnum.Active &&
                 (!fromInclusive.HasValue || p.PaymentDate >= fromInclusive.Value) &&
-                (!toInclusive.HasValue || p.PaymentDate <= toInclusive.Value)))
-            .Where(p => groupType == "clinic" ? p.ClinicId == groupId : p.PatientSourceId == groupId)
+                (!toInclusive.HasValue || p.PaymentDate <= toInclusive.Value) &&
+                (groupType == "clinic"
+                    ? p.ClinicId == groupId
+                    : p.PatientSourceId == groupId))
             .OrderByDescending(p => p.PaymentDate)
-            .ToList();
+            .Select(p => new
+            {
+                p.Id,
+                p.PatientId,
+                PatientName = $"{p.Patient.FirstName} {p.Patient.LastName}",
+                p.PaymentDate,
+                p.Amount,
+                p.SourceDeductionAmount,
+                p.ClinicNetAmount,
+                p.ClinicId,
+                ClinicName = p.ClinicId.HasValue ? p.Clinic.Name : null,
+                p.PatientSourceId,
+                PatientSourceName = p.PatientSourceId.HasValue
+                    ? p.PatientSource.Name
+                    : null,
+                p.PaymentMethod,
+                p.ReferenceNumber
+            })
+            .ToListAsync();
 
         // Label resolution deliberately distinguishes "no id at all" (null — genuinely no
         // clinic/source attached) from "an id that doesn't resolve to a live record"
@@ -965,33 +988,36 @@ public class PaymentService : IPaymentService
         // so explicitly instead of leaving an unexplained blank table. This is what
         // happens for "No Clinic"/"No Source" rows containing older, legacy-dated
         // payments that fall outside whatever range the user happens to pick.
-        var allTimePaymentsForGroup = (await _uow.Payments.FindAsync(p =>
-                p.Status == PaymentStatusEnum.Active))
-            .Where(p => groupType == "clinic" ? p.ClinicId == groupId : p.PatientSourceId == groupId)
-            .ToList();
+        var allTimeGroupQuery = _uow.Payments
+            .Query()
+            .Where(p =>
+                p.Status == PaymentStatusEnum.Active &&
+                (groupType == "clinic"
+                    ? p.ClinicId == groupId
+                    : p.PatientSourceId == groupId));
 
-        var lines = new List<PaymentLineDetailDto>();
-        foreach (var p in payments)
-        {
-            var patient = await _uow.Patients.GetByIdAsync(p.PatientId);
-            var clinic = p.ClinicId.HasValue ? await _uow.Clinics.GetByIdAsync(p.ClinicId.Value) : null;
-            var source = p.PatientSourceId.HasValue ? await _uow.PatientSources.GetByIdAsync(p.PatientSourceId.Value) : null;
+                var totalPaymentsAllTime = await allTimeGroupQuery.CountAsync();
 
-            lines.Add(new PaymentLineDetailDto
+                var earliestPaymentDate = totalPaymentsAllTime > 0
+                    ? await allTimeGroupQuery.MinAsync(p => (DateTime?)p.PaymentDate)
+                    : null;
+
+        var lines = payments
+            .Select(p => new PaymentLineDetailDto
             {
                 PaymentId = p.Id,
-                PatientName = patient is null ? "" : $"{patient.FirstName} {patient.LastName}",
+                PatientName = p.PatientName ?? "",
                 PaymentDate = p.PaymentDate,
                 AmountPaid = p.Amount,
                 DeductedAmount = groupType == "source"
                     ? p.SourceDeductionAmount
                     : p.Amount - p.ClinicNetAmount,
-                ClinicName = clinic?.Name ?? "—",
-                PatientSourceName = source?.Name ?? "—",
+                ClinicName = p.ClinicName ?? "—",
+                PatientSourceName = p.PatientSourceName ?? "—",
                 PaymentMethod = p.PaymentMethod.ToString(),
                 ReferenceNumber = p.ReferenceNumber
-            });
-        }
+            })
+            .ToList();
 
         return ServiceResult<PaymentLineDetailReportDto>.Success(new PaymentLineDetailReportDto
         {
@@ -999,9 +1025,9 @@ public class PaymentService : IPaymentService
             From = from?.Date,
             To = to?.Date,
             Lines = lines,
-            TotalPaymentsAllTime = allTimePaymentsForGroup.Count,
-            EarliestPaymentDate = allTimePaymentsForGroup.Count > 0 ? allTimePaymentsForGroup.Min(p => p.PaymentDate) : null,
-            LatestPaymentDate = allTimePaymentsForGroup.Count > 0 ? allTimePaymentsForGroup.Max(p => p.PaymentDate) : null
+            TotalPaymentsAllTime = totalPaymentsAllTime,
+            EarliestPaymentDate = earliestPaymentDate,
+            LatestPaymentDate = totalPaymentsAllTime > 0 ? await allTimeGroupQuery.MaxAsync(p => (DateTime?)p.PaymentDate) : null
         });
     }
 
