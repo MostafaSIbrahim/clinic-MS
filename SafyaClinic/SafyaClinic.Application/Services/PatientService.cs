@@ -88,6 +88,11 @@ public class PatientService : IPatientService
         await _uow.SaveChangesAsync();
 
         var createdPatient = await GetPatientDtoByIdAsync(patient.Id);
+
+        if (createdPatient is null)
+            return ServiceResult<PatientDto>.Failure(
+                "Patient was created but could not be loaded.");
+
         return ServiceResult<PatientDto>.Success(
             createdPatient,
             "Patient created successfully.");
