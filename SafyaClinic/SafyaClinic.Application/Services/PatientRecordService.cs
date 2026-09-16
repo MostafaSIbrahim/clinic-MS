@@ -115,10 +115,19 @@ public class PatientRecordService : IPatientRecordService
     public async Task<ServiceResult<TreatmentDto>> AddTreatmentAsync(
         int recordId, AddTreatmentRequest request, int createdBy)
     {
-        var record = await _uow.PatientRecords.GetByIdAsync(recordId);
-        if (record is null) return ServiceResult<TreatmentDto>.Failure("Record not found.");
-        if (record.IsLocked) return ServiceResult<TreatmentDto>.Failure("Record is locked.");
+        var recordState = await _uow.PatientRecords.Query()
+                .Where(r => r.Id == recordId)
+                .Select(r => new
+                {
+                    r.IsLocked
+                })
+                .FirstOrDefaultAsync();
 
+        if (recordState is null)
+            return ServiceResult<TreatmentDto>.Failure("Record not found.");
+
+        if (recordState.IsLocked)
+            return ServiceResult<TreatmentDto>.Failure("Record is locked.");
         var treatment = new Treatment
         {
             RecordId = recordId,
@@ -145,13 +154,22 @@ public class PatientRecordService : IPatientRecordService
 
     public async Task<ServiceResult> RemoveTreatmentAsync(int treatmentId)
     {
-        var t = await _uow.Treatments.GetByIdAsync(treatmentId);
-        if (t is null) return ServiceResult.Failure("Treatment not found.");
+        var treatmentState = await _uow.Treatments.Query(asNoTracking: false)
+                .Where(t => t.Id == treatmentId)
+                .Select(t => new
+                {
+                    Treatment = t,
+                    IsRecordLocked = t.Record.IsLocked
+                })
+                .FirstOrDefaultAsync();
 
-        var record = await _uow.PatientRecords.GetByIdAsync(t.RecordId);
-        if (record?.IsLocked == true) return ServiceResult.Failure("Record is locked.");
+        if (treatmentState is null)
+            return ServiceResult.Failure("Treatment not found.");
 
-        _uow.Treatments.Delete(t);
+        if (treatmentState.IsRecordLocked)
+            return ServiceResult.Failure("Record is locked.");
+
+        _uow.Treatments.Delete(treatmentState.Treatment);
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Treatment removed.");
     }
