@@ -273,14 +273,14 @@ public class PatientService : IPatientService
 
     public async Task<ServiceResult> RemoveAddressAsync(int patientId, int addressId)
     {
-        var address = await _uow.PatientAddresses.FirstOrDefaultAsync(
-            a => a.Id == addressId && a.PatientId == patientId);
-        if (address is null)
-            return ServiceResult.Failure("Address not found for this patient.");
+        var affectedRows = await _uow.PatientAddresses
+            .Query()
+            .Where(address => address.Id == addressId && address.PatientId == patientId)
+            .ExecuteDeleteAsync();
 
-        _uow.PatientAddresses.Delete(address);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Address removed.");
+        return affectedRows == 0
+            ? ServiceResult.Failure("Address not found for this patient.")
+            : ServiceResult.Success("Address removed.");
     }
 
     // ── Mapper ────────────────────────────────────────────────
