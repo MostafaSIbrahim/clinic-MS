@@ -68,7 +68,6 @@ public class AnalysisService : IAnalysisService
 
         if (!validation.AnalysisTypeExists)
             return ServiceResult<MedicalAnalysisDto>.Failure("Analysis type not found.");
-       
         var analysis = new MedicalAnalysis
         {
             PatientId = request.PatientId,
@@ -94,11 +93,24 @@ public class AnalysisService : IAnalysisService
             return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Failure(
                 "Select at least one analysis type.");
 
-        if (!await _uow.Patients.ExistsAsync(request.PatientId))
-            return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Failure("Patient not found.");
-        if (!await _uow.Users.ExistsAsync(request.DoctorId))
-            return ServiceResult<IEnumerable<MedicalAnalysisDto>>.Failure("Doctor not found.");
+        var users = _uow.Users.Query();
 
+        var validation = await _uow.Patients
+            .Query()
+            .Where(p => p.Id == request.PatientId)
+            .Select(_ => new
+            {
+                DoctorExists = users.Any(u => u.Id == request.DoctorId)
+            })
+            .FirstOrDefaultAsync();
+
+        if (validation is null)
+            return ServiceResult<IEnumerable<MedicalAnalysisDto>>
+                .Failure("Patient not found.");
+
+        if (!validation.DoctorExists)
+            return ServiceResult<IEnumerable<MedicalAnalysisDto>>
+                .Failure("Doctor not found.");
         var distinctTypeIds = request.AnalysisTypeIds
             .Distinct()
             .ToList();
