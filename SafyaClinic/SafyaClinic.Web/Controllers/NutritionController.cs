@@ -186,6 +186,11 @@ namespace SafyaClinic.Web.Controllers
             if (!result.IsSuccess) { Error("Follow-up not found."); return RedirectToAction(nameof(Packages)); }
 
             var dto = result.Data;
+            if (dto is null)
+            {
+                Error("Follow-up could not be loaded.");
+                return RedirectToAction(nameof(Packages));
+            }
             var model = new RecordFollowUpDto
             {
                 FollowUpId = dto.EnrollmentId,
