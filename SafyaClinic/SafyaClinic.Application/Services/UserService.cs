@@ -176,9 +176,11 @@ public class UserService : IUserService
         if (!validation.RoleExists)
             return ServiceResult.Failure("Role not found.");
 
-        var existing = await _uow.UserRoles.FirstOrDefaultAsync(
-            ur => ur.UserId == userId && ur.RoleId == roleId);
-        if (existing is not null)
+        var roleAlreadyAssigned = await _uow.UserRoles
+     .Query()
+     .AnyAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
+
+        if (roleAlreadyAssigned)
             return ServiceResult.Failure("User already has this role.");
 
         await _uow.UserRoles.AddAsync(new UserRole
