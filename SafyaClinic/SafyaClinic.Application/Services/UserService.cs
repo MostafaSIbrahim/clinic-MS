@@ -146,14 +146,15 @@ public class UserService : IUserService
 
     public async Task<ServiceResult> SetUserActiveAsync(int userId, bool isActive)
     {
-        var user = await _uow.Users.GetByIdAsync(userId);
-        if (user is null)
-            return ServiceResult.Failure("User not found.");
+        var affectedRows = await _uow.Users
+            .Query()
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(u => u.IsActive, isActive));
 
-        user.IsActive = isActive;
-        _uow.Users.Update(user);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success();
+        return affectedRows == 0
+            ? ServiceResult.Failure("User not found.")
+            : ServiceResult.Success();
     }
 
     public async Task<ServiceResult> AssignRoleAsync(int userId, int roleId, int assignedBy)
