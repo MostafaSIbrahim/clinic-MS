@@ -349,14 +349,14 @@ public class NutritionService : INutritionService
                 .ToHashSet();
 
         var administeredItems = request.AdministeredItems
-                .Where(item =>
-                    item.PackageItemId.HasValue &&
-                    existingPackageItemIds.Contains(item.PackageItemId.Value))
+                .Where(item => item.PackageItemId.HasValue &&
+                            item.ActualQuantity.HasValue &&
+                            existingPackageItemIds.Contains(item.PackageItemId.Value))
                 .Select(item => new WeeklyAdministeredItem
                 {
                     FollowUpId = followUp.Id,
                     PackageItemId = item.PackageItemId!.Value,
-                    ActualQuantity = (decimal)item.ActualQuantity,
+                    ActualQuantity = item.ActualQuantity.Value,
                     AdministeredBy = recordedBy,
                     AdministeredAt = DateTime.UtcNow,
                     Notes = item.Notes?.Trim()
