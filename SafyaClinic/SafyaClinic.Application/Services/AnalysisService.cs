@@ -47,13 +47,28 @@ public class AnalysisService : IAnalysisService
     public async Task<ServiceResult<MedicalAnalysisDto>> RequestAnalysisAsync(
         RequestAnalysisRequest request, int requestedBy)
     {
-        if (!await _uow.Patients.ExistsAsync(request.PatientId))
-            return ServiceResult<MedicalAnalysisDto>.Failure("Patient not found.");
-        if (!await _uow.Users.ExistsAsync(request.DoctorId))
-            return ServiceResult<MedicalAnalysisDto>.Failure("Doctor not found.");
-        if (!await _uow.AnalysisTypes.ExistsAsync(request.AnalysisTypeId))
-            return ServiceResult<MedicalAnalysisDto>.Failure("Analysis type not found.");
+        var users = _uow.Users.Query();
+        var analysisTypes = _uow.AnalysisTypes.Query();
 
+        var validation = await _uow.Patients
+            .Query()
+            .Where(p => p.Id == request.PatientId)
+            .Select(_ => new
+            {
+                DoctorExists = users.Any(u => u.Id == request.DoctorId),
+                AnalysisTypeExists = analysisTypes.Any(t => t.Id == request.AnalysisTypeId)
+            })
+            .FirstOrDefaultAsync();
+
+        if (validation is null)
+            return ServiceResult<MedicalAnalysisDto>.Failure("Patient not found.");
+
+        if (!validation.DoctorExists)
+            return ServiceResult<MedicalAnalysisDto>.Failure("Doctor not found.");
+
+        if (!validation.AnalysisTypeExists)
+            return ServiceResult<MedicalAnalysisDto>.Failure("Analysis type not found.");
+       
         var analysis = new MedicalAnalysis
         {
             PatientId = request.PatientId,
