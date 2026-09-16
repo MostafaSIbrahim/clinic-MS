@@ -182,14 +182,14 @@ public class UserService : IUserService
 
     public async Task<ServiceResult> RemoveRoleAsync(int userId, int roleId)
     {
-        var userRole = await _uow.UserRoles.FirstOrDefaultAsync(
-            ur => ur.UserId == userId && ur.RoleId == roleId);
-        if (userRole is null)
-            return ServiceResult.Failure("User does not have this role.");
+        var affectedRows = await _uow.UserRoles
+            .Query()
+            .Where(userRole => userRole.UserId == userId && userRole.RoleId == roleId)
+            .ExecuteDeleteAsync();
 
-        _uow.UserRoles.Delete(userRole);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Role removed.");
+        return affectedRows == 0
+            ? ServiceResult.Failure("User does not have this role.")
+            : ServiceResult.Success("Role removed.");
     }
 
     // ── Mapper ────────────────────────────────────────────────
