@@ -21,9 +21,21 @@ public class UserService : IUserService
             return ServiceResult<UserDto>.Failure("A user with this phone number already exists.");
 
         // Validate roles exist
-        foreach (var roleId in request.RoleIds)
-            if (!await _uow.Roles.ExistsAsync(roleId))
-                return ServiceResult<UserDto>.Failure($"Role ID {roleId} does not exist.");
+        var requestedRoleIds = request.RoleIds.ToList();
+
+        var existingRoleIds = (await _uow.Roles
+            .Query()
+            .Where(role => requestedRoleIds.Contains(role.Id))
+            .Select(role => role.Id)
+            .ToListAsync())
+            .ToHashSet();
+
+        foreach (var roleId in requestedRoleIds)
+        {
+            if (!existingRoleIds.Contains(roleId))
+                return ServiceResult<UserDto>.Failure(
+                    $"Role ID {roleId} does not exist.");
+        }
 
         var user = new User
         {
