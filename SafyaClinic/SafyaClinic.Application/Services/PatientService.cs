@@ -242,14 +242,14 @@ public class PatientService : IPatientService
 
     public async Task<ServiceResult> RemovePhoneAsync(int patientId, int phoneId)
     {
-        var phone = await _uow.PatientPhones.FirstOrDefaultAsync(
-            ph => ph.Id == phoneId && ph.PatientId == patientId);
-        if (phone is null)
-            return ServiceResult.Failure("Phone not found for this patient.");
+        var affectedRows = await _uow.PatientPhones
+            .Query()
+            .Where(phone => phone.Id == phoneId && phone.PatientId == patientId)
+            .ExecuteDeleteAsync();
 
-        _uow.PatientPhones.Delete(phone);
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Phone removed.");
+        return affectedRows == 0
+            ? ServiceResult.Failure("Phone not found for this patient.")
+            : ServiceResult.Success("Phone removed.");
     }
 
     public async Task<ServiceResult> AddAddressAsync(
