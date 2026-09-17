@@ -33,9 +33,43 @@ public class PatientsController : BaseController
 
     public async Task<IActionResult> Details(int id)
     {
-        var result = await _patientService.GetPatientByIdAsync(id);
-        if (!result.IsSuccess) { Error("Patient not found."); return RedirectToAction(nameof(Index)); }
+        var result = await _patientService.GetPatientDashboardAsync(id);
+
+        if (!result.IsSuccess)
+        {
+            Error("Patient not found.");
+            return RedirectToAction(nameof(Index));
+        }
+
         return View(result.Data);
+    }
+
+    [HttpGet]
+    [Authorize(Policy = "DoctorOrAdmin")]
+    public async Task<IActionResult> Timeline(
+    int id,
+    [FromQuery] PaginationRequest pagination)
+    {
+        var patientResult = await _patientService.GetPatientByIdAsync(id);
+
+        if (!patientResult.IsSuccess || patientResult.Data is null)
+            return NotFound("Patient not found.");
+
+        var timelineResult =
+            await _patientService.GetPatientTimelineAsync(id, pagination);
+
+        if (!timelineResult.IsSuccess || timelineResult.Data is null)
+        {
+            Error("Could not load patient timeline.");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        return View(new PatientTimelineDto
+        {
+            PatientId = patientResult.Data.Id,
+            PatientName = patientResult.Data.FullName,
+            Timeline = timelineResult.Data
+        });
     }
 
     // ── Create ────────────────────────────────────────────────

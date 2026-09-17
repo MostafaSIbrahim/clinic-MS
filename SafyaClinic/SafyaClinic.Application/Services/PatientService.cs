@@ -5,6 +5,7 @@ using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.DTOs.Reservation;
 
 
 namespace SafyaClinic.Application.Services;
@@ -107,6 +108,200 @@ public class PatientService : IPatientService
         return ServiceResult<PatientDto>.Success(patient);
     }
 
+    public async Task<ServiceResult<PatientDashboardDto>> GetPatientDashboardAsync(
+    int patientId)
+    {
+        var patient = await GetPatientDtoByIdAsync(patientId);
+
+        if (patient is null)
+            return ServiceResult<PatientDashboardDto>.Failure("Patient not found.");
+
+        var now = DateTime.Now;
+        var today = now.Date;
+        var currentTime = now.TimeOfDay;
+
+        var appointments = _uow.Reservations
+            .Query()
+            .Where(r => r.PatientId == patientId)
+            .Select(r => new ReservationSummaryDto
+            {
+                Id = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient.FirstName + " " + r.Patient.LastName,
+                DoctorName = r.Doctor.FullName,
+                ClinicName = r.Clinic.Name,
+                TreatmentTypeName = r.TreatmentType.TypeName,
+                ReservationDate = r.ReservationDate,
+                ReservationTime = r.ReservationTime,
+                StatusName = r.Status.StatusName,
+                StatusColor = r.Status.ColorCode,
+                Category = r.Category.ToString(),
+                IsPaid = r.IsPaid
+            });
+
+        var lastCompletedVisit = await appointments
+            .Where(r => r.StatusName == "Completed")
+            .OrderByDescending(r => r.ReservationDate)
+            .ThenByDescending(r => r.ReservationTime)
+            .ThenByDescending(r => r.Id)
+            .FirstOrDefaultAsync();
+
+        var nextAppointment = await appointments
+            .Where(r =>
+                (r.StatusName == "Pending" || r.StatusName == "Confirmed") &&
+                (r.ReservationDate.Date > today ||
+                 (r.ReservationDate.Date == today &&
+                  r.ReservationTime >= currentTime)))
+            .OrderBy(r => r.ReservationDate)
+            .ThenBy(r => r.ReservationTime)
+            .ThenBy(r => r.Id)
+            .FirstOrDefaultAsync();
+
+        return ServiceResult<PatientDashboardDto>.Success(
+            new PatientDashboardDto
+            {
+                Patient = patient,
+                LastCompletedVisit = lastCompletedVisit,
+                NextAppointment = nextAppointment
+            });
+    }
+
+    public async Task<ServiceResult<PagedResult<PatientTimelineItemDto>>>
+    GetPatientTimelineAsync(int patientId, PaginationRequest pagination)
+    {
+        if (!await _uow.Patients.ExistsAsync(patientId))
+        {
+            return ServiceResult<PagedResult<PatientTimelineItemDto>>
+                .Failure("Patient not found.");
+        }
+
+        var reservationEvents = _uow.Reservations
+            .Query()
+            .Where(r => r.PatientId == patientId)
+            .Select(r => new
+            {
+                EventType = (int)PatientTimelineEventType.Reservation,
+                EntityId = r.Id,
+                OccurredAt = r.CreatedAt
+            });
+
+        var medicalRecordEvents = _uow.PatientRecords
+            .Query()
+            .Where(r => r.PatientId == patientId)
+            .Select(r => new
+            {
+                EventType = (int)PatientTimelineEventType.MedicalRecord,
+                EntityId = r.Id,
+                OccurredAt = r.CreatedAt
+            });
+
+        var events = reservationEvents.Concat(medicalRecordEvents);
+        var totalCount = await events.CountAsync();
+
+        var totalPages = Math.Max(
+            1, (int)Math.Ceiling((double)totalCount / pagination.PageSize));
+
+        var page = Math.Min(pagination.Page, totalPages);
+
+        var pageEvents = await events
+            .OrderByDescending(e => e.OccurredAt)
+            .ThenByDescending(e => e.EventType)
+            .ThenByDescending(e => e.EntityId)
+            .Skip((page - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .ToListAsync();
+
+        var items = new List<PatientTimelineItemDto>();
+
+        var reservationIds = pageEvents
+            .Where(e => e.EventType == (int)PatientTimelineEventType.Reservation)
+            .Select(e => e.EntityId)
+            .ToList();
+
+        if (reservationIds.Count > 0)
+        {
+            var reservations = await _uow.Reservations
+                .Query()
+                .Where(r =>
+                    r.PatientId == patientId &&
+                    reservationIds.Contains(r.Id))
+                .Select(r => new
+                {
+                    r.Id,
+                    r.CreatedAt,
+                    r.ReservationDate,
+                    r.ReservationTime,
+                    DoctorName = r.Doctor.FullName,
+                    ClinicName = r.Clinic.Name,
+                    TreatmentTypeName = r.TreatmentType.TypeName,
+                    StatusName = r.Status.StatusName
+                })
+                .ToListAsync();
+
+            items.AddRange(reservations.Select(r => new PatientTimelineItemDto
+            {
+                EventType = PatientTimelineEventType.Reservation,
+                EntityId = r.Id,
+                OccurredAt = r.CreatedAt,
+                Title = $"Reservation booked — {r.TreatmentTypeName}",
+                Description =
+                    $"{r.DoctorName} — {r.ClinicName}. " +
+                    $"Appointment: {r.ReservationDate:dd MMM yyyy} " +
+                    $"at {r.ReservationTime:hh\\:mm}",
+                Status = r.StatusName
+            }));
+        }
+
+        var recordIds = pageEvents
+            .Where(e => e.EventType == (int)PatientTimelineEventType.MedicalRecord)
+            .Select(e => e.EntityId)
+            .ToList();
+
+        if (recordIds.Count > 0)
+        {
+            var records = await _uow.PatientRecords
+                .Query()
+                .Where(r =>
+                    r.PatientId == patientId &&
+                    recordIds.Contains(r.Id))
+                .Select(r => new
+                {
+                    r.Id,
+                    r.CreatedAt,
+                    DoctorName = r.Doctor.FullName,
+                    r.Diagnosis,
+                    r.IsLocked
+                })
+                .ToListAsync();
+
+            items.AddRange(records.Select(r => new PatientTimelineItemDto
+            {
+                EventType = PatientTimelineEventType.MedicalRecord,
+                EntityId = r.Id,
+                OccurredAt = r.CreatedAt,
+                Title = "Medical record created",
+                Description =
+                    $"{r.DoctorName} — " +
+                    (string.IsNullOrWhiteSpace(r.Diagnosis)
+                        ? "No diagnosis recorded."
+                        : r.Diagnosis),
+                Status = r.IsLocked ? "Locked" : "Unlocked"
+            }));
+        }
+
+        return ServiceResult<PagedResult<PatientTimelineItemDto>>.Success(
+            new PagedResult<PatientTimelineItemDto>
+            {
+                Items = items
+                    .OrderByDescending(i => i.OccurredAt)
+                    .ThenByDescending(i => i.EventType)
+                    .ThenByDescending(i => i.EntityId)
+                    .ToList(),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pagination.PageSize
+            });
+    }
     public async Task<ServiceResult<PagedResult<PatientSummaryDto>>> SearchPatientsAsync(
         PaginationRequest request)
     {
@@ -330,4 +525,6 @@ public class PatientService : IPatientService
 
         return patient;
     }
+
+
 }

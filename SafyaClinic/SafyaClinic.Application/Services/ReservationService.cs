@@ -214,7 +214,13 @@ public class ReservationService : IReservationService
     {
         var r = await _uow.Reservations.GetByIdAsync(reservationId);
         if (r is null) return ServiceResult.Failure("Reservation not found.");
+        
+        var isCompleted = await _uow.ReservationStatuses
+                .Query()
+                .AnyAsync(s => s.Id == r.StatusId && s.StatusName == "Completed");
 
+        if (isCompleted)
+            return ServiceResult.Failure("Completed reservations cannot be edited.");
         var treatmentType = await _uow.TreatmentTypes.GetByIdAsync(request.TreatmentTypeId);
         if (treatmentType is null) return ServiceResult.Failure("Treatment type not found.");
 

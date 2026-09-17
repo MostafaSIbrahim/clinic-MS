@@ -14,4 +14,8 @@ public interface IPatientService
     Task<ServiceResult> RemovePhoneAsync(int patientId, int phoneId);
     Task<ServiceResult> AddAddressAsync(int patientId, CreatePatientAddressRequest request);
     Task<ServiceResult> RemoveAddressAsync(int patientId, int addressId);
+    Task<ServiceResult<PatientDashboardDto>> GetPatientDashboardAsync(int patientId);
+    Task<ServiceResult<PagedResult<PatientTimelineItemDto>>> GetPatientTimelineAsync(
+    int patientId,
+    PaginationRequest pagination);
 }
