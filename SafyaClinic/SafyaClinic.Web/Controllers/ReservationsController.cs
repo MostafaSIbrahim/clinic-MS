@@ -42,6 +42,38 @@ public class ReservationsController : BaseController
         return View(result.IsSuccess ? result.Data : Enumerable.Empty<ReservationSummaryDto>());
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Board(
+    DateTime? date,
+    int? doctorId,
+    int? clinicId)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest("Invalid board filters.");
+
+        var result = await _reservationService.GetAppointmentBoardAsync(
+            date ?? DateTime.Today, doctorId, clinicId);
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            Error(result.Errors.FirstOrDefault() ?? "Could not load appointment board.");
+            return RedirectToAction(nameof(Index));
+        }
+
+        var doctors = await _userService.GetDoctorsAsync();
+        var clinics = await _clinicService.GetAllAsync(includeInactive: true);
+
+        if (!doctors.IsSuccess || !clinics.IsSuccess)
+        {
+            Error("Could not load board filters.");
+            return RedirectToAction(nameof(Index));
+        }
+
+        ViewBag.Doctors = doctors.Data;
+        ViewBag.Clinics = clinics.Data;
+
+        return View(result.Data);
+    }
     public async Task<IActionResult> Details(int id)
     {
         var result = await _reservationService.GetReservationByIdAsync(id);

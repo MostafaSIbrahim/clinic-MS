@@ -208,7 +208,70 @@ public class ReservationService : IReservationService
 
         return ServiceResult<IEnumerable<ReservationSummaryDto>>.Success(summaries);
     }
+    //----New Board Implementation for today reservation---//
+    public async Task<ServiceResult<AppointmentBoardDto>> GetAppointmentBoardAsync(
+    DateTime date,
+    int? doctorId = null,
+    int? clinicId = null)
+    {
+        var selectedDate = date.Date;
 
+        if (selectedDate == DateTime.MaxValue.Date)
+            return ServiceResult<AppointmentBoardDto>.Failure("Invalid appointment date.");
+
+        if (doctorId.HasValue && doctorId.Value <= 0)
+            return ServiceResult<AppointmentBoardDto>.Failure("Invalid doctor.");
+
+        if (clinicId.HasValue && clinicId.Value <= 0)
+            return ServiceResult<AppointmentBoardDto>.Failure("Invalid clinic.");
+
+        var nextDate = selectedDate.AddDays(1);
+
+        var query = _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.ReservationDate >= selectedDate &&
+                r.ReservationDate < nextDate);
+
+        if (doctorId.HasValue)
+            query = query.Where(r => r.DoctorId == doctorId.Value);
+
+        if (clinicId.HasValue)
+            query = query.Where(r => r.ClinicId == clinicId.Value);
+
+        var reservations = await query
+            .OrderBy(r => r.ReservationTime)
+            .ThenBy(r => r.Id)
+            .Select(r => new ReservationSummaryDto
+            {
+                Id = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient != null
+                    ? r.Patient.FirstName + " " + r.Patient.LastName
+                    : "",
+                DoctorName = r.Doctor != null ? r.Doctor.FullName : "",
+                ClinicName = r.Clinic != null ? r.Clinic.Name : "",
+                TreatmentTypeName = r.TreatmentType != null
+                    ? r.TreatmentType.TypeName
+                    : "",
+                ReservationDate = r.ReservationDate,
+                ReservationTime = r.ReservationTime,
+                StatusName = r.Status != null ? r.Status.StatusName : "Unknown",
+                StatusColor = r.Status != null ? r.Status.ColorCode : "#6c757d",
+                Category = r.Category.ToString(),
+                IsPaid = r.IsPaid
+            })
+            .ToListAsync();
+
+        return ServiceResult<AppointmentBoardDto>.Success(
+            new AppointmentBoardDto
+            {
+                Date = selectedDate,
+                DoctorId = doctorId,
+                ClinicId = clinicId,
+                Reservations = reservations
+            });
+    }
     public async Task<ServiceResult> UpdateReservationAsync(
         int reservationId, UpdateReservationRequest request)
     {
