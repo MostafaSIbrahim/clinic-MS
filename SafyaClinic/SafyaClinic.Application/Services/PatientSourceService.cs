@@ -39,10 +39,24 @@ public class PatientSourceService : IPatientSourceService
 
     public async Task<ServiceResult<PatientSourceDto>> GetByIdAsync(int id)
     {
-        var source = await _uow.PatientSources.GetByIdAsync(id);
-        if (source is null) return ServiceResult<PatientSourceDto>.Failure("Patient source not found.");
-        var count = await _uow.Patients.CountAsync(p => p.PatientSourceId == id);
-        return ServiceResult<PatientSourceDto>.Success(ToDto(source, count));
+        var source = await _uow.PatientSources
+    .Query()
+    .Where(s => s.Id == id)
+    .Select(s => new PatientSourceDto
+    {
+        Id = s.Id,
+        Name = s.Name,
+        Description = s.Description,
+        DefaultDeductionPercentage = s.DefaultDeductionPercentage,
+        IsActive = s.IsActive,
+        PatientCount = s.Patients.Count()
+    })
+    .FirstOrDefaultAsync();
+
+        if (source is null)
+            return ServiceResult<PatientSourceDto>.Failure("Patient source not found.");
+
+        return ServiceResult<PatientSourceDto>.Success(source);
     }
 
     public async Task<ServiceResult<PatientSourceDto>> CreateAsync(CreatePatientSourceRequest request)
