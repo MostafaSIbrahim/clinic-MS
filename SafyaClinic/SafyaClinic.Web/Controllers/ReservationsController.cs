@@ -52,6 +52,18 @@ public class ReservationsController : BaseController
     [HttpGet]
     public async Task<IActionResult> Create(int? patientId)
     {
+        if (patientId.HasValue)
+        {
+            var patientResult = await _patientService.GetPatientByIdAsync(patientId.Value);
+
+            if (!patientResult.IsSuccess || patientResult.Data is null)
+            {
+                Error("Patient not found.");
+                return RedirectToAction("Index", "Patients");
+            }
+
+            ViewBag.SelectedPatientName = patientResult.Data.FullName;
+        }
         var doctors = await _userService.GetDoctorsAsync();
         ViewBag.Doctors = doctors.Data;
         var clinics = await _clinicService.GetAllAsync(includeInactive: false);
@@ -77,6 +89,11 @@ public class ReservationsController : BaseController
             ViewBag.Doctors = d.Data;
             ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
             ViewBag.TreatmentTypes = (await _reservationService.GetTreatmentTypesAsync()).Data;
+            if (model.PatientId > 0)
+            {
+                var patientResult = await _patientService.GetPatientByIdAsync(model.PatientId);
+                ViewBag.SelectedPatientName = patientResult.Data?.FullName;
+            }
             return View(model);
         }
         var result = await _reservationService.CreateReservationAsync(model, CurrentUserId);
@@ -87,6 +104,11 @@ public class ReservationsController : BaseController
             ViewBag.Doctors = d.Data;
             ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
             ViewBag.TreatmentTypes = (await _reservationService.GetTreatmentTypesAsync()).Data;
+            if (model.PatientId > 0)
+            {
+                var patientResult = await _patientService.GetPatientByIdAsync(model.PatientId);
+                ViewBag.SelectedPatientName = patientResult.Data?.FullName;
+            }
             return View(model);
         }
         return RedirectWithSuccess("Reservation booked.", nameof(Details), routeValues: new { id = result.Data!.Id });
@@ -97,6 +119,11 @@ public class ReservationsController : BaseController
     {
         var result = await _reservationService.GetReservationByIdAsync(id);
         if (!result.IsSuccess) return RedirectToAction(nameof(Index));
+        if (result.Data!.StatusName == "Completed")
+        {
+            Error("Completed reservations cannot be edited.");
+            return RedirectToAction(nameof(Details), new { id });
+        }
         var doctors = await _userService.GetDoctorsAsync();
         ViewBag.Doctors = doctors.Data;
         ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
@@ -107,7 +134,7 @@ public class ReservationsController : BaseController
             DoctorId = r.DoctorId,
             ClinicId = r.ClinicId,
             TreatmentTypeId = r.TreatmentTypeId,
-            StatusId = 1,
+            StatusId = r.StatusId,
             ReservationDate = r.ReservationDate,
             ReservationTime = r.ReservationTime,
             DurationMinutes = r.DurationMinutes,
@@ -130,7 +157,17 @@ public class ReservationsController : BaseController
             return View(model);
         }
         var result = await _reservationService.UpdateReservationAsync(id, model);
-        if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            ViewBag.Doctors = (await _userService.GetDoctorsAsync()).Data;
+            ViewBag.Clinics =
+                (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+            ViewBag.TreatmentTypes =
+                (await _reservationService.GetTreatmentTypesAsync()).Data;
+
+            return View(model);
+        }
         return RedirectWithSuccess("Reservation updated.", nameof(Details), routeValues: new { id });
     }
 
@@ -184,15 +221,17 @@ public class ReservationsController : BaseController
             return NotFound("لم يتم العثور على بيانات المريض.");
         }
 
-        var filter = new ReservationFilterRequest { PatientId = patientId };
-        var pagination = new PaginationRequest { Page = 1, PageSize = 1000 };
+        var reservationsResult =
+     await _reservationService.GetPatientReservationHistoryAsync(patientId);
 
-        var reservationsResult = await _reservationService.GetReservationsAsync(filter, pagination);
-        var reservations = (reservationsResult != null && reservationsResult.IsSuccess && reservationsResult.Data != null)
-            ? reservationsResult.Data.Items
-            : Enumerable.Empty<ReservationSummaryDto>();
+        if (!reservationsResult.IsSuccess || reservationsResult.Data is null)
+        {
+            Error("Could not load reservation history.");
+            return RedirectToAction(
+                "Details", "Patients", new { id = patientId });
+        }
 
         ViewBag.Patient = patientResult.Data;
-        return View(reservations);
+        return View(reservationsResult.Data);
     }
 }
