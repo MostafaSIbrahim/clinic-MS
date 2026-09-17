@@ -66,4 +66,8 @@ public interface IPaymentService
     Task<ServiceResult<decimal>> GetRevenueByDateRangeAsync(
                     DateTime from,
                     DateTime to);
+    // ── Payment audit trail ───────────────────────────────────────
+    Task<ServiceResult<PaymentAuditDto>> GetPaymentAuditAsync(
+    int paymentId,
+    PaginationRequest pagination);
 }

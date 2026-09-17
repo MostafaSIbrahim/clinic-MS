@@ -137,7 +137,62 @@ public class PaymentService : IPaymentService
                 .Failure("Payment not found.");
         return ServiceResult<PaymentDto>.Success(payment);
     }
+    // ──// Payment audit history, newest first.
+    public async Task<ServiceResult<PaymentAuditDto>> GetPaymentAuditAsync(
+    int paymentId,
+    PaginationRequest pagination)
+    {
+        var payment = await GetPaymentDtoByIdAsync(paymentId);
 
+        if (payment is null)
+            return ServiceResult<PaymentAuditDto>.Failure("Payment not found.");
+
+        var query = _uow.PaymentAdjustments
+            .Query()
+            .Where(a => a.PaymentId == paymentId);
+
+        var totalCount = await query.CountAsync();
+
+        var totalPages = Math.Max(
+            1, (int)Math.Ceiling((double)totalCount / pagination.PageSize));
+
+        var page = Math.Min(pagination.Page, totalPages);
+
+        var users = _uow.Users.Query();
+
+        var adjustments = await query
+            .OrderByDescending(a => a.PerformedAt)
+            .ThenByDescending(a => a.Id)
+            .Skip((page - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .Select(a => new PaymentAdjustmentDto
+            {
+                Id = a.Id,
+                ActionType = a.ActionType,
+                OldAmount = a.OldAmount,
+                NewAmount = a.NewAmount,
+                Reason = a.Reason,
+                PerformedBy = a.PerformedBy,
+                PerformedByName = users
+                    .Where(u => u.Id == a.PerformedBy)
+                    .Select(u => u.FullName)
+                    .FirstOrDefault() ?? "Unknown user",
+                PerformedAt = a.PerformedAt
+            })
+            .ToListAsync();
+
+        return ServiceResult<PaymentAuditDto>.Success(new PaymentAuditDto
+        {
+            Payment = payment,
+            Adjustments = new PagedResult<PaymentAdjustmentDto>
+            {
+                Items = adjustments,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pagination.PageSize
+            }
+        });
+    }
     public async Task<ServiceResult<IEnumerable<PaymentDto>>> GetPatientPaymentsAsync(int patientId)
     {
         var payments = await _uow.Payments.Query()

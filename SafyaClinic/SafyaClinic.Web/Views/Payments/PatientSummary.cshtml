@@ -106,6 +106,12 @@
                             </td>
                             <td>@p.CollectorName</td>
                             <td class="text-nowrap">
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary js-payment-audit"
+                                        data-audit-url="@Url.Action("Audit", "Payments", new { paymentId = p.Id })">
+                                    <i class="bi bi-clock-history me-1"></i>Audit History
+                                </button>
+                                
                                 @if (p.Status == "Active")
                                 {
                                     <a asp-action="ChangeAmount" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-primary" title="Change amount">
@@ -123,3 +129,113 @@
         }
     </div>
 </div>
+<div class="modal fade"
+     id="paymentAuditModal"
+     tabindex="-1"
+     aria-labelledby="paymentAuditTitle"
+     aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentAuditTitle">
+                    <i class="bi bi-clock-history me-2"></i>Payment Audit History
+                </h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body" id="paymentAuditBody" aria-live="polite"></div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const modalElement = document.getElementById('paymentAuditModal');
+            const body = document.getElementById('paymentAuditBody');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            let activeRequest = null;
+
+            async function loadAudit(url) {
+                activeRequest?.abort();
+                const request = new AbortController();
+                activeRequest = request;
+
+                body.innerHTML = `
+                            <div class="text-center text-muted py-5" role="status">
+                                <span class="spinner-border spinner-border-sm me-2"
+                                      aria-hidden="true"></span>
+                                Loading audit history…
+                            </div>`;
+
+                try {
+                    const response = await fetch(url, {
+                        credentials: 'same-origin',
+                        signal: request.signal
+                    });
+
+                    if (response.redirected ||
+                        response.status === 401 ||
+                        response.status === 403) {
+                        throw new Error(
+                            'Your session expired or you do not have access. Refresh the page and sign in again.');
+                    }
+
+                    if (!response.ok) {
+                        throw new Error('Could not load payment audit history.');
+                    }
+
+                    const html = await response.text();
+
+                    if (activeRequest !== request) return;
+
+                    body.innerHTML = html;
+                    body.scrollTop = 0;
+                } catch (error) {
+                    if (request.signal.aborted || activeRequest !== request) return;
+
+                    body.replaceChildren();
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-danger mb-0';
+                    alert.setAttribute('role', 'alert');
+                    alert.textContent = error.message ||
+                        'Could not load payment audit history.';
+                    body.appendChild(alert);
+                }
+            }
+
+            document.querySelectorAll('.js-payment-audit').forEach(button => {
+                button.addEventListener('click', () => {
+                    modal.show();
+                    loadAudit(button.dataset.auditUrl);
+                });
+            });
+
+            body.addEventListener('click', event => {
+                const link = event.target.closest('nav a');
+
+                if (!link || !body.contains(link)) return;
+
+                event.preventDefault();
+                loadAudit(link.href);
+            });
+
+            modalElement.addEventListener('hidden.bs.modal', () => {
+                activeRequest?.abort();
+                activeRequest = null;
+                body.replaceChildren();
+            });
+        })();
+    </script>
+}

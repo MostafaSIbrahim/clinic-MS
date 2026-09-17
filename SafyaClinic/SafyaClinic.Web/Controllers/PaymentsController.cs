@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Payment;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Application.DTOs.Common;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -22,6 +23,20 @@ public class PaymentsController : BaseController
         var result = await _paymentService.GetPatientFinancialSummaryAsync(patientId);
         if (!result.IsSuccess) return RedirectToAction("Details", "Patients", new { id = patientId });
         return View(result.Data);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Audit(
+    int paymentId,
+    [FromQuery] PaginationRequest pagination)
+    {
+        var result = await _paymentService.GetPaymentAuditAsync(
+            paymentId, pagination);
+
+        if (!result.IsSuccess || result.Data is null)
+            return NotFound("Payment not found.");
+
+        return PartialView("Audit", result.Data);
     }
 
     [HttpGet]
