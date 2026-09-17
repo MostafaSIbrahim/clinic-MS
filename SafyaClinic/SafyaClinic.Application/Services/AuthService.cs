@@ -38,11 +38,12 @@ public class AuthService : IAuthService
             return ServiceResult<LoginResponse>.Failure("Invalid phone number or password.");
 
         // Load roles
-        var userRoles = await _uow.UserRoles.FindAsync(ur => ur.UserId == user.Id);
-        var roleIds = userRoles.Select(ur => ur.RoleId).ToList();
-        var roles = await _uow.Roles.FindAsync(r => roleIds.Contains(r.Id));
-        var roleNames = roles.Select(r => r.RoleName).ToList();
-
+        var roleNames = await _uow.UserRoles
+            .Query()
+            .Where(ur => ur.UserId == user.Id)
+            .OrderBy(ur => ur.RoleId)
+            .Select(ur => ur.Role.RoleName)
+            .ToListAsync();
         // Update last login
         user.LastLoginAt = DateTime.UtcNow;
         _uow.Users.Update(user);
