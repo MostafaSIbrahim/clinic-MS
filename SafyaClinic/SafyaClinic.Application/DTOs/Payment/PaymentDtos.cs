@@ -81,7 +81,7 @@ public class PaymentDashboardDto
 {
     public IEnumerable<UnpaidReservationDto> UnpaidCompletedReservations { get; init; } = Enumerable.Empty<UnpaidReservationDto>();
     public IEnumerable<UnpaidReservationDto> UnpaidPendingReservations { get; init; } = Enumerable.Empty<UnpaidReservationDto>();
-    public IEnumerable<PaymentDto> FullyPaidPayments { get; init; } = Enumerable.Empty<PaymentDto>();
+    public int FullyPaidPaymentCount { get; init; }
 
     public decimal TotalUnpaidCompleted { get; init; }
     public decimal TotalUnpaidPending { get; init; }
