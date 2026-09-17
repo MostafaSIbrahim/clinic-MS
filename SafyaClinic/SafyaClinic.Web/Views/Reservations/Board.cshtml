@@ -1,0 +1,170 @@
+﻿@model AppointmentBoardDto
+@using SafyaClinic.Application.DTOs.Patient
+@using SafyaClinic.Application.DTOs.Settings
+@{
+    ViewData["Title"] = "Appointment Board";
+
+    var doctors = (ViewBag.Doctors as IEnumerable<UserDto>
+        ?? Enumerable.Empty<UserDto>()).ToList();
+
+    var clinics = (ViewBag.Clinics as IEnumerable<ClinicDto>
+        ?? Enumerable.Empty<ClinicDto>()).ToList();
+
+    var columns = new[]
+    {
+        (Status: "Pending", Label: "Pending", Color: "warning"),
+        (Status: "Confirmed", Label: "Confirmed", Color: "primary"),
+        (Status: "Completed", Label: "Completed", Color: "success"),
+        (Status: "Cancelled", Label: "Cancelled", Color: "secondary"),
+        (Status: "NoShow", Label: "No-show", Color: "danger")
+    };
+
+    var knownStatuses = columns.Select(c => c.Status).ToHashSet();
+    var grouped = Model.Reservations.ToLookup(r => r.StatusName);
+    var otherItems = Model.Reservations
+        .Where(r => !knownStatuses.Contains(r.StatusName))
+        .ToList();
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h4 class="mb-1">
+            <i class="bi bi-kanban text-primary me-2"></i>Appointment Board
+        </h4>
+        <div class="text-muted">
+            @Model.Date.ToString("dddd, dd MMM yyyy")
+            · @Model.Reservations.Count appointment(s)
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-list-ul me-1"></i>List View
+        </a>
+        <a asp-action="Create" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>New Reservation
+        </a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Board" method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="boardDate" class="form-label">Date</label>
+                <input id="boardDate"
+                       type="date"
+                       name="date"
+                       value="@Model.Date.ToString("yyyy-MM-dd")"
+                       class="form-control"
+                       required />
+            </div>
+
+            <div class="col-md-3">
+                <label for="boardDoctor" class="form-label">Doctor</label>
+                <select id="boardDoctor" name="doctorId" class="form-select">
+                    <option value="">All doctors</option>
+                    @foreach (var doctor in doctors.OrderBy(d => d.FullName))
+                    {
+                        <option value="@doctor.Id"
+                                selected="@(Model.DoctorId == doctor.Id)">
+                            @doctor.FullName
+                        </option>
+                    }
+                    @if (Model.DoctorId.HasValue &&
+                         !doctors.Any(d => d.Id == Model.DoctorId.Value))
+                    {
+                        <option value="@Model.DoctorId" selected>
+                            Selected doctor #@Model.DoctorId
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label for="boardClinic" class="form-label">Clinic</label>
+                <select id="boardClinic" name="clinicId" class="form-select">
+                    <option value="">All clinics</option>
+                    @foreach (var clinic in clinics.OrderBy(c => c.Name))
+                    {
+                        <option value="@clinic.Id"
+                                selected="@(Model.ClinicId == clinic.Id)">
+                            @clinic.Name
+                        </option>
+                    }
+                    @if (Model.ClinicId.HasValue &&
+                         !clinics.Any(c => c.Id == Model.ClinicId.Value))
+                    {
+                        <option value="@Model.ClinicId" selected>
+                            Selected clinic #@Model.ClinicId
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel me-1"></i>Apply
+                </button>
+                <a asp-action="Board" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.Reservations.Count == 0)
+{
+    <div class="alert alert-info">
+        No appointments match this date and these filters.
+    </div>
+}
+
+<div class="d-flex gap-3 overflow-auto pb-3">
+    @foreach (var column in columns)
+    {
+        var appointments = grouped[column.Status].ToList();
+
+        <section class="card bg-light flex-shrink-0"
+                 style="width:280px;"
+                 aria-label="@column.Label">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>@column.Label</strong>
+                <span class="badge bg-@column.Color text-dark">
+                    @appointments.Count
+                </span>
+            </div>
+
+            <div class="card-body p-2">
+                @if (appointments.Count == 0)
+                {
+                    <p class="small text-muted text-center py-4 mb-0">
+                        No appointments
+                    </p>
+                }
+                else
+                {
+                    @foreach (var appointment in appointments)
+                    {
+                        <partial name="_BoardAppointment" model="appointment" />
+                    }
+                }
+            </div>
+        </section>
+    }
+
+    @if (otherItems.Count > 0)
+    {
+        <section class="card bg-light flex-shrink-0"
+                 style="width:280px;"
+                 aria-label="Other statuses">
+            <div class="card-header">
+                <strong>Other statuses (@otherItems.Count)</strong>
+            </div>
+            <div class="card-body p-2">
+                @foreach (var appointment in otherItems)
+                {
+                    <partial name="_BoardAppointment" model="appointment" />
+                }
+            </div>
+        </section>
+    }
+</div>

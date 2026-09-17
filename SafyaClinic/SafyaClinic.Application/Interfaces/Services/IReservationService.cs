@@ -18,4 +18,8 @@ public interface IReservationService
     // Treatment types (used when booking a reservation to derive the price)
     Task<ServiceResult<IEnumerable<TreatmentTypeDto>>> GetTreatmentTypesAsync(string? category = null);
     Task<ServiceResult<List<ReservationDto>>> GetPatientReservationHistoryAsync(int patientId);
+    Task<ServiceResult<AppointmentBoardDto>> GetAppointmentBoardAsync(
+    DateTime date,
+    int? doctorId = null,
+    int? clinicId = null);
 }
