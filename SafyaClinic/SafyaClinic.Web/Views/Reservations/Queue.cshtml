@@ -1,0 +1,204 @@
+﻿@model SafyaClinic.Web.Models.DoctorQueueViewModel
+@using SafyaClinic.Domain.Enums
+
+@{
+    ViewData["Title"] = "Doctor Queues";
+
+    var waitingCount = Model.Entries.Count(
+        e => e.QueueStatus == PatientQueueStatus.Waiting);
+
+    var consultationCount = Model.Entries.Count(
+        e => e.QueueStatus == PatientQueueStatus.InConsultation);
+
+    var canStartConsultation =
+        User.IsInRole("Admin") || User.IsInRole("Doctor");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-1">
+            @(Model.CanViewAllQueues ? "Doctor Queues" : "My Queue")
+        </h4>
+        <div class="text-muted">
+            @DateTime.Today.ToString("dddd, dd MMM yyyy")
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form asp-action="Queue" method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label asp-for="ClinicId" class="form-label">Clinic</label>
+                <select asp-for="ClinicId"
+                        asp-items="Model.Clinics"
+                        class="form-select"
+                        id="queueClinic">
+                    <option value="">All clinics</option>
+                </select>
+            </div>
+
+            @if (Model.CanViewAllQueues)
+            {
+                <div class="col-md-4">
+                    <label asp-for="DoctorId" class="form-label">Doctor</label>
+                    <select asp-for="DoctorId"
+                            asp-items="Model.Doctors"
+                            class="form-select"
+                            id="queueDoctor">
+                        <option value="">All doctors</option>
+                    </select>
+                </div>
+            }
+
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    Apply / Refresh
+                </button>
+                <a asp-action="Queue" class="btn btn-outline-secondary">
+                    Reset
+                </a>
+            </div>
+        </form>
+
+        @if (Model.CanViewAllQueues)
+        {
+            <div class="small text-muted mt-2">
+                Doctor options are based on today's reservations
+                at the selected clinic.
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="text-muted">Waiting</div>
+                <div class="fs-3 fw-bold">@waitingCount</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-success">
+            <div class="card-body">
+                <div class="text-muted">In Consultation</div>
+                <div class="fs-3 fw-bold">@consultationCount</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Entries.Any())
+{
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-people fs-1 d-block mb-2"></i>
+            No patients are waiting or in consultation for these filters.
+        </div>
+    </div>
+}
+else
+{
+    @foreach (var doctorQueue in Model.Entries.GroupBy(e => e.DoctorId))
+    {
+        var doctor = doctorQueue.First();
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-semibold">
+                    <i class="bi bi-person-badge me-2"></i>
+                    @doctor.DoctorName
+                </span>
+                <span class="badge bg-secondary">
+                    @doctorQueue.Count() patient(s)
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Patient</th>
+                            <th>Clinic</th>
+                            <th>Treatment</th>
+                            <th>Appointment</th>
+                            <th>Queue Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in doctorQueue)
+                        {
+                            var inConsultation =
+                                entry.QueueStatus ==
+                                PatientQueueStatus.InConsultation;
+
+                            <tr>
+                                <td class="fw-semibold">@entry.PatientName</td>
+                                <td>@entry.ClinicName</td>
+                                <td>@entry.TreatmentTypeName</td>
+                                <td>@entry.ReservationTime.ToString(@"hh\:mm")</td>
+                                <td>
+                                    <span class="badge @(inConsultation ? "bg-success" : "bg-warning text-dark")">
+                                        @(inConsultation ? "In Consultation" : "Waiting")
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <a asp-action="Details"
+                                           asp-route-id="@entry.ReservationId"
+                                           class="btn btn-sm btn-outline-primary">
+                                            Open
+                                        </a>
+                                        @if (canStartConsultation &&
+                                                  entry.QueueStatus == PatientQueueStatus.InConsultation)
+                                        {
+                                            <a asp-controller="MedicalRecords"
+                                               asp-action="Consultation"
+                                               asp-route-reservationId="@entry.ReservationId"
+                                               class="btn btn-sm btn-success">
+                                                Open Consultation
+                                            </a>
+                                        }
+                                        @if (canStartConsultation &&
+                                             entry.QueueStatus == PatientQueueStatus.Waiting)
+                                        {
+                                            <form asp-action="StartConsultation"
+                                                  method="post">
+                                                <input type="hidden"
+                                                       name="id"
+                                                       value="@entry.ReservationId" />
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-success">
+                                                    Start Consultation
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@section Scripts {
+    <script>
+        document.getElementById('queueClinic')
+            .addEventListener('change', function() {
+                const doctor = document.getElementById('queueDoctor');
+
+                if (doctor) {
+                    doctor.value = '';
+                }
+
+                this.form.requestSubmit();
+            });
+    </script>
+}

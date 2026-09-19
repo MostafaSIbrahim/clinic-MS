@@ -50,6 +50,18 @@
                     </li>
                 }
 
+                    @if (User.IsInRole("Admin") ||
+                             User.IsInRole("Reception") ||
+                             User.IsInRole("Doctor"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link"
+                               asp-controller="Reservations"
+                               asp-action="Queue">
+                                <i class="bi bi-people"></i>Doctor Queues
+                            </a>
+                        </li>
+                    }
                 @if (User.IsInRole("Admin") || User.IsInRole("Doctor"))
                 {
                     @* <li class="nav-item">

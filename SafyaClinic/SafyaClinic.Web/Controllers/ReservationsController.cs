@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using SafyaClinic.Web.Models;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Interfaces.Services;
@@ -40,6 +42,97 @@ public class ReservationsController : BaseController
     {
         var result = await _reservationService.GetTodayReservationsAsync(doctorId);
         return View(result.IsSuccess ? result.Data : Enumerable.Empty<ReservationSummaryDto>());
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "Admin,Reception,Doctor")]
+    public async Task<IActionResult> Queue(int? clinicId, int? doctorId)
+    {
+        if (!ModelState.IsValid ||
+            clinicId is <= 0 ||
+            doctorId is <= 0)
+        {
+            return BadRequest("Invalid queue filters.");
+        }
+
+        if (CurrentUserId <= 0)
+            return Challenge();
+
+        var canViewAllQueues = IsAdmin || IsReception;
+
+        // Doctors cannot override their own queue through URL parameters.
+        if (!canViewAllQueues)
+            doctorId = CurrentUserId;
+
+        var clinicsResult = await _clinicService.GetAllAsync(
+            includeInactive: true);
+
+        if (!clinicsResult.IsSuccess || clinicsResult.Data is null)
+        {
+            Error("Could not load clinic filters.");
+            return RedirectToAction(nameof(Index));
+        }
+
+        var clinics = clinicsResult.Data.ToList();
+
+        if (clinicId.HasValue &&
+            !clinics.Any(c => c.Id == clinicId.Value))
+        {
+            return BadRequest("Invalid clinic.");
+        }
+
+        var doctorOptions = new List<QueueDoctorOptionDto>();
+
+        if (canViewAllQueues)
+        {
+            doctorOptions = await _reservationService
+                .GetQueueDoctorOptionsAsync(clinicId);
+
+            // Reset a doctor selection that no longer belongs to the filters.
+            if (doctorId.HasValue &&
+                !doctorOptions.Any(d => d.DoctorId == doctorId.Value))
+            {
+                doctorId = null;
+                ModelState.Remove(nameof(doctorId));
+            }
+        }
+
+        var queueResult = await _reservationService.GetDoctorQueueAsync(
+            clinicId,
+            doctorId);
+
+        if (!queueResult.IsSuccess || queueResult.Data is null)
+        {
+            Error(queueResult.Errors.FirstOrDefault()
+                ?? "Could not load the queue.");
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(new DoctorQueueViewModel
+        {
+            ClinicId = clinicId,
+            DoctorId = doctorId,
+            CanViewAllQueues = canViewAllQueues,
+            Entries = queueResult.Data,
+
+            Clinics = clinics
+                .OrderBy(c => c.Name)
+                .Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = c.Name
+                })
+                .ToList(),
+
+            Doctors = doctorOptions
+                .Select(d => new SelectListItem
+                {
+                    Value = d.DoctorId.ToString(),
+                    Text = d.DoctorName
+                })
+                .ToList()
+        });
     }
 
     [HttpGet]
