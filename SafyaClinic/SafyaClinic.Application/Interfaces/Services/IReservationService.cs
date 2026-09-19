@@ -22,4 +22,9 @@ public interface IReservationService
     DateTime date,
     int? doctorId = null,
     int? clinicId = null);
+    Task<ServiceResult> CheckInAsync(int reservationId);
+    Task<ServiceResult> StartConsultationAsync(
+    int reservationId,
+    int currentUserId,
+    bool isAdmin);
 }

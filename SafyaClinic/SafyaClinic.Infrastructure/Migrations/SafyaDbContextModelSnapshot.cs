@@ -1200,8 +1200,14 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<DateTime?>("CheckedInAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("ClinicId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ConsultationStartedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -1224,6 +1230,16 @@ namespace SafyaClinic.Infrastructure.Migrations
 
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("QueueEndedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("QueueStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("NotCheckedIn");
 
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
@@ -1263,6 +1279,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasIndex("StatusId");
 
                     b.HasIndex("TreatmentTypeId");
+
+                    b.HasIndex("ClinicId", "DoctorId", "QueueStatus", "CheckedInAtUtc");
 
                     b.HasIndex("DoctorId", "ReservationDate", "ReservationTime", "Id");
 

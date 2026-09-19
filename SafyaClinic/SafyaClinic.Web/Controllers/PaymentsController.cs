@@ -11,11 +11,15 @@ public class PaymentsController : BaseController
 {
     private readonly IPaymentService _paymentService;
     private readonly IClinicService _clinicService;
+    private readonly IReservationService _reservationService;
 
-    public PaymentsController(IPaymentService paymentService, IClinicService clinicService)
+    public PaymentsController(IPaymentService paymentService,
+        IClinicService clinicService, 
+        IReservationService reservationService)
     {
         _paymentService = paymentService;
         _clinicService = clinicService;
+        _reservationService = reservationService;
     }
 
     public async Task<IActionResult> PatientSummary(int patientId)
@@ -127,19 +131,64 @@ public class PaymentsController : BaseController
     // ── Collect ─────────────────────────────────────────────────
 
     [HttpGet]
-    public async Task<IActionResult> Collect(int patientId, int? reservationId, int? enrollmentId)
+    public async Task<IActionResult> Collect(
+    int patientId,
+    int? reservationId,
+    int? enrollmentId)
     {
-        var clinics = await _clinicService.GetAllAsync(includeInactive: false);
-        ViewBag.Clinics = clinics.Data;
+        var clinicId = 0;
 
-        var dueResult = await _paymentService.GetDueAmountAsync(patientId, reservationId, enrollmentId);
+        if (reservationId.HasValue)
+        {
+            var reservationResult =
+                await _reservationService.GetReservationByIdAsync(reservationId.Value);
+
+            if (!reservationResult.IsSuccess ||
+                reservationResult.Data is null ||
+                reservationResult.Data.PatientId != patientId)
+            {
+                Error("Reservation not found for this patient.");
+                return RedirectToAction(nameof(PatientSummary), new { patientId });
+            }
+
+            clinicId = reservationResult.Data.ClinicId;
+        }
+
+        var dueResult = await _paymentService.GetDueAmountAsync(
+            patientId, reservationId, enrollmentId);
+
+        if (!dueResult.IsSuccess)
+        {
+            Error(dueResult.Errors.FirstOrDefault() ?? "Could not load the amount due.");
+            return RedirectToAction(nameof(PatientSummary), new { patientId });
+        }
+        if (dueResult.Data <= 0m)
+        {
+            Error(
+                "The selected reservation or nutrition enrollment has no collectible balance.");
+
+            if (reservationId.HasValue)
+            {
+                return RedirectToAction(
+                    "Details",
+                    "Reservations",
+                    new { id = reservationId.Value });
+            }
+
+            return RedirectToAction(
+                nameof(PatientSummary),
+                new { patientId });
+        }
+        ViewBag.Clinics = (await _clinicService.GetAllAsync(
+            includeInactive: reservationId.HasValue)).Data;
 
         return View(new CollectPaymentRequest
         {
             PatientId = patientId,
             ReservationId = reservationId,
             EnrollmentId = enrollmentId,
-            Amount = dueResult.IsSuccess ? dueResult.Data : 0m
+            ClinicId = clinicId,
+            Amount = dueResult.Data
         });
     }
 
@@ -154,7 +203,8 @@ public class PaymentsController : BaseController
         }
         if (!ModelState.IsValid)
         {
-            ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+            ViewBag.Clinics = (await _clinicService.GetAllAsync(
+                   includeInactive: model.ReservationId.HasValue)).Data;
             return View(model);
         }
 
@@ -162,7 +212,8 @@ public class PaymentsController : BaseController
         if (!result.IsSuccess)
         {
             ApplyErrors(result);
-            ViewBag.Clinics = (await _clinicService.GetAllAsync(includeInactive: false)).Data;
+            ViewBag.Clinics = (await _clinicService.GetAllAsync(
+                   includeInactive: model.ReservationId.HasValue)).Data;
             return View(model);
         }
 

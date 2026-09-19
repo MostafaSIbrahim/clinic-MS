@@ -62,4 +62,8 @@ public interface IUnitOfWork : IDisposable
 
     // ── Persistence ───────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<T> ExecutePatientPaymentAsync<T>(
+    int patientId,
+    Func<Task<T>> operation,
+    Func<T, bool> shouldCommit);
 }

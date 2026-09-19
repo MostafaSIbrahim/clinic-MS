@@ -166,7 +166,6 @@ public class ReservationsController : BaseController
             DoctorId = r.DoctorId,
             ClinicId = r.ClinicId,
             TreatmentTypeId = r.TreatmentTypeId,
-            StatusId = r.StatusId,
             ReservationDate = r.ReservationDate,
             ReservationTime = r.ReservationTime,
             DurationMinutes = r.DurationMinutes,
@@ -211,7 +210,7 @@ public class ReservationsController : BaseController
 
         if (!result.IsSuccess)
         {
-            ApplyErrors(result);
+            Error(result.Errors.FirstOrDefault() ?? "Could not update reservation status.");
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -235,8 +234,20 @@ public class ReservationsController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id, string? reason)
     {
-        await _reservationService.CancelReservationAsync(id, reason);
-        return RedirectWithSuccess("Reservation cancelled.", nameof(Index));
+        var result = await _reservationService
+            .CancelReservationAsync(id, reason);
+
+        if (!result.IsSuccess)
+        {
+            Error(result.Errors.FirstOrDefault()
+                ?? "Could not cancel the reservation.");
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        return RedirectWithSuccess(
+            "Reservation cancelled.",
+            nameof(Index));
     }
 
     [HttpGet]
@@ -265,5 +276,38 @@ public class ReservationsController : BaseController
 
         ViewBag.Patient = patientResult.Data;
         return View(reservationsResult.Data);
+    }
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "ReceptionOrAdmin")]
+    public async Task<IActionResult> CheckIn(int id)
+    {
+        var result = await _reservationService.CheckInAsync(id);
+
+        if (result.IsSuccess)
+        {
+            Success(result.Message);
+        }
+        else
+        {
+            Error(result.Errors.FirstOrDefault() ?? "Check-in failed.");
+        }
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Authorize(Policy = "DoctorOrAdmin")]
+    public async Task<IActionResult> StartConsultation(int id)
+    {
+        var result = await _reservationService.StartConsultationAsync(
+            id, CurrentUserId, IsAdmin);
+
+        if (result.IsSuccess)
+            Success(result.Message);
+        else
+            Error(result.Errors.FirstOrDefault() ?? "Could not start consultation.");
+
+        return RedirectToAction(nameof(Details), new { id });
     }
 }

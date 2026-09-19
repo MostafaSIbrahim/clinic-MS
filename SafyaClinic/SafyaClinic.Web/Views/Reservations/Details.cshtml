@@ -1,6 +1,36 @@
+@using System.Security.Claims
 @model ReservationDto
+@using SafyaClinic.Domain.Enums
 @{
     ViewData["Title"] = "Reservation Details";
+    var canCheckIn =
+    (User.IsInRole("Reception") || User.IsInRole("Admin")) &&
+    Model.ReservationDate.Date == DateTime.Today &&
+   (Model.StatusName == "Pending" || Model.StatusName == "Confirmed") &&
+    Model.QueueStatus == PatientQueueStatus.NotCheckedIn &&
+    Model.CheckedInAtUtc is null;
+
+    var queueLabel = Model.QueueStatus switch
+    {
+        PatientQueueStatus.NotCheckedIn => "Not checked in",
+        PatientQueueStatus.Waiting => "Waiting",
+        PatientQueueStatus.InConsultation => "In consultation",
+        PatientQueueStatus.Finished => "Finished",
+        PatientQueueStatus.Left => "Left",
+        _ => "Unknown"
+    };
+    var hasUserId = int.TryParse(
+        User.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+        out var currentUserId);
+
+    var canStartConsultation =
+        hasUserId &&
+        (User.IsInRole("Admin") ||
+         (User.IsInRole("Doctor") && Model.DoctorId == currentUserId)) &&
+        (Model.StatusName == "Confirmed") &&
+        Model.QueueStatus == PatientQueueStatus.Waiting &&
+        Model.CheckedInAtUtc.HasValue &&
+        Model.ConsultationStartedAtUtc is null;
 }
 
 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -41,7 +71,56 @@
         }
     </div>
 </div>
+<!-- Queue Status -->
+<div class="card mb-3">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="small text-muted mb-1">Patient Queue</div>
+            <div class="fw-semibold">
+                <i class="bi bi-person-check me-1"></i>@queueLabel
+            </div>
 
+            @if (Model.CheckedInAtUtc.HasValue)
+            {
+                <div class="small text-muted mt-1">
+                    Checked in:
+                    @Model.CheckedInAtUtc.Value.ToString("dd MMM yyyy HH:mm") UTC
+                </div>
+            }
+        </div>
+
+        @if (canCheckIn)
+        {
+            <form asp-action="CheckIn"
+                  asp-route-id="@Model.Id"
+                  method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-person-check me-1"></i>Check In
+                </button>
+            </form>
+        }
+        @if (canStartConsultation)
+        {
+            <form asp-action="StartConsultation"
+                  asp-route-id="@Model.Id"
+                  method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-play-circle me-1"></i>Start Consultation
+                </button>
+            </form>
+        }
+        @if (Model.ConsultationStartedAtUtc.HasValue)
+        {
+            <div class="small text-muted mt-1">
+                Consultation started:
+                @Model.ConsultationStartedAtUtc.Value.ToString("dd MMM yyyy HH:mm") UTC
+            </div>
+        }
+    </div>
+</div>
+<!-- Details and Actions -->
 <div class="row g-3">
     <div class="col-md-7">
         <div class="card">

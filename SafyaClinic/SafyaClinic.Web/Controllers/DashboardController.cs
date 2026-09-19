@@ -42,7 +42,7 @@ public class DashboardController : BaseController
             TodayReservations = reservations,
             TodayReservationCount = reservations.Count,
             TodayPendingCount = reservations.Count(r => r.StatusName == "Pending"),
-            TodayUnpaidCount = reservations.Count(r => !r.IsPaid),
+            TodayUnpaidCount = reservations.Count(r => r.HasCollectibleBalance),
             TodayRevenue = todayPayments.IsSuccess
                 ? todayPayments.Data
                 : 0m

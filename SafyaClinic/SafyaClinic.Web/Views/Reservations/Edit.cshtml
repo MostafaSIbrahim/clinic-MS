@@ -51,15 +51,10 @@
                     </select>
                     <small class="text-muted">Changing this updates the price below.</small>
                 </div>
-                <div class="col-md-6">
-                    <label asp-for="StatusId" class="form-label">Status</label>
-                    <select asp-for="StatusId" class="form-select">
-                        <option value="1">Pending</option>
-                        <option value="2">Confirmed</option>
-                        <option value="3">Completed</option>
-                        <option value="4">Cancelled</option>
-                        <option value="5">NoShow</option>
-                    </select>
+                <div class="col-12">
+                    <div class="alert alert-info mb-0">
+                        Change reservation status from the reservation details page.
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="ReservationDate" class="form-label">Date *</label>
