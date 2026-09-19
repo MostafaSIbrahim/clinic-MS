@@ -25,6 +25,10 @@ public interface IUnitOfWork : IDisposable
     // ── Reservation ──────────────────────────────────────────
     IRepository<Reservation> Reservations { get; }
     IRepository<ReservationStatus> ReservationStatuses { get; }
+    Task<T> ExecuteReservationRecordAsync<T>(
+    int reservationId,
+    Func<Task<T>> operation,
+    Func<T, bool> shouldCommit);
 
     // ── Medical Record ────────────────────────────────────────
     IRepository<PatientRecord> PatientRecords { get; }

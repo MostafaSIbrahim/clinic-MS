@@ -17,9 +17,43 @@ public class PatientRecordService : IPatientRecordService
     public PatientRecordService(IUnitOfWork uow) => _uow = uow;
 
     public async Task<ServiceResult<PatientRecordDto>> CreateRecordAsync(
-     CreatePatientRecordRequest request,
-     int createdBy,
-     bool isAdmin)
+    CreatePatientRecordRequest request,
+    int createdBy,
+    bool isAdmin)
+    {
+        if (!request.ReservationId.HasValue)
+        {
+            return await CreateRecordCoreAsync(
+                request,
+                createdBy,
+                isAdmin);
+        }
+
+        if (request.ReservationId.Value <= 0)
+        {
+            return ServiceResult<PatientRecordDto>.Failure(
+                "Invalid reservation.");
+        }
+
+        try
+        {
+            return await _uow.ExecuteReservationRecordAsync(
+                request.ReservationId.Value,
+                () => CreateRecordCoreAsync(request, createdBy, isAdmin),
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult<PatientRecordDto>.Failure(
+                "Another request is creating this reservation's medical record. " +
+                "Your submission was not saved. Return to the queue and " +
+                "select Open Consultation before trying again.");
+        }
+    }
+    private async Task<ServiceResult<PatientRecordDto>> CreateRecordCoreAsync(
+        CreatePatientRecordRequest request,
+        int createdBy,
+        bool isAdmin)
     {
         if (createdBy <= 0)
             return ServiceResult<PatientRecordDto>.Failure("Invalid user.");

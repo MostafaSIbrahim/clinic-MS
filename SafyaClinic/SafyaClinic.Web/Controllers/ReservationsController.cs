@@ -394,13 +394,23 @@ public class ReservationsController : BaseController
     public async Task<IActionResult> StartConsultation(int id)
     {
         var result = await _reservationService.StartConsultationAsync(
-            id, CurrentUserId, IsAdmin);
+            id,
+            CurrentUserId,
+            IsAdmin);
 
-        if (result.IsSuccess)
-            Success(result.Message);
-        else
-            Error(result.Errors.FirstOrDefault() ?? "Could not start consultation.");
+        if (!result.IsSuccess)
+        {
+            Error(result.Errors.FirstOrDefault()
+                ?? "Could not start consultation.");
 
-        return RedirectToAction(nameof(Details), new { id });
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        Success(result.Message);
+
+        return RedirectToAction(
+            "Consultation",
+            "MedicalRecords",
+            new { reservationId = id });
     }
 }
