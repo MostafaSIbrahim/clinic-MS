@@ -1,4 +1,6 @@
-﻿using SafyaClinic.Domain.Entities.Analysis;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Domain.Entities.Analysis;
 using SafyaClinic.Domain.Entities.MedicalRecord;
 using SafyaClinic.Domain.Entities.Nutrition;
 using SafyaClinic.Domain.Entities.Patient;
@@ -9,6 +11,7 @@ using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using SafyaClinic.Infrastructure.Data;
+using System.Data;
 
 namespace SafyaClinic.Infrastructure.Repositories;
 
@@ -112,6 +115,69 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => await _context.SaveChangesAsync(cancellationToken);
+    public async Task<T> ExecutePatientPaymentAsync<T>(
+    int patientId,
+    Func<Task<T>> operation,
+    Func<T, bool> shouldCommit)
+    {
+        await using var transaction = await _context.Database
+            .BeginTransactionAsync(IsolationLevel.ReadCommitted);
+
+        try
+        {
+            var resource = new SqlParameter(
+                "@resource",
+                SqlDbType.NVarChar,
+                255)
+            {
+                Value = $"SafyaClinic:PatientPayment:{patientId}"
+            };
+
+            var lockResult = new SqlParameter(
+                "@lockResult",
+                SqlDbType.Int)
+            {
+                Direction = ParameterDirection.Output
+            };
+
+            await _context.Database.ExecuteSqlRawAsync(
+                """
+            EXEC @lockResult = sys.sp_getapplock
+                @Resource = @resource,
+                @LockMode = 'Exclusive',
+                @LockOwner = 'Transaction',
+                @LockTimeout = 10000;
+            """,
+                resource,
+                lockResult);
+
+            if ((int)lockResult.Value < 0)
+            {
+                throw new TimeoutException(
+                    "Could not acquire the patient payment lock.");
+            }
+
+            var result = await operation();
+
+            if (shouldCommit(result))
+            {
+                await transaction.CommitAsync();
+            }
+            else
+            {
+                await transaction.RollbackAsync();
+                _context.ChangeTracker.Clear();
+            }
+
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            _context.ChangeTracker.Clear();
+            throw;
+        }
+    }
 
     // ── Disposal ──────────────────────────────────────────────
 

@@ -73,6 +73,13 @@ public class PatientFinancialSummaryDto
     public decimal TotalWrittenOff { get; init; }
     public decimal Balance => Math.Max(0m, TotalCharged - TotalPaid - TotalWrittenOff);
     public IEnumerable<PaymentDto> Payments { get; init; } = Enumerable.Empty<PaymentDto>();
+    public IReadOnlyList<PendingPaymentDto> PendingPayments { get; init; }
+    = Array.Empty<PendingPaymentDto>();
+
+    public decimal CollectibleBalance =>
+        PendingPayments.Sum(p => p.AmountDue);
+
+    public decimal UnallocatedCoverage { get; init; }
 }
 
 // ── Payment Dashboard ───────────────────────────────────────────

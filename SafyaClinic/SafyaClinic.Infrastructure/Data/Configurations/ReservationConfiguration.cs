@@ -1,8 +1,7 @@
-﻿
-
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SafyaClinic.Domain.Entities.Reservation;
+using SafyaClinic.Domain.Enums;
 
 namespace SafyaClinic.Infrastructure.Data.Configurations
 {
@@ -16,6 +15,10 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.Property(r => r.Notes).HasMaxLength(1000);
             builder.Property(r => r.TotalAmount).HasPrecision(18, 2);
             builder.Property(r => r.Category).HasConversion<string>().HasMaxLength(20);
+            builder.Property(r => r.QueueStatus)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(PatientQueueStatus.NotCheckedIn);
 
             builder.HasIndex(r => r.PatientId);
             builder.HasIndex(r => r.DoctorId);
@@ -31,6 +34,13 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.HasIndex(r => r.StatusId);
             builder.HasIndex(r => r.Category);
             builder.HasIndex(r => r.TreatmentTypeId);
+            builder.HasIndex(r => new
+            {
+                r.ClinicId,
+                r.DoctorId,
+                r.QueueStatus,
+                r.CheckedInAtUtc
+            });
 
             builder.HasOne(r => r.Patient)
                    .WithMany(p => p.Reservations)
@@ -56,6 +66,8 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
                    .WithMany(tt => tt.Reservations)
                    .HasForeignKey(r => r.TreatmentTypeId)
                    .OnDelete(DeleteBehavior.Restrict);
+
+
         }
     }
 }

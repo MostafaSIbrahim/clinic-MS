@@ -22,6 +22,13 @@ namespace SafyaClinic.Domain.Entities.Reservation
         public string? Notes { get; set; }
         public bool IsPaid { get; set; }
         public decimal? TotalAmount { get; set; }
+        public PatientQueueStatus QueueStatus { get; set; } = PatientQueueStatus.NotCheckedIn;
+
+        public DateTime? CheckedInAtUtc { get; set; }
+
+        public DateTime? ConsultationStartedAtUtc { get; set; }
+
+        public DateTime? QueueEndedAtUtc { get; set; }
 
         // Navigation properties
         public virtual Patient.Patient Patient { get; set; } = null!;

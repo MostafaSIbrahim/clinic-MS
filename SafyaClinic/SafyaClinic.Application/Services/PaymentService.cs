@@ -15,11 +15,79 @@ public class PaymentService : IPaymentService
 
     public PaymentService(IUnitOfWork uow) => _uow = uow;
 
-    public async Task<ServiceResult<PaymentDto>> CollectPaymentAsync(CollectPaymentRequest request, int currentUserId)
+    public async Task<ServiceResult<PaymentDto>> CollectPaymentAsync(
+    CollectPaymentRequest request,
+    int currentUserId)
     {
+        if (request.ReservationId.HasValue == request.EnrollmentId.HasValue)
+        {
+            return ServiceResult<PaymentDto>.Failure(
+                "Select exactly one reservation or nutrition enrollment.");
+        }
+
+        try
+        {
+            return await _uow.ExecutePatientPaymentAsync(
+                request.PatientId,
+                () => CollectPaymentCoreAsync(request, currentUserId),
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult<PaymentDto>.Failure(
+                "Another payment is being processed for this patient. " +
+                "Refresh the payment summary before trying again.");
+        }
+    }
+
+    private async Task<ServiceResult<PaymentDto>> CollectPaymentCoreAsync(
+        CollectPaymentRequest request,
+        int currentUserId)
+    {
+        if (request.ReservationId.HasValue == request.EnrollmentId.HasValue)
+            return ServiceResult<PaymentDto>.Failure(
+                "Select exactly one reservation or nutrition enrollment.");
         var patient = await _uow.Patients.GetByIdAsync(request.PatientId);
         if (patient is null)
             return ServiceResult<PaymentDto>.Failure("Patient not found.");
+        if (request.ReservationId.HasValue)
+        {
+            var reservation = await _uow.Reservations
+                .Query()
+                .Where(r => r.Id == request.ReservationId.Value)
+                .Select(r => new
+                {
+                    r.PatientId,
+                    r.ClinicId
+                })
+                .FirstOrDefaultAsync();
+
+            if (reservation is null || reservation.PatientId != request.PatientId)
+                return ServiceResult<PaymentDto>.Failure(
+                    "Reservation not found for this patient.");
+
+            if (reservation.ClinicId != request.ClinicId)
+                return ServiceResult<PaymentDto>.Failure(
+                    "The payment clinic must match the reservation clinic.");
+        }
+        if (request.Amount > 0m)
+        {
+            var dueResult = await GetDueAmountAsync(
+                request.PatientId,
+                request.ReservationId,
+                request.EnrollmentId);
+
+            if (!dueResult.IsSuccess)
+                return ServiceResult<PaymentDto>.Failure(dueResult.Errors);
+
+            if (dueResult.Data <= 0m)
+                return ServiceResult<PaymentDto>.Failure(
+                    "The selected reservation or nutrition enrollment has no collectible balance.");
+
+            if (request.Amount > dueResult.Data)
+                return ServiceResult<PaymentDto>.Failure(
+                    "The payment amount exceeds the remaining collectible balance.");
+        }
         if (!await _uow.Clinics.ExistsAsync(request.ClinicId))
             return ServiceResult<PaymentDto>.Failure("Clinic not found.");
         if (!Enum.TryParse<PaymentMethodEnum>(request.PaymentMethod, out var method))
@@ -297,6 +365,70 @@ public class PaymentService : IPaymentService
               .SumAsync(r => r.TotalAmount ?? 0m);
 
         var totalCharged = totalReservationCharges + totalEnrollmentCharges;
+        var reservationBalances = await _uow.Reservations
+             .Query()
+             .Where(r =>
+                 r.PatientId == patientId &&
+                 (r.QueueStatus == PatientQueueStatus.InConsultation ||
+                  r.QueueStatus == PatientQueueStatus.Finished) &&
+                 r.Status.StatusName != "Cancelled" &&
+                 r.Status.StatusName != "NoShow")
+             .Select(r => new
+             {
+                 r.Id,
+                 r.ReservationDate,
+                 ClinicName = r.Clinic.Name,
+                 TreatmentName = r.TreatmentType.TypeName,
+                 Charge = r.TotalAmount ?? 0m,
+                 Covered = r.Payments
+                     .Where(p =>
+                         p.Status == PaymentStatusEnum.Active ||
+                         p.Status == PaymentStatusEnum.Cancelled)
+                     .Sum(p => (decimal?)p.Amount) ?? 0m
+             })
+             .Where(r => r.Charge > r.Covered)
+             .ToListAsync();
+
+        var pendingPayments = reservationBalances
+            .Select(r => new PendingPaymentDto
+            {
+                ReservationId = r.Id,
+                Description = $"Reservation #{r.Id} — {r.TreatmentName}",
+                Date = r.ReservationDate,
+                ClinicName = r.ClinicName,
+                AmountDue = r.Charge - r.Covered
+            })
+            .ToList();
+
+        // Preserve the existing nutrition balance calculation.
+        var enrollmentBalances = await _uow.NutritionEnrollments
+            .Query()
+            .Where(e => e.PatientId == patientId)
+            .Select(e => new
+            {
+                e.Id,
+                e.StartDate,
+                Charge = e.BasePrice * (1 - e.DiscountPercent / 100),
+                e.TotalPaid
+            })
+            .Where(e => e.Charge > e.TotalPaid)
+            .ToListAsync();
+
+        pendingPayments.AddRange(enrollmentBalances.Select(e =>
+            new PendingPaymentDto
+            {
+                EnrollmentId = e.Id,
+                Description = $"Nutrition enrollment #{e.Id}",
+                Date = e.StartDate,
+                AmountDue = e.Charge - e.TotalPaid
+            }));
+
+        var unallocatedCoverage = dtos
+            .Where(p =>
+                p.ReservationId is null &&
+                p.EnrollmentId is null &&
+                (p.Status == "Active" || p.Status == "Cancelled"))
+            .Sum(p => p.Amount);
         var summary = new PatientFinancialSummaryDto
         {
             PatientId = patientId,
@@ -304,7 +436,13 @@ public class PaymentService : IPaymentService
             TotalCharged = totalCharged,
             TotalPaid = totalPaid,
             TotalWrittenOff = totalWrittenOff,
-            Payments = dtos
+            Payments = dtos,
+            PendingPayments = pendingPayments
+                .OrderBy(p => p.Date)
+                .ThenBy(p => p.ReservationId)
+                .ThenBy(p => p.EnrollmentId)
+                .ToList(),
+            UnallocatedCoverage = unallocatedCoverage,
         };
 
         return ServiceResult<PatientFinancialSummaryDto>.Success(summary);
@@ -543,7 +681,16 @@ public class PaymentService : IPaymentService
                 ClinicName = r.Clinic.Name,
                 StatusName = r.Status.StatusName,
                 r.ReservationDate,
-                r.TotalAmount
+                r.TotalAmount,
+                r.QueueStatus,
+
+                Paid = r.Payments
+                    .Where(p => p.Status == PaymentStatusEnum.Active)
+                    .Sum(p => (decimal?)p.Amount) ?? 0m,
+
+                WrittenOff = r.Payments
+                    .Where(p => p.Status == PaymentStatusEnum.Cancelled)
+                    .Sum(p => (decimal?)p.Amount) ?? 0m
             })
             .ToListAsync();
 
@@ -565,38 +712,22 @@ public class PaymentService : IPaymentService
             .Where(p => p.Status == PaymentStatusEnum.Active)
             .ToList();
 
-        var cancelledPayments = payments
-            .Where(p => p.Status == PaymentStatusEnum.Cancelled)
-            .ToList();
-        var paidByReservation = activePayments
-            .Where(p => p.ReservationId.HasValue)
-            .GroupBy(p => p.ReservationId!.Value)
-            .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
-
-        // Cancelled amounts are written off — they still count as "covered" so a cancelled
-        // payment does not reopen the reservation's due balance.
-        var writtenOffByReservation = cancelledPayments
-            .Where(p => p.ReservationId.HasValue)
-            .GroupBy(p => p.ReservationId!.Value)
-            .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
-
         var unpaidCompleted = new List<UnpaidReservationDto>();
         var unpaidPending = new List<UnpaidReservationDto>();
 
         foreach (var r in reservations)
         {
-            var statusName = r.StatusName ?? "Unknown";
-            if (statusName is "Cancelled" or "NoShow") continue;
+            if (r.StatusName is "Cancelled" or "NoShow")
+                continue;
 
-            var paid = paidByReservation.TryGetValue(r.Id, out var amt) ? amt : 0m;
-            
-            var writtenOff = writtenOffByReservation.TryGetValue(r.Id, out var wo) ? wo : 0m;
-            
+            if (r.QueueStatus != PatientQueueStatus.InConsultation &&
+                r.QueueStatus != PatientQueueStatus.Finished)
+                continue;
+
             var total = r.TotalAmount ?? 0m;
 
-            if (paid + writtenOff >= total)
+            if (r.Paid + r.WrittenOff >= total)
                 continue;
-               
 
             var dto = new UnpaidReservationDto
             {
@@ -606,17 +737,16 @@ public class PaymentService : IPaymentService
                 DoctorName = r.DoctorName,
                 ClinicName = r.ClinicName,
                 ReservationDate = r.ReservationDate,
-                StatusName = statusName,
+                StatusName = r.StatusName,
                 TotalAmount = r.TotalAmount,
-                AmountPaid = paid,
-                WrittenOff = writtenOff
+                AmountPaid = r.Paid,
+                WrittenOff = r.WrittenOff
             };
 
-            if (statusName == "Completed")
+            if (r.QueueStatus == PatientQueueStatus.Finished)
                 unpaidCompleted.Add(dto);
             else
                 unpaidPending.Add(dto);
-
         }
 
         var reservationsDict = reservations.ToDictionary(r => r.Id, r => r);
@@ -625,18 +755,10 @@ public class PaymentService : IPaymentService
                 .Where(p =>
                     !p.ReservationId.HasValue ||
                     (
-                        paidByReservation.TryGetValue(
-                            p.ReservationId.Value, out var paidAmt) &&
-                        paidAmt +
-                            (writtenOffByReservation.TryGetValue(
-                                p.ReservationId.Value, out var woAmt)
-                                ? woAmt
-                                : 0m)
-                        >=
-                        (reservationsDict.TryGetValue(
-                            p.ReservationId.Value, out var res)
-                            ? res.TotalAmount ?? 0m
-                            : 0m)
+                        reservationsDict.TryGetValue(
+                            p.ReservationId.Value, out var reservation) &&
+                        reservation.Paid + reservation.WrittenOff >=
+                            (reservation.TotalAmount ?? 0m)
                     ))
                 .ToList();
 
@@ -724,36 +846,71 @@ public class PaymentService : IPaymentService
 
     public async Task<ServiceResult<decimal>> GetDueAmountAsync(int patientId, int? reservationId, int? enrollmentId)
     {
+        if (reservationId.HasValue == enrollmentId.HasValue)
+            return ServiceResult<decimal>.Failure(
+                "Select exactly one reservation or nutrition enrollment.");
         if (!await _uow.Patients.ExistsAsync(patientId))
             return ServiceResult<decimal>.Failure("Patient not found.");
 
         if (reservationId.HasValue)
         {
-            var reservation = await _uow.Reservations.GetByIdAsync(reservationId.Value);
-            if (reservation is null) return ServiceResult<decimal>.Failure("Reservation not found.");
+            var reservation = await _uow.Reservations
+                .Query()
+                .Where(r =>
+                    r.Id == reservationId.Value &&
+                    r.PatientId == patientId)
+                .Select(r => new
+                {
+                    r.TotalAmount,
+                    r.QueueStatus,
+                    StatusName = r.Status.StatusName,
+                    Covered = r.Payments
+                        .Where(p =>
+                            p.Status == PaymentStatusEnum.Active ||
+                            p.Status == PaymentStatusEnum.Cancelled)
+                        .Sum(p => (decimal?)p.Amount) ?? 0m
+                })
+                .FirstOrDefaultAsync();
 
-            var payments = await _uow.Payments.FindAsync(
-                p => p.ReservationId == reservationId.Value &&
-                     (p.Status == PaymentStatusEnum.Active || p.Status == PaymentStatusEnum.Cancelled));
-            var covered = payments.Sum(p => p.Amount);
-            var due = Math.Max(0m, (reservation.TotalAmount ?? 0m) - covered);
+            if (reservation is null)
+                return ServiceResult<decimal>.Failure(
+                    "Reservation not found for this patient.");
+
+            var isCollectible =
+                (reservation.QueueStatus == PatientQueueStatus.InConsultation ||
+                 reservation.QueueStatus == PatientQueueStatus.Finished) &&
+                reservation.StatusName != "Cancelled" &&
+                reservation.StatusName != "NoShow";
+
+            if (!isCollectible)
+                return ServiceResult<decimal>.Success(0m);
+
+            var due = Math.Max(
+                0m,
+                (reservation.TotalAmount ?? 0m) - reservation.Covered);
+
             return ServiceResult<decimal>.Success(due);
         }
 
         if (enrollmentId.HasValue)
         {
-            var enrollment = await _uow.NutritionEnrollments.GetByIdAsync(enrollmentId.Value);
-            if (enrollment is null) return ServiceResult<decimal>.Failure("Enrollment not found.");
+            var enrollment = await _uow.NutritionEnrollments
+                .GetByIdAsync(enrollmentId.Value);
 
-            var due = Math.Max(0m, enrollment.FinalPrice - enrollment.TotalPaid);
+            if (enrollment is null || enrollment.PatientId != patientId)
+                return ServiceResult<decimal>.Failure(
+                    "Nutrition enrollment not found for this patient.");
+
+            var due = Math.Max(
+                0m,
+                enrollment.FinalPrice - enrollment.TotalPaid);
+
             return ServiceResult<decimal>.Success(due);
         }
 
-        // No specific reservation/enrollment — overall outstanding balance for the patient.
-        var summary = await GetPatientFinancialSummaryAsync(patientId);
-        return summary.IsSuccess
-            ? ServiceResult<decimal>.Success(summary.Data!.Balance)
-            : ServiceResult<decimal>.Success(0m);
+        return ServiceResult<decimal>.Failure(
+            "Select exactly one reservation or nutrition enrollment.");
+
     }
 
     // ── One-time data backfill ───────────────────────────────────

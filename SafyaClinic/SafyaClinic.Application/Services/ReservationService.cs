@@ -203,7 +203,18 @@ public class ReservationService : IReservationService
                 StatusName = r.Status != null ? r.Status.StatusName : "Unknown",
                 StatusColor = r.Status != null ? r.Status.ColorCode : "#6c757d",
                 Category = r.Category.ToString(),
-                IsPaid = r.IsPaid
+                IsPaid = r.IsPaid,
+                HasCollectibleBalance =
+                (r.QueueStatus == PatientQueueStatus.InConsultation ||
+                 r.QueueStatus == PatientQueueStatus.Finished) &&
+                r.Status.StatusName != "Cancelled" &&
+                r.Status.StatusName != "NoShow" &&
+                (r.TotalAmount ?? 0m) >
+                    (r.Payments
+                        .Where(p =>
+                            p.Status == PaymentStatusEnum.Active ||
+                            p.Status == PaymentStatusEnum.Cancelled)
+                        .Sum(p => (decimal?)p.Amount) ?? 0m)
             }).ToListAsync();
 
         return ServiceResult<IEnumerable<ReservationSummaryDto>>.Success(summaries);
@@ -272,10 +283,105 @@ public class ReservationService : IReservationService
                 Reservations = reservations
             });
     }
+    //------------------------Queue Service Implementation----------------------------//
+    public async Task<ServiceResult> CheckInAsync(int reservationId)
+    {
+        if (reservationId <= 0)
+            return ServiceResult.Failure("Invalid reservation.");
+        var confirmedStatusId = await _uow.ReservationStatuses
+    .Query()
+    .Where(s => s.StatusName == "Confirmed")
+    .Select(s => (int?)s.Id)
+    .FirstOrDefaultAsync();
+
+        if (!confirmedStatusId.HasValue)
+            return ServiceResult.Failure("Confirmed reservation status is not configured.");
+
+        var today = DateTime.Today;
+        var tomorrow = today.AddDays(1);
+        var checkedInAtUtc = DateTime.UtcNow;
+
+        var affectedRows = await _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.Id == reservationId &&
+                r.ReservationDate >= today &&
+                r.ReservationDate < tomorrow &&
+                (r.Status.StatusName == "Pending" ||
+                 r.Status.StatusName == "Confirmed") &&
+                r.QueueStatus == PatientQueueStatus.NotCheckedIn &&
+                r.CheckedInAtUtc == null)
+              .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(
+                        r => r.StatusId,
+                        confirmedStatusId.Value)
+                    .SetProperty(
+                        r => r.QueueStatus,
+                        PatientQueueStatus.Waiting)
+                    .SetProperty(
+                        r => r.CheckedInAtUtc,
+                        (DateTime?)checkedInAtUtc)
+                    .SetProperty(
+                        r => r.UpdatedAt,
+                        (DateTime?)checkedInAtUtc));
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult.Failure(
+                "Check-in was not applied. The reservation must be for today, " +
+                "Pending or Confirmed, and not already checked in. " +
+                "Refresh the page to see its current state.");
+        }
+
+        return ServiceResult.Success("Patient checked in successfully.");
+    }
+    public async Task<ServiceResult> StartConsultationAsync(
+    int reservationId,
+    int currentUserId,
+    bool isAdmin)
+    {
+        if (reservationId <= 0 || currentUserId <= 0)
+            return ServiceResult.Failure("Invalid reservation or user.");
+
+        var startedAtUtc = DateTime.UtcNow;
+
+        var affectedRows = await _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.Id == reservationId &&
+                (isAdmin || r.DoctorId == currentUserId) &&
+                (r.Status.StatusName == "Confirmed") &&
+                r.QueueStatus == PatientQueueStatus.Waiting &&
+                r.CheckedInAtUtc != null &&
+                r.ConsultationStartedAtUtc == null &&
+                r.QueueEndedAtUtc == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    r => r.QueueStatus,
+                    PatientQueueStatus.InConsultation)
+                .SetProperty(
+                    r => r.ConsultationStartedAtUtc,
+                    (DateTime?)startedAtUtc)
+                .SetProperty(
+                    r => r.UpdatedAt,
+                    (DateTime?)startedAtUtc));
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult.Failure(
+                "Consultation could not be started. The patient must be waiting " +
+                "with an active reservation, and you must be the assigned doctor " +
+                "or an administrator. Refresh the page.");
+        }
+
+        return ServiceResult.Success("Consultation started.");
+    }
     public async Task<ServiceResult> UpdateReservationAsync(
         int reservationId, UpdateReservationRequest request)
     {
-        var r = await _uow.Reservations.GetByIdAsync(reservationId);
+        var r = await _uow.Reservations
+                .Query()
+                .FirstOrDefaultAsync(x => x.Id == reservationId);
         if (r is null) return ServiceResult.Failure("Reservation not found.");
         
         var isCompleted = await _uow.ReservationStatuses
@@ -292,28 +398,44 @@ public class ReservationService : IReservationService
         var totalAmount = request.TotalAmount
             ?? (request.TreatmentTypeId != r.TreatmentTypeId ? treatmentType.DefaultCost : r.TotalAmount);
 
-        r.DoctorId = request.DoctorId;
+        var updatedAtUtc = DateTime.UtcNow;
+        var reason = request.Reason?.Trim();
+        var notes = request.Notes?.Trim();
+
+        var affectedRows = await _uow.Reservations
+            .Query()
+            .Where(x =>
+                x.Id == reservationId &&
+                x.Status.StatusName != "Completed" &&
+                x.StatusId == r.StatusId &&
+                x.QueueStatus == r.QueueStatus &&
+                x.UpdatedAt == r.UpdatedAt)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.DoctorId, request.DoctorId)
+                .SetProperty(x => x.ClinicId, request.ClinicId)
+                .SetProperty(x => x.TreatmentTypeId, request.TreatmentTypeId)
+                .SetProperty(x => x.ReservationDate, request.ReservationDate)
+                .SetProperty(x => x.ReservationTime, request.ReservationTime)
+                .SetProperty(x => x.DurationMinutes, request.DurationMinutes)
+                .SetProperty(x => x.Reason, reason)
+                .SetProperty(x => x.Notes, notes)
+                .SetProperty(x => x.TotalAmount, totalAmount)
+                .SetProperty(
+                    x => x.IsPaid,
+                    x => totalAmount.HasValue && totalAmount.Value == 0m
+                        ? true
+                        : x.IsPaid)
+                .SetProperty(x => x.UpdatedAt, (DateTime?)updatedAtUtc));
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult.Failure(
+                "The reservation changed while saving or has been completed. " +
+                "Reload the reservation before editing again.");
+        }
+
+        // Keep the snapshot's clinic current for the zero-cost payment below.
         r.ClinicId = request.ClinicId;
-        r.TreatmentTypeId = request.TreatmentTypeId;
-        r.StatusId = request.StatusId;
-        r.ReservationDate = request.ReservationDate;
-        r.ReservationTime = request.ReservationTime;
-        r.DurationMinutes = request.DurationMinutes;
-        r.Reason = request.Reason?.Trim();
-        r.Notes = request.Notes?.Trim();
-        r.TotalAmount = totalAmount;
-
-        // If the (possibly new) treatment type carries no charge, there's nothing left to
-        // collect — mark it paid automatically, same as at creation time. Otherwise leave
-        // the existing IsPaid flag alone; it's kept in sync with real payments separately
-        // via PaymentService.RecalculateReservationPaidStatusAsync.
-        if (totalAmount.HasValue && totalAmount.Value == 0m)
-            r.IsPaid = true;
-
-        r.UpdatedAt = DateTime.UtcNow;
-
-        _uow.Reservations.Update(r);
-        await _uow.SaveChangesAsync();
 
         // Same rationale as CreateReservationAsync: if this update is what made the
         // reservation free (e.g. the treatment type was changed to the nutrition
@@ -366,22 +488,78 @@ public class ReservationService : IReservationService
         await _uow.SaveChangesAsync();
     }
 
-    public async Task<ServiceResult<ReservationDto>> UpdateStatusAsync(int reservationId, int statusId)
+    public async Task<ServiceResult<ReservationDto>> UpdateStatusAsync(
+    int reservationId,
+    int statusId)
     {
-        var r = await _uow.Reservations.GetByIdAsync(reservationId);
-        if (r is null) return ServiceResult<ReservationDto>.Failure("Reservation not found.");
-        if (!await _uow.ReservationStatuses.ExistsAsync(statusId))
-            return ServiceResult<ReservationDto>.Failure("Invalid status.");
-        if (r.StatusId == 3) // Completed — status is locked once the visit is done
-            return ServiceResult<ReservationDto>.Failure("This reservation is completed and its status can no longer be changed.");
+        var targetStatus = await _uow.ReservationStatuses
+            .Query()
+            .Where(s => s.Id == statusId)
+            .Select(s => s.StatusName)
+            .FirstOrDefaultAsync();
 
-        r.StatusId = statusId;
-        r.UpdatedAt = DateTime.UtcNow;
-        _uow.Reservations.Update(r);
-        await _uow.SaveChangesAsync();
-        var reservation = await GetReservationDtoByIdAsync(r.Id);
+        if (targetStatus is null)
+            return ServiceResult<ReservationDto>.Failure("Invalid status.");
+
+        var isCompleted = targetStatus == "Completed";
+        var isCancelledOrNoShow =
+            targetStatus == "Cancelled" || targetStatus == "NoShow";
+
+        var closesQueue = isCompleted || isCancelledOrNoShow;
+        var isPending = targetStatus == "Pending";
+        var isActiveStatus = isPending || targetStatus == "Confirmed";
+        var updatedAtUtc = DateTime.UtcNow;
+
+        var affectedRows = await _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.Id == reservationId &&
+                r.Status.StatusName != "Completed" &&
+                (!isPending ||
+                 (r.QueueStatus != PatientQueueStatus.Waiting &&
+                  r.QueueStatus != PatientQueueStatus.InConsultation)) &&
+                (!isActiveStatus ||
+                 (r.QueueStatus != PatientQueueStatus.Finished &&
+                  r.QueueStatus != PatientQueueStatus.Left)))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    r => r.StatusId,
+                    statusId)
+                .SetProperty(
+                    r => r.QueueEndedAtUtc,
+                    r => closesQueue &&
+                         (r.QueueStatus == PatientQueueStatus.Waiting ||
+                          r.QueueStatus == PatientQueueStatus.InConsultation)
+                        ? r.QueueEndedAtUtc ?? (DateTime?)updatedAtUtc
+                        : r.QueueEndedAtUtc)
+                .SetProperty(
+                    r => r.QueueStatus,
+                    r => closesQueue &&
+                         (r.QueueStatus == PatientQueueStatus.Waiting ||
+                          r.QueueStatus == PatientQueueStatus.InConsultation)
+                        ? (isCompleted
+                            ? PatientQueueStatus.Finished
+                            : PatientQueueStatus.Left)
+                        : r.QueueStatus)
+                .SetProperty(
+                    r => r.UpdatedAt,
+                    (DateTime?)updatedAtUtc));
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Status was not changed. The reservation may be missing or completed, " +
+                "or the requested status conflicts with its queue state. " +
+                "Refresh the page.");
+        }
+
+        var reservation = await GetReservationDtoByIdAsync(reservationId);
+
         if (reservation is null)
-            return ServiceResult<ReservationDto>.Failure("Failed to retrieve updated reservation.");
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Status changed, but the reservation could not be reloaded.");
+        }
 
         return ServiceResult<ReservationDto>.Success(reservation);
     }
@@ -403,26 +581,65 @@ public class ReservationService : IReservationService
     }
 
     public async Task<ServiceResult> CancelReservationAsync(
-    int reservationId, string? reason = null)
+    int reservationId,
+    string? reason = null)
     {
-        var updatedAt = DateTime.UtcNow;
-        var query = _uow.Reservations
+        var cancelledStatusId = await _uow.ReservationStatuses
             .Query()
-            .Where(r => r.Id == reservationId);
+            .Where(s => s.StatusName == "Cancelled")
+            .Select(s => (int?)s.Id)
+            .FirstOrDefaultAsync();
 
-        var affectedRows = string.IsNullOrWhiteSpace(reason)
-            ? await query.ExecuteUpdateAsync(setters => setters
-                .SetProperty(r => r.StatusId, 4)
-                .SetProperty(r => r.UpdatedAt, updatedAt))
-            : await query.ExecuteUpdateAsync(setters => setters
-                .SetProperty(r => r.StatusId, 4)
-                .SetProperty(r => r.Notes,
-                    r => (r.Notes ?? string.Empty) + $" | Cancelled: {reason}")
-                .SetProperty(r => r.UpdatedAt, updatedAt));
+        if (!cancelledStatusId.HasValue)
+            return ServiceResult.Failure(
+                "The Cancelled reservation status is not configured.");
 
-        return affectedRows == 0
-            ? ServiceResult.Failure("Reservation not found.")
-            : ServiceResult.Success("Reservation cancelled.");
+        var updatedAtUtc = DateTime.UtcNow;
+        var cancellationNote = string.IsNullOrWhiteSpace(reason)
+            ? null
+            : $" | Cancelled: {reason.Trim()}";
+
+        var affectedRows = await _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.Id == reservationId &&
+                r.Status.StatusName != "Completed" &&
+                r.Status.StatusName != "Cancelled" &&
+                r.QueueStatus != PatientQueueStatus.Finished)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    r => r.StatusId,
+                    cancelledStatusId.Value)
+                .SetProperty(
+                    r => r.QueueEndedAtUtc,
+                    r => r.QueueStatus == PatientQueueStatus.Waiting ||
+                         r.QueueStatus == PatientQueueStatus.InConsultation
+                        ? r.QueueEndedAtUtc ?? (DateTime?)updatedAtUtc
+                        : r.QueueEndedAtUtc)
+                .SetProperty(
+                    r => r.QueueStatus,
+                    r => r.QueueStatus == PatientQueueStatus.Waiting ||
+                         r.QueueStatus == PatientQueueStatus.InConsultation
+                        ? PatientQueueStatus.Left
+                        : r.QueueStatus)
+                .SetProperty(
+                    r => r.Notes,
+                    r => cancellationNote == null
+                        ? r.Notes
+                        : (r.Notes ?? string.Empty) + cancellationNote)
+                .SetProperty(
+                    r => r.UpdatedAt,
+                    (DateTime?)updatedAtUtc));
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult.Failure(
+                "Cancellation was not applied. The reservation may be missing, " +
+                "already cancelled, completed, or its queue may be finished. " +
+                "Refresh the page.");
+        }
+
+        return ServiceResult.Success("Reservation cancelled.");
     }
 
     public async Task<ServiceResult<IEnumerable<TreatmentTypeDto>>> GetTreatmentTypesAsync(
@@ -462,7 +679,7 @@ public class ReservationService : IReservationService
             .Select(r => new ReservationDto
             {
                 Id = r.Id,
-
+                StatusId = r.StatusId,
                 PatientId = r.PatientId,
                 PatientName = r.Patient != null
                     ? $"{r.Patient.FirstName} {r.Patient.LastName}"
@@ -503,7 +720,10 @@ public class ReservationService : IReservationService
                 IsPaid = r.IsPaid,
                 TotalAmount = r.TotalAmount,
 
-                CreatedAt = r.CreatedAt
+                CreatedAt = r.CreatedAt,
+                QueueStatus = r.QueueStatus,
+                CheckedInAtUtc = r.CheckedInAtUtc,
+                ConsultationStartedAtUtc = r.ConsultationStartedAtUtc
             })
             .FirstOrDefaultAsync();
     }
@@ -553,7 +773,10 @@ public class ReservationService : IReservationService
 
                     TreatmentTypeName = r.TreatmentType != null
                         ? r.TreatmentType.TypeName
-                        : ""
+                        : "",
+                    QueueStatus = r.QueueStatus,
+                    CheckedInAtUtc = r.CheckedInAtUtc,
+                    ConsultationStartedAtUtc = r.ConsultationStartedAtUtc
                 })
                 .ToListAsync();
 

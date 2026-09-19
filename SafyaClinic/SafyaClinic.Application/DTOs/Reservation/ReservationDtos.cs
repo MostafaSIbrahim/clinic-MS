@@ -1,4 +1,6 @@
-﻿namespace SafyaClinic.Application.DTOs.Reservation;
+﻿using SafyaClinic.Domain.Enums;
+
+namespace SafyaClinic.Application.DTOs.Reservation;
 
 public class ReservationDto
 {
@@ -23,6 +25,9 @@ public class ReservationDto
     public bool IsPaid { get; init; }
     public decimal? TotalAmount { get; init; }
     public DateTime CreatedAt { get; init; }
+    public PatientQueueStatus QueueStatus { get; init; }
+    public DateTime? CheckedInAtUtc { get; init; }
+    public DateTime? ConsultationStartedAtUtc { get; init; }
 }
 
 public class ReservationSummaryDto
@@ -39,6 +44,7 @@ public class ReservationSummaryDto
     public string StatusColor { get; init; } = string.Empty;
     public string Category { get; init; } = string.Empty;
     public bool IsPaid { get; init; }
+    public bool HasCollectibleBalance { get; init; }
 }
 
 public class CreateReservationRequest
@@ -61,7 +67,6 @@ public class UpdateReservationRequest
     public int DoctorId { get; init; }
     public int ClinicId { get; init; }
     public int TreatmentTypeId { get; init; }
-    public int StatusId { get; init; }
     public DateTime ReservationDate { get; init; }
     public TimeSpan ReservationTime { get; init; }
     public int DurationMinutes { get; init; } = 30;

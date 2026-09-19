@@ -22,20 +22,24 @@
                 <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
             </div>
         </form>
+        <div class="small text-muted mt-2">
+            The date filter applies to payment totals.
+            Unpaid lists show current collectible balances across all dates.
+        </div>
     </div>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-4">
         <div class="stat-card bg-rose-soft">
-            <div class="small opacity-75">Unpaid — Completed Reservations</div>
+            <div class="small opacity-75">Unpaid — Finished Visits</div>
             <div class="fs-3 fw-bold">@Model.TotalUnpaidCompleted.ToString("C")</div>
             <div class="small">@Model.UnpaidCompletedReservations.Count() reservation(s)</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="stat-card bg-primary-soft">
-            <div class="small opacity-75">Unpaid — Pending Reservations</div>
+            <div class="small opacity-75">Unpaid — In Consultation</div>
             <div class="fs-3 fw-bold">@Model.TotalUnpaidPending.ToString("C")</div>
             <div class="small">@Model.UnpaidPendingReservations.Count() reservation(s)</div>
         </div>
@@ -52,11 +56,11 @@
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Unpaid — Completed Reservations</div>
+            <div class="card-header"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Unpaid — Finished Visits</div>
             <div class="card-body p-0" style="max-height:340px; overflow:auto;">
                 @if (!Model.UnpaidCompletedReservations.Any())
                 {
-                    <div class="text-center text-muted py-4">None — all completed reservations are settled.</div>
+                    <div class="text-center text-muted py-4">No collectible balances for finished visits.</div>
                 }
                 else
                 {
@@ -88,11 +92,11 @@
 
     <div class="col-md-6">
         <div class="card h-100">
-            <div class="card-header"><i class="bi bi-hourglass-split text-warning me-2"></i>Unpaid — Pending Reservations</div>
+            <div class="card-header"><i class="bi bi-hourglass-split text-warning me-2"></i>Unpaid — In Consultation</div>
             <div class="card-body p-0" style="max-height:340px; overflow:auto;">
                 @if (!Model.UnpaidPendingReservations.Any())
                 {
-                    <div class="text-center text-muted py-4">None pending.</div>
+                    <div class="text-center text-muted py-4">No collectible balances for consultations in progress.</div>
                 }
                 else
                 {
