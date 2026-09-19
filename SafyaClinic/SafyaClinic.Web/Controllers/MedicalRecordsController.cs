@@ -13,17 +13,20 @@ namespace SafyaClinic.Web.Controllers
         private readonly IAnalysisService _analysisService;
         private readonly IConfiguration _config;
         private readonly IWebHostEnvironment _env;
+        private readonly IReservationService _reservationService;
 
         public MedicalRecordsController(
             IPatientRecordService recordService,
             IAnalysisService analysisService,
             IConfiguration config,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IReservationService reservationService)
         {
             _recordService = recordService;
             _analysisService = analysisService;
             _config = config;
             _env = env;
+            _reservationService = reservationService;
         }
 
         public async Task<IActionResult> PatientRecords(int patientId)
@@ -49,11 +52,30 @@ namespace SafyaClinic.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(int patientId, int? reservationId)
         {
+            if (reservationId.HasValue)
+            {
+                var result = await _reservationService.GetConsultationContextAsync(
+                    reservationId.Value,
+                    CurrentUserId,
+                    IsAdmin);
+
+                if (!result.IsSuccess ||
+                    result.Data is null ||
+                    result.Data.PatientId != patientId)
+                {
+                    Error("The reservation is unavailable for this patient's consultation.");
+                    return RedirectToAction("Queue", "Reservations");
+                }
+
+                return RedirectToAction(
+                    nameof(Consultation),
+                    new { reservationId = reservationId.Value });
+            }
+
             return View(new CreatePatientRecordRequest
             {
                 PatientId = patientId,
-                DoctorId = CurrentUserId,
-                ReservationId = reservationId
+                DoctorId = CurrentUserId
             });
         }
 
@@ -65,7 +87,10 @@ namespace SafyaClinic.Web.Controllers
             {
                 return View(model);
             }
-            var result = await _recordService.CreateRecordAsync(model, CurrentUserId);
+            var result = await _recordService.CreateRecordAsync(
+                    model,
+                    CurrentUserId,
+                    IsAdmin||IsDoctor);
             if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
             return RedirectWithSuccess("Record created.", nameof(Details), routeValues: new { id = result.Data!.Id });
         }
@@ -284,6 +309,40 @@ namespace SafyaClinic.Web.Controllers
             await using var stream = new FileStream(fullPath, FileMode.Create);
             await file.CopyToAsync(stream);
             return (fullPath, savedName);
+        }
+        //---Consultation Context for Doctor Queue and Consultation Pages--//
+        [HttpGet]
+        public async Task<IActionResult> Consultation(int reservationId)
+        {
+            var result = await _reservationService.GetConsultationContextAsync(
+                reservationId,
+                CurrentUserId,
+                IsAdmin);
+
+            if (!result.IsSuccess || result.Data is null)
+            {
+                Error(result.Errors.FirstOrDefault()
+                    ?? "Could not open consultation.");
+
+                return RedirectToAction("Queue", "Reservations");
+            }
+
+            var context = result.Data;
+
+            if (context.PatientRecordId.HasValue)
+            {
+                return RedirectToAction(
+                    nameof(Details),
+                    new { id = context.PatientRecordId.Value });
+            }
+
+            return View("Create", new CreatePatientRecordRequest
+            {
+                PatientId = context.PatientId,
+                DoctorId = context.DoctorId,
+                ReservationId = context.ReservationId,
+                Category = context.Category
+            });
         }
     }
 }

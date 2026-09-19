@@ -284,6 +284,102 @@ public class ReservationService : IReservationService
             });
     }
     //------------------------Queue Service Implementation----------------------------//
+    public async Task<List<QueueDoctorOptionDto>> GetQueueDoctorOptionsAsync(
+    int? clinicId = null)
+    {
+        var today = DateTime.Today;
+        var tomorrow = today.AddDays(1);
+
+        var query = _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.ReservationDate >= today &&
+                r.ReservationDate < tomorrow);
+
+        if (clinicId.HasValue)
+            query = query.Where(r => r.ClinicId == clinicId.Value);
+
+        return await query
+            .Select(r => new
+            {
+                r.DoctorId,
+                DoctorName = r.Doctor.FullName
+            })
+            .Distinct()
+            .OrderBy(r => r.DoctorName)
+            .ThenBy(r => r.DoctorId)
+            .Select(r => new QueueDoctorOptionDto
+            {
+                DoctorId = r.DoctorId,
+                DoctorName = r.DoctorName
+            })
+            .ToListAsync();
+    }
+    public async Task<ServiceResult<List<DoctorQueueEntryDto>>> GetDoctorQueueAsync(
+      int? clinicId = null,
+      int? doctorId = null)
+    {
+        if (clinicId.HasValue && clinicId.Value <= 0)
+        {
+            return ServiceResult<List<DoctorQueueEntryDto>>.Failure(
+                "Invalid clinic.");
+        }
+
+        if (doctorId.HasValue && doctorId.Value <= 0)
+        {
+            return ServiceResult<List<DoctorQueueEntryDto>>.Failure(
+                "Invalid doctor.");
+        }
+
+        var today = DateTime.Today;
+        var tomorrow = today.AddDays(1);
+
+        var query = _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.ReservationDate >= today &&
+                r.ReservationDate < tomorrow &&
+                r.Status.StatusName == "Confirmed" &&
+                (r.QueueStatus == PatientQueueStatus.Waiting ||
+                 r.QueueStatus == PatientQueueStatus.InConsultation));
+
+        if (clinicId.HasValue)
+            query = query.Where(r => r.ClinicId == clinicId.Value);
+
+        if (doctorId.HasValue)
+            query = query.Where(r => r.DoctorId == doctorId.Value);
+
+        var entries = await query
+            .OrderBy(r => r.Doctor.FullName)
+            .ThenBy(r => r.DoctorId)
+            .ThenBy(r =>
+                r.QueueStatus == PatientQueueStatus.InConsultation ? 0 : 1)
+            .ThenBy(r => r.CheckedInAtUtc ?? DateTime.MaxValue)
+            .ThenBy(r => r.ReservationTime)
+            .ThenBy(r => r.Id)
+            .Select(r => new DoctorQueueEntryDto
+            {
+                ReservationId = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient.FirstName + " " + r.Patient.LastName,
+
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor.FullName,
+
+                ClinicId = r.ClinicId,
+                ClinicName = r.Clinic.Name,
+
+                TreatmentTypeName = r.TreatmentType.TypeName,
+                ReservationTime = r.ReservationTime,
+
+                QueueStatus = r.QueueStatus,
+                CheckedInAtUtc = r.CheckedInAtUtc,
+                ConsultationStartedAtUtc = r.ConsultationStartedAtUtc
+            })
+            .ToListAsync();
+
+        return ServiceResult<List<DoctorQueueEntryDto>>.Success(entries);
+    }
     public async Task<ServiceResult> CheckInAsync(int reservationId)
     {
         if (reservationId <= 0)
@@ -670,7 +766,61 @@ public class ReservationService : IReservationService
 
         return ServiceResult<IEnumerable<TreatmentTypeDto>>.Success(types);
     }
+    //----Consultation Service Implementation----//
+    public async Task<ServiceResult<ConsultationContextDto>>
+    GetConsultationContextAsync(
+        int reservationId,
+        int currentUserId,
+        bool isAdmin)
+    {
+        if (reservationId <= 0 || currentUserId <= 0)
+        {
+            return ServiceResult<ConsultationContextDto>.Failure(
+                "Invalid reservation or user.");
+        }
 
+        var reservation = await _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.Id == reservationId &&
+                (isAdmin || r.DoctorId == currentUserId))
+            .Select(r => new
+            {
+                r.Id,
+                r.PatientId,
+                r.DoctorId,
+                r.Category,
+                r.QueueStatus,
+                StatusName = r.Status.StatusName,
+                PatientRecordId = r.PatientRecord != null
+                    ? (int?)r.PatientRecord.Id
+                    : null
+            })
+            .FirstOrDefaultAsync();
+
+        if (reservation is null)
+        {
+            return ServiceResult<ConsultationContextDto>.Failure(
+                "Reservation not found or you are not its assigned doctor.");
+        }
+
+        if (reservation.StatusName != "Confirmed" ||
+            reservation.QueueStatus != PatientQueueStatus.InConsultation)
+        {
+            return ServiceResult<ConsultationContextDto>.Failure(
+                "The reservation must be in consultation before opening this workspace.");
+        }
+
+        return ServiceResult<ConsultationContextDto>.Success(
+            new ConsultationContextDto
+            {
+                ReservationId = reservation.Id,
+                PatientId = reservation.PatientId,
+                DoctorId = reservation.DoctorId,
+                Category = reservation.Category.ToString(),
+                PatientRecordId = reservation.PatientRecordId
+            });
+    }
     // ── Mappers ──────────────────────────────────────────────
     private async Task<ReservationDto?> GetReservationDtoByIdAsync(int reservationId)
     {

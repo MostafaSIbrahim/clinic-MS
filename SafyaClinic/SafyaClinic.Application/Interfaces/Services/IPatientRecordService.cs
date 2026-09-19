@@ -5,7 +5,10 @@ namespace SafyaClinic.Application.Interfaces.Services;
 
 public interface IPatientRecordService
 {
-    Task<ServiceResult<PatientRecordDto>> CreateRecordAsync(CreatePatientRecordRequest request, int createdBy);
+    Task<ServiceResult<PatientRecordDto>> CreateRecordAsync(
+    CreatePatientRecordRequest request,
+    int createdBy,
+    bool isAdmin);
     Task<ServiceResult<PatientRecordDto>> GetRecordByIdAsync(int recordId);
     Task<ServiceResult<IEnumerable<PatientRecordDto>>> GetPatientRecordsAsync(int patientId);
     Task<ServiceResult> UpdateRecordAsync(int recordId, UpdatePatientRecordRequest request);

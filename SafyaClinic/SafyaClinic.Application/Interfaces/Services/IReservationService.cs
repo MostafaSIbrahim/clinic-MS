@@ -27,4 +27,13 @@ public interface IReservationService
     int reservationId,
     int currentUserId,
     bool isAdmin);
+    Task<ServiceResult<List<DoctorQueueEntryDto>>> GetDoctorQueueAsync(
+    int? clinicId = null,
+    int? doctorId = null);
+    Task<List<QueueDoctorOptionDto>> GetQueueDoctorOptionsAsync(
+    int? clinicId = null);
+    Task<ServiceResult<ConsultationContextDto>> GetConsultationContextAsync(
+    int reservationId,
+    int currentUserId,
+    bool isAdmin);
 }

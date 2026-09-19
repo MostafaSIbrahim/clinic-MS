@@ -17,8 +17,65 @@ public class PatientRecordService : IPatientRecordService
     public PatientRecordService(IUnitOfWork uow) => _uow = uow;
 
     public async Task<ServiceResult<PatientRecordDto>> CreateRecordAsync(
-        CreatePatientRecordRequest request, int createdBy)
+     CreatePatientRecordRequest request,
+     int createdBy,
+     bool isAdmin)
     {
+        if (createdBy <= 0)
+            return ServiceResult<PatientRecordDto>.Failure("Invalid user.");
+
+        if (!isAdmin && request.DoctorId != createdBy)
+        {
+            return ServiceResult<PatientRecordDto>.Failure(
+                "You can only create records under your own doctor account.");
+        }
+
+        if (request.ReservationId.HasValue)
+        {
+            var reservation = await _uow.Reservations
+                .Query()
+                .Where(r => r.Id == request.ReservationId.Value)
+                .Select(r => new
+                {
+                    r.PatientId,
+                    r.DoctorId,
+                    r.QueueStatus,
+                    StatusName = r.Status.StatusName,
+                    HasRecord = r.PatientRecord != null
+                })
+                .FirstOrDefaultAsync();
+
+            if (reservation is null)
+                return ServiceResult<PatientRecordDto>.Failure(
+                    "Reservation not found.");
+
+            if (reservation.PatientId != request.PatientId ||
+                reservation.DoctorId != request.DoctorId)
+            {
+                return ServiceResult<PatientRecordDto>.Failure(
+                    "The patient and doctor must match the reservation.");
+            }
+
+            if (!isAdmin && reservation.DoctorId != createdBy)
+            {
+                return ServiceResult<PatientRecordDto>.Failure(
+                    "You are not the assigned doctor.");
+            }
+
+            if (reservation.StatusName != "Confirmed" ||
+                reservation.QueueStatus != PatientQueueStatus.InConsultation)
+            {
+                return ServiceResult<PatientRecordDto>.Failure(
+                    "The reservation must be in consultation before creating its record.");
+            }
+
+            if (reservation.HasRecord)
+            {
+                return ServiceResult<PatientRecordDto>.Failure(
+                    "This reservation already has a medical record. " +
+                    "Return to the queue and select Open Consultation.");
+            }
+        }
         var users = _uow.Users.Query();
 
         var validation = await _uow.Patients
