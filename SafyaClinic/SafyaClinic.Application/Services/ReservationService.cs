@@ -609,14 +609,19 @@ public class ReservationService : IReservationService
         var affectedRows = await _uow.Reservations
             .Query()
             .Where(r =>
-                r.Id == reservationId &&
-                r.Status.StatusName != "Completed" &&
-                (!isPending ||
-                 (r.QueueStatus != PatientQueueStatus.Waiting &&
-                  r.QueueStatus != PatientQueueStatus.InConsultation)) &&
-                (!isActiveStatus ||
-                 (r.QueueStatus != PatientQueueStatus.Finished &&
-                  r.QueueStatus != PatientQueueStatus.Left)))
+                        r.Id == reservationId &&
+                        r.Status.StatusName != "Completed" &&
+                        (!isCompleted ||
+                         (r.Status.StatusName == "Confirmed" &&
+                          r.QueueStatus == PatientQueueStatus.InConsultation &&
+                          r.ConsultationStartedAtUtc != null &&
+                          r.QueueEndedAtUtc == null)) &&
+                        (!isPending ||
+                         (r.QueueStatus != PatientQueueStatus.Waiting &&
+                          r.QueueStatus != PatientQueueStatus.InConsultation)) &&
+                        (!isActiveStatus ||
+                         (r.QueueStatus != PatientQueueStatus.Finished &&
+                          r.QueueStatus != PatientQueueStatus.Left)))
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(
                     r => r.StatusId,
@@ -644,9 +649,13 @@ public class ReservationService : IReservationService
         if (affectedRows == 0)
         {
             return ServiceResult<ReservationDto>.Failure(
-                "Status was not changed. The reservation may be missing or completed, " +
-                "or the requested status conflicts with its queue state. " +
-                "Refresh the page.");
+                isCompleted
+                    ? "Completion was not applied. The reservation must be Confirmed " +
+                      "and its queue must be In Consultation with a recorded start " +
+                      "time and no end time."
+                    : "Status was not changed. The reservation may be missing or completed, " +
+                      "or the requested status conflicts with its queue state. " +
+                      "Refresh the page.");
         }
 
         var reservation = await GetReservationDtoByIdAsync(reservationId);
@@ -820,6 +829,88 @@ public class ReservationService : IReservationService
                 Category = reservation.Category.ToString(),
                 PatientRecordId = reservation.PatientRecordId
             });
+    }
+    public async Task<ServiceResult<ReservationDto>> CompleteConsultationAsync(
+    int recordId,
+    int currentUserId,
+    bool isAdmin)
+    {
+        if (recordId <= 0 || currentUserId <= 0)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Invalid record or user.");
+        }
+
+        var reservationId = await _uow.PatientRecords
+            .Query()
+            .Where(r => r.Id == recordId)
+            .Select(r => r.ReservationId)
+            .FirstOrDefaultAsync();
+
+        if (!reservationId.HasValue)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "This record is not linked to a reservation.");
+        }
+
+        var completedStatusId = await _uow.ReservationStatuses
+            .Query()
+            .Where(s => s.StatusName == "Completed")
+            .Select(s => (int?)s.Id)
+            .FirstOrDefaultAsync();
+
+        if (!completedStatusId.HasValue)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "The Completed reservation status is not configured.");
+        }
+
+        var completedAtUtc = DateTime.UtcNow;
+
+        var affectedRows = await _uow.Reservations
+            .Query()
+            .Where(r =>
+                r.Id == reservationId.Value &&
+                (isAdmin || r.DoctorId == currentUserId) &&
+                r.Status.StatusName == "Confirmed" &&
+                r.QueueStatus == PatientQueueStatus.InConsultation &&
+                r.ConsultationStartedAtUtc != null &&
+                r.QueueEndedAtUtc == null &&
+                r.PatientRecord != null &&
+                r.PatientRecord.Id == recordId &&
+                r.PatientRecord.PatientId == r.PatientId &&
+                r.PatientRecord.DoctorId == r.DoctorId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.StatusId, completedStatusId.Value)
+                .SetProperty(
+                    r => r.QueueStatus,
+                    PatientQueueStatus.Finished)
+                .SetProperty(
+                    r => r.QueueEndedAtUtc,
+                    (DateTime?)completedAtUtc)
+                .SetProperty(
+                    r => r.UpdatedAt,
+                    (DateTime?)completedAtUtc));
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Consultation was not completed. You must be the assigned " +
+                "doctor or an administrator, and the reservation must still " +
+                "be in consultation with its matching medical record. " +
+                "Refresh the page.");
+        }
+
+        var reservation = await GetReservationDtoByIdAsync(
+            reservationId.Value);
+
+        if (reservation is null)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Consultation was completed, but the reservation could not be reloaded.");
+        }
+
+        return ServiceResult<ReservationDto>.Success(reservation);
     }
     // ── Mappers ──────────────────────────────────────────────
     private async Task<ReservationDto?> GetReservationDtoByIdAsync(int reservationId)

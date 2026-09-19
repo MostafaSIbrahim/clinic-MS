@@ -36,4 +36,8 @@ public interface IReservationService
     int reservationId,
     int currentUserId,
     bool isAdmin);
+    Task<ServiceResult<ReservationDto>> CompleteConsultationAsync(
+    int recordId,
+    int currentUserId,
+    bool isAdmin);
 }

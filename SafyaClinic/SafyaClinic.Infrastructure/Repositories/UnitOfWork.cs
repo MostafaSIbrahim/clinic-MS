@@ -115,10 +115,32 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => await _context.SaveChangesAsync(cancellationToken);
-    public async Task<T> ExecutePatientPaymentAsync<T>(
+    public Task<T> ExecutePatientPaymentAsync<T>(
     int patientId,
     Func<Task<T>> operation,
     Func<T, bool> shouldCommit)
+    {
+        return ExecuteLockedAsync(
+            $"SafyaClinic:PatientPayment:{patientId}",
+            operation,
+            shouldCommit);
+    }
+
+    public Task<T> ExecuteReservationRecordAsync<T>(
+        int reservationId,
+        Func<Task<T>> operation,
+        Func<T, bool> shouldCommit)
+    {
+        return ExecuteLockedAsync(
+            $"SafyaClinic:ReservationRecord:{reservationId}",
+            operation,
+            shouldCommit);
+    }
+
+    private async Task<T> ExecuteLockedAsync<T>(
+        string resourceName,
+        Func<Task<T>> operation,
+        Func<T, bool> shouldCommit)
     {
         await using var transaction = await _context.Database
             .BeginTransactionAsync(IsolationLevel.ReadCommitted);
@@ -130,7 +152,7 @@ public class UnitOfWork : IUnitOfWork
                 SqlDbType.NVarChar,
                 255)
             {
-                Value = $"SafyaClinic:PatientPayment:{patientId}"
+                Value = resourceName
             };
 
             var lockResult = new SqlParameter(
@@ -154,7 +176,7 @@ public class UnitOfWork : IUnitOfWork
             if ((int)lockResult.Value < 0)
             {
                 throw new TimeoutException(
-                    "Could not acquire the patient payment lock.");
+                    "Could not acquire the operation lock.");
             }
 
             var result = await operation();

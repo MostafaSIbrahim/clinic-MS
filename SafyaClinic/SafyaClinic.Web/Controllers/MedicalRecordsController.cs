@@ -14,19 +14,22 @@ namespace SafyaClinic.Web.Controllers
         private readonly IConfiguration _config;
         private readonly IWebHostEnvironment _env;
         private readonly IReservationService _reservationService;
+        private readonly IPaymentService _paymentService;
 
         public MedicalRecordsController(
             IPatientRecordService recordService,
             IAnalysisService analysisService,
             IConfiguration config,
             IWebHostEnvironment env,
-            IReservationService reservationService)
+            IReservationService reservationService,
+            IPaymentService paymentService)
         {
             _recordService = recordService;
             _analysisService = analysisService;
             _config = config;
             _env = env;
             _reservationService = reservationService;
+            _paymentService = paymentService;
         }
 
         public async Task<IActionResult> PatientRecords(int patientId)
@@ -39,14 +42,42 @@ namespace SafyaClinic.Web.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var result = await _recordService.GetRecordByIdAsync(id);
-            if (!result.IsSuccess) return RedirectToAction("Index", "Patients");
+
+            if (!result.IsSuccess || result.Data is null)
+                return RedirectToAction("Index", "Patients");
+
+            var record = result.Data;
+
+            ViewBag.CanCompleteConsultation = false;
+
+            if (record.ReservationId.HasValue)
+            {
+                var contextResult =
+                    await _reservationService.GetConsultationContextAsync(
+                        record.ReservationId.Value,
+                        CurrentUserId,
+                        IsAdmin);
+
+                if (contextResult.IsSuccess && contextResult.Data is { } context)
+                {
+                    ViewBag.CanCompleteConsultation =
+                        context.PatientRecordId == record.Id &&
+                        context.PatientId == record.PatientId &&
+                        context.DoctorId == record.DoctorId;
+                }
+            }
 
             var analyses = await _analysisService.GetAnalysesByRecordAsync(id);
-            ViewBag.Analyses = analyses.IsSuccess ? analyses.Data : Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>();
+            ViewBag.Analyses = analyses.IsSuccess
+                ? analyses.Data
+                : Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>();
 
             var prescriptions = await _recordService.GetPrescriptionsByRecordAsync(id);
-            ViewBag.Prescriptions = prescriptions.IsSuccess ? prescriptions.Data : Enumerable.Empty<PrescriptionListDto>();
-            return View(result.Data);
+            ViewBag.Prescriptions = prescriptions.IsSuccess
+                ? prescriptions.Data
+                : Enumerable.Empty<PrescriptionListDto>();
+
+            return View(record);
         }
 
         [HttpGet]
@@ -90,7 +121,7 @@ namespace SafyaClinic.Web.Controllers
             var result = await _recordService.CreateRecordAsync(
                     model,
                     CurrentUserId,
-                    IsAdmin||IsDoctor);
+                    IsAdmin);
             if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
             return RedirectWithSuccess("Record created.", nameof(Details), routeValues: new { id = result.Data!.Id });
         }
@@ -343,6 +374,64 @@ namespace SafyaClinic.Web.Controllers
                 ReservationId = context.ReservationId,
                 Category = context.Category
             });
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "DoctorOrAdmin")]
+        public async Task<IActionResult> CompleteConsultation(int recordId)
+        {
+            var result = await _reservationService.CompleteConsultationAsync(
+                recordId,
+                CurrentUserId,
+                IsAdmin);
+
+            if (!result.IsSuccess || result.Data is null)
+            {
+                Error(result.Errors.FirstOrDefault()
+                    ?? "Could not complete consultation.");
+
+                return RedirectToAction(nameof(Details), new { id = recordId });
+            }
+
+            var reservation = result.Data;
+
+            if (IsAdmin || IsReception)
+            {
+                var dueResult = await _paymentService.GetDueAmountAsync(
+                    reservation.PatientId,
+                    reservation.Id,
+                    null);
+
+                if (!dueResult.IsSuccess)
+                {
+                    Warning(
+                        "Consultation completed, but the remaining balance " +
+                        "could not be checked. Review the patient's payment summary.");
+
+                    return RedirectToAction(
+                        "PatientSummary",
+                        "Payments",
+                        new { patientId = reservation.PatientId });
+                }
+
+                if (dueResult.Data > 0m)
+                {
+                    Success("Consultation completed. Payment remains outstanding.");
+
+                    return RedirectToAction(
+                        "Collect",
+                        "Payments",
+                        new
+                        {
+                            patientId = reservation.PatientId,
+                            reservationId = reservation.Id
+                        });
+                }
+            }
+
+            Success("Consultation completed.");
+
+            return RedirectToAction("Queue", "Reservations");
         }
     }
 }
