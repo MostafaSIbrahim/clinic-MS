@@ -18,6 +18,15 @@ namespace SafyaClinic.Domain.Entities.MedicalRecord
         public string? TreatmentPlan { get; set; }
         public string? Notes { get; set; }
         public DateTime? FollowUpDate { get; set; }
+        public PatientFollowUpStatus FollowUpStatus { get; set; }= PatientFollowUpStatus.Pending;
+
+        public int? FollowUpReservationId { get; set; }
+
+        public DateTime? FollowUpUpdatedAtUtc { get; set; }
+
+        public int? FollowUpUpdatedBy { get; set; }
+
+        public string? FollowUpDismissalReason { get; set; }
         public bool IsLocked { get; set; }
 
         // Navigation properties
@@ -26,5 +35,6 @@ namespace SafyaClinic.Domain.Entities.MedicalRecord
         public virtual Reservation.Reservation? Reservation { get; set; }
         public virtual ICollection<Treatment> Treatments { get; set; } = new List<Treatment>();
         public virtual ICollection<Prescription.Prescription> Prescriptions { get; set; } = new List<Prescription.Prescription>();
+        public virtual Reservation.Reservation? FollowUpReservation { get; set; }
     }
 }

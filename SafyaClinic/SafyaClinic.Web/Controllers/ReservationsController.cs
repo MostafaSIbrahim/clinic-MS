@@ -299,7 +299,10 @@ public class ReservationsController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdateStatus(int id, int statusId)
     {
-        var result = await _reservationService.UpdateStatusAsync(id, statusId);
+        var result = await _reservationService.UpdateStatusAsync(
+    id,
+    statusId,
+    CurrentUserId);
 
         if (!result.IsSuccess)
         {
@@ -327,8 +330,7 @@ public class ReservationsController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id, string? reason)
     {
-        var result = await _reservationService
-            .CancelReservationAsync(id, reason);
+        var result = await _reservationService.CancelReservationAsync(id, CurrentUserId, reason);
 
         if (!result.IsSuccess)
         {

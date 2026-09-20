@@ -1,0 +1,279 @@
+﻿@model SafyaClinic.Web.Models.PatientFollowUpsViewModel
+
+@{
+    ViewData["Title"] = "Patient Follow-ups";
+    var today = DateTime.Today;
+    var canOpenRecord = User.IsInRole("Admin") || User.IsInRole("Doctor");
+}
+
+<div class="mb-3">
+    <h4 class="mb-1">
+        @(Model.CanViewAll ? "Patient Follow-ups" : "My Patient Follow-ups")
+    </h4>
+    <div class="text-muted">
+        Pending follow-ups that have not yet been booked or dismissed.
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="get"
+              class="row g-3 align-items-end">
+
+            <div asp-validation-summary="All"
+                 class="text-danger"></div>
+
+            @if (Model.CanViewAll)
+            {
+                <div class="col-md-3">
+                    <label asp-for="DoctorId" class="form-label">Doctor</label>
+                    <select asp-for="DoctorId"
+                            asp-items="Model.Doctors"
+                            class="form-select">
+                        <option value="">All doctors</option>
+                    </select>
+                </div>
+            }
+
+            <div class="col-md-3">
+                <label asp-for="Due" class="form-label">Due</label>
+                <select asp-for="Due" class="form-select">
+                    <option value="All">All pending</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Today">Due today</option>
+                    <option value="Upcoming">Upcoming</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="From" class="form-label">From</label>
+                <input asp-for="From" type="date" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="To" class="form-label">To</label>
+                <input asp-for="To" type="date" class="form-control" />
+            </div>
+
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    Apply Filters
+                </button>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (ViewData.ModelState.IsValid)
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Pending Follow-ups</span>
+            <span class="badge bg-secondary">
+                @Model.Results.TotalCount
+            </span>
+        </div>
+
+        @if (!Model.Results.Items.Any())
+        {
+            <div class="card-body text-center text-muted py-5">
+                No pending follow-ups match these filters.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Patient</th>
+                            <th>Doctor</th>
+                            <th>Follow-up Date</th>
+                            <th>Due</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Results.Items)
+                        {
+                            var date = item.FollowUpDate.Date;
+                            var label = date < today
+                                ? "Overdue"
+                                : date == today ? "Due today" : "Upcoming";
+
+                            var badgeClass = date < today
+                                ? "bg-danger"
+                                : date == today
+                                    ? "bg-warning text-dark"
+                                    : "bg-info text-dark";
+
+                            <tr>
+                                <td class="fw-semibold">@item.PatientName</td>
+                                <td>@item.DoctorName</td>
+                                <td>@item.FollowUpDate.ToString("dd MMM yyyy")</td>
+                                <td>
+                                    <span class="badge @badgeClass">@label</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                        <a asp-controller="Patients"
+                                           asp-action="Details"
+                                           asp-route-id="@item.PatientId"
+                                           class="btn btn-sm btn-outline-primary">
+                                            View Patient
+                                        </a>
+                                        <a asp-action="Book"
+                                           asp-route-recordId="@item.RecordId"
+                                           class="btn btn-sm btn-success">
+                                            Book Follow-up
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#dismissFollowUpModal"
+                                                data-record-id="@item.RecordId"
+                                                data-patient-name="@item.PatientName">
+                                            Dismiss
+                                        </button>
+                                        @if (canOpenRecord)
+                                        {
+                                            <a asp-controller="MedicalRecords"
+                                               asp-action="Details"
+                                               asp-route-id="@item.RecordId"
+                                               class="btn btn-sm btn-outline-secondary">
+                                                Open Record
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <span class="small text-muted">
+                    Page @Model.Results.Page of @Model.Results.TotalPages
+                </span>
+
+                <div class="d-flex gap-2">
+                    @if (Model.Results.HasPrev)
+                    {
+                        <a asp-action="Index"
+                           asp-route-page="@(Model.Results.Page - 1)"
+                           asp-route-pageSize="@Model.Results.PageSize"
+                           asp-route-doctorId="@(Model.CanViewAll ? Model.DoctorId : null)"
+                           asp-route-due="@Model.Due"
+                           asp-route-from="@(Model.From?.ToString("yyyy-MM-dd"))"
+                           asp-route-to="@(Model.To?.ToString("yyyy-MM-dd"))"
+                           class="btn btn-sm btn-outline-secondary">
+                            Previous
+                        </a>
+                    }
+
+                    @if (Model.Results.HasNext)
+                    {
+                        <a asp-action="Index"
+                           asp-route-page="@(Model.Results.Page + 1)"
+                           asp-route-pageSize="@Model.Results.PageSize"
+                           asp-route-doctorId="@(Model.CanViewAll ? Model.DoctorId : null)"
+                           asp-route-due="@Model.Due"
+                           asp-route-from="@(Model.From?.ToString("yyyy-MM-dd"))"
+                           asp-route-to="@(Model.To?.ToString("yyyy-MM-dd"))"
+                           class="btn btn-sm btn-outline-secondary">
+                            Next
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+<div class="modal fade"
+     id="dismissFollowUpModal"
+     tabindex="-1"
+     aria-labelledby="dismissFollowUpTitle"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Dismiss" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dismissFollowUpTitle">
+                        Dismiss Follow-up
+                    </h5>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden"
+                           name="recordId"
+                           id="dismissFollowUpRecordId" />
+
+                    <p>
+                        Patient:
+                        <strong id="dismissFollowUpPatient"></strong>
+                    </p>
+
+                    <p class="text-muted small">
+                        This removes the follow-up from the pending list.
+                        The medical record remains unchanged except for
+                        its follow-up tracking information.
+                    </p>
+
+                    <label for="dismissFollowUpReason" class="form-label">
+                        Reason
+                    </label>
+                    <textarea id="dismissFollowUpReason"
+                              name="reason"
+                              class="form-control"
+                              rows="3"
+                              maxlength="500"
+                              required></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        Dismiss Follow-up
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const dismissalModal = document.getElementById('dismissFollowUpModal');
+
+        dismissalModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            document.getElementById('dismissFollowUpRecordId').value =
+                button.dataset.recordId;
+
+            document.getElementById('dismissFollowUpPatient').textContent =
+                button.dataset.patientName;
+
+            document.getElementById('dismissFollowUpReason').value = '';
+        });
+
+        dismissalModal.addEventListener('shown.bs.modal', function () {
+            document.getElementById('dismissFollowUpReason').focus();
+        });
+    </script>
+}

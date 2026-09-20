@@ -1,6 +1,4 @@
-﻿
-namespace SafyaClinic.Application.Services;
-
+﻿namespace SafyaClinic.Application.Services;
 using global::SafyaClinic.Application.DTOs.Common;
 using global::SafyaClinic.Application.DTOs.MedicalRecord;
 using global::SafyaClinic.Application.Interfaces.Services;
@@ -241,7 +239,108 @@ public class PatientRecordService : IPatientRecordService
             ? ServiceResult.Failure("Record not found.")
             : ServiceResult.Success("Record locked.");
     }
+    public async Task<ServiceResult<FollowUpBookingContextDto>>
+    GetFollowUpBookingContextAsync(
+        int recordId,
+        int currentUserId,
+        bool canManageAll)
+    {
+        if (recordId <= 0 || currentUserId <= 0)
+            return ServiceResult<FollowUpBookingContextDto>.Failure(
+                "Invalid record or user.");
 
+        var context = await _uow.PatientRecords
+            .Query()
+            .Where(r =>
+                r.Id == recordId &&
+                (canManageAll || r.DoctorId == currentUserId) &&
+                r.FollowUpDate.HasValue &&
+                r.FollowUpStatus == PatientFollowUpStatus.Pending &&
+                r.FollowUpReservationId == null)
+            .Select(r => new FollowUpBookingContextDto
+            {
+                RecordId = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient.FirstName + " " + r.Patient.LastName,
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor.FullName,
+                Category = r.Category.ToString(),
+                FollowUpDate = r.FollowUpDate.Value
+            })
+            .FirstOrDefaultAsync();
+
+        return context is null
+            ? ServiceResult<FollowUpBookingContextDto>.Failure(
+                "This follow-up is unavailable, already handled, or belongs to another doctor.")
+            : ServiceResult<FollowUpBookingContextDto>.Success(context);
+    }
+    public async Task<ServiceResult> DismissFollowUpAsync(
+    int recordId,
+    string? reason,
+    int currentUserId,
+    bool canManageAll)
+    {
+        if (recordId <= 0 || currentUserId <= 0)
+            return ServiceResult.Failure("Invalid record or user.");
+
+        var dismissalReason = reason?.Trim();
+
+        if (string.IsNullOrWhiteSpace(dismissalReason))
+            return ServiceResult.Failure("Enter a dismissal reason.");
+
+        if (dismissalReason.Length > 500)
+            return ServiceResult.Failure(
+                "The dismissal reason must not exceed 500 characters.");
+
+        try
+        {
+            // Use the same lock as booking this follow-up.
+            return await _uow.ExecuteFollowUpBookingAsync(
+                recordId,
+                async () =>
+                {
+                    var updatedAtUtc = DateTime.UtcNow;
+
+                    var affectedRows = await _uow.PatientRecords
+                        .Query()
+                        .Where(r =>
+                            r.Id == recordId &&
+                            (canManageAll || r.DoctorId == currentUserId) &&
+                            r.FollowUpDate.HasValue &&
+                            r.FollowUpStatus == PatientFollowUpStatus.Pending &&
+                            r.FollowUpReservationId == null)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(
+                                r => r.FollowUpStatus,
+                                PatientFollowUpStatus.Dismissed)
+                            .SetProperty(
+                                r => r.FollowUpDismissalReason,
+                                dismissalReason)
+                            .SetProperty(
+                                r => r.FollowUpUpdatedAtUtc,
+                                (DateTime?)updatedAtUtc)
+                            .SetProperty(
+                                r => r.FollowUpUpdatedBy,
+                                (int?)currentUserId)
+                            .SetProperty(
+                                r => r.UpdatedAt,
+                                (DateTime?)updatedAtUtc));
+
+                    return affectedRows == 0
+                        ? ServiceResult.Failure(
+                            "Dismissal was not applied. The follow-up may already " +
+                            "be booked or dismissed, or you do not have access.")
+                        : ServiceResult.Success("Follow-up dismissed.");
+                },
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult.Failure(
+                "Another request is updating this follow-up. " +
+                "Refresh the list before trying again.");
+        }
+    }
     // ── Treatments ────────────────────────────────────────────
 
     public async Task<ServiceResult<TreatmentDto>> AddTreatmentAsync(
@@ -578,9 +677,131 @@ public class PatientRecordService : IPatientRecordService
             ? ServiceResult<PrescriptionPrintDto>.Failure("Prescription not found.")
             : ServiceResult<PrescriptionPrintDto>.Success(prescription);
     }
-    // ── Mapper ────────────────────────────────────────────────
+    // ── Follow-ups ─────────────────────────────────────────────────
+    public async Task<ServiceResult<PagedResult<PatientFollowUpDto>>>
+    GetPendingFollowUpsAsync(
+        PatientFollowUpFilter filter,
+        PaginationRequest pagination,
+        int currentUserId,
+        bool canViewAll)
+    {
+        if (currentUserId <= 0)
+        {
+            return ServiceResult<PagedResult<PatientFollowUpDto>>.Failure(
+                "Invalid user.");
+        }
 
-    
+        if (filter.DoctorId is <= 0)
+        {
+            return ServiceResult<PagedResult<PatientFollowUpDto>>.Failure(
+                "Invalid doctor.");
+        }
+
+        var due = (filter.Due ?? "All").Trim().ToLowerInvariant();
+
+        if (due != "all" &&
+            due != "overdue" &&
+            due != "today" &&
+            due != "upcoming")
+        {
+            return ServiceResult<PagedResult<PatientFollowUpDto>>.Failure(
+                "Invalid due-date filter.");
+        }
+
+        var from = filter.From?.Date;
+        var to = filter.To?.Date;
+
+        if (from.HasValue && to.HasValue && from.Value > to.Value)
+        {
+            return ServiceResult<PagedResult<PatientFollowUpDto>>.Failure(
+                "The start date must not be after the end date.");
+        }
+
+        if (to == DateTime.MaxValue.Date)
+        {
+            return ServiceResult<PagedResult<PatientFollowUpDto>>.Failure(
+                "The end date is outside the supported range.");
+        }
+
+        var today = DateTime.Today;
+        var tomorrow = today.AddDays(1);
+
+        var query = _uow.PatientRecords
+            .Query()
+            .Where(r =>
+                r.FollowUpDate.HasValue &&
+                r.FollowUpStatus == PatientFollowUpStatus.Pending &&
+                r.FollowUpReservationId == null);
+
+        // canViewAll must come from the authenticated user's roles.
+        var doctorId = canViewAll
+            ? filter.DoctorId
+            : currentUserId;
+
+        if (doctorId.HasValue)
+            query = query.Where(r => r.DoctorId == doctorId.Value);
+
+        if (due == "overdue")
+        {
+            query = query.Where(r => r.FollowUpDate < today);
+        }
+        else if (due == "today")
+        {
+            query = query.Where(r =>
+                r.FollowUpDate >= today &&
+                r.FollowUpDate < tomorrow);
+        }
+        else if (due == "upcoming")
+        {
+            query = query.Where(r => r.FollowUpDate >= tomorrow);
+        }
+
+        if (from.HasValue)
+            query = query.Where(r => r.FollowUpDate >= from.Value);
+
+        if (to.HasValue)
+        {
+            var endExclusive = to.Value.AddDays(1);
+            query = query.Where(r => r.FollowUpDate < endExclusive);
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var totalPages = Math.Max(
+            1,
+            (int)Math.Ceiling((double)totalCount / pagination.PageSize));
+
+        var page = Math.Min(pagination.Page, totalPages);
+
+        var items = await query
+            .OrderBy(r => r.FollowUpDate)
+            .ThenBy(r => r.Id)
+            .Skip((page - 1) * pagination.PageSize)
+            .Take(pagination.PageSize)
+            .Select(r => new PatientFollowUpDto
+            {
+                RecordId = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient.FirstName + " " + r.Patient.LastName,
+
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor.FullName,
+
+                FollowUpDate = r.FollowUpDate.Value,
+                OriginalReservationId = r.ReservationId
+            })
+            .ToListAsync();
+
+        return ServiceResult<PagedResult<PatientFollowUpDto>>.Success(
+            new PagedResult<PatientFollowUpDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pagination.PageSize
+            });
+    }
+
     // ── Private mapper ────────────────────────────────────────
     private IQueryable<PatientRecordDto> PatientRecordDtoQuery()
     {

@@ -61,6 +61,13 @@
                                 <i class="bi bi-people"></i>Doctor Queues
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "FollowUps" ? "active" : "")"
+                               asp-controller="FollowUps"
+                               asp-action="Index">
+                                <i class="bi bi-calendar-check"></i>Follow-ups
+                            </a>
+                        </li>
                     }
                 @if (User.IsInRole("Admin") || User.IsInRole("Doctor"))
                 {

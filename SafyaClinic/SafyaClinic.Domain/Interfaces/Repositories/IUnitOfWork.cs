@@ -29,12 +29,20 @@ public interface IUnitOfWork : IDisposable
     int reservationId,
     Func<Task<T>> operation,
     Func<T, bool> shouldCommit);
+    Task<T> ExecuteReservationStatusAsync<T>(
+    int reservationId,
+    Func<Task<T>> operation,
+    Func<T, bool> shouldCommit);
 
     // ── Medical Record ────────────────────────────────────────
     IRepository<PatientRecord> PatientRecords { get; }
     IRepository<Treatment> Treatments { get; }
     IRepository<TreatmentType> TreatmentTypes { get; }
-
+    // ── Follow-up Record ─────────────────────────────
+    Task<T> ExecuteFollowUpBookingAsync<T>(
+        int recordId,
+        Func<Task<T>> operation,
+        Func<T, bool> shouldCommit);
     // ── Prescription ──────────────────────────────────────────
     IRepository<Prescription> Prescriptions { get; }
     IRepository<PrescriptionItem> PrescriptionItems { get; }
