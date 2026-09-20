@@ -18,13 +18,6 @@ public interface IPatientRecordService
     Task<ServiceResult<TreatmentDto>> AddTreatmentAsync(int recordId, AddTreatmentRequest request, int createdBy);
     Task<ServiceResult> RemoveTreatmentAsync(int treatmentId);
 
-    // Prescriptions
-    //Task<ServiceResult<PrescriptionDto>> AddPrescriptionAsync(int recordId, AddPrescriptionRequest request, int createdBy);
-   // Task<ServiceResult> MarkPrescriptionPrintedAsync(int prescriptionId);
-    //Task<ServiceResult> AddPrescriptionAttachmentAsync(int prescriptionId, string filePath, string fileName, string contentType, long fileSize, int uploadedBy);
-    //Task<ServiceResult> DeleteAttachmentAsync(int attachmentId);  // Admin only
-    //Task<ServiceResult<AttachmentDto>> GetAttachmentAsync(int attachmentId);
-    //Task<ServiceResult<PrescriptionPrintDto>> GetPrescriptionForPrintAsync(int prescriptionId);
     // ── Prescriptions (Document-level) ─────────────────────────
     Task<ServiceResult<PrescriptionDetailDto>> CreatePrescriptionAsync(CreatePrescriptionRequest request, int createdBy);
     Task<ServiceResult<PrescriptionDetailDto>> GetPrescriptionByIdAsync(int prescriptionId);
@@ -38,4 +31,19 @@ public interface IPatientRecordService
     Task<ServiceResult> DeleteAttachmentAsync(int attachmentId);
     Task<ServiceResult<AttachmentDto>> GetAttachmentAsync(int attachmentId);
     Task<ServiceResult<PrescriptionPrintDto>> GetPrescriptionForPrintAsync(int prescriptionId);
+    // ── Follow-ups ─────────────────────────//
+    Task<ServiceResult<PagedResult<PatientFollowUpDto>>> GetPendingFollowUpsAsync(
+    PatientFollowUpFilter filter,
+    PaginationRequest pagination,
+    int currentUserId,
+    bool canViewAll);
+    Task<ServiceResult<FollowUpBookingContextDto>> GetFollowUpBookingContextAsync(
+    int recordId,
+    int currentUserId,
+    bool canManageAll);
+    Task<ServiceResult> DismissFollowUpAsync(
+    int recordId,
+    string? reason,
+    int currentUserId,
+    bool canManageAll);
 }

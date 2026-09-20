@@ -33,11 +33,32 @@ public class UnitOfWork : IUnitOfWork
     // ── Reservation ──────────────────────────────────────────
     private IRepository<Reservation>? _reservations;
     private IRepository<ReservationStatus>? _reservationStatuses;
+    public Task<T> ExecuteReservationStatusAsync<T>(
+    int reservationId,
+    Func<Task<T>> operation,
+    Func<T, bool> shouldCommit)
+    {
+        return ExecuteLockedAsync(
+            $"SafyaClinic:ReservationStatus:{reservationId}",
+            operation,
+            shouldCommit);
+    }
 
     // ── Medical Record ────────────────────────────────────────
     private IRepository<PatientRecord>? _patientRecords;
     private IRepository<Treatment>? _treatments;
     private IRepository<TreatmentType>? _treatmentTypes;
+    //--- Follow-up Record ─────────────────────────────
+    public Task<T> ExecuteFollowUpBookingAsync<T>(
+    int recordId,
+    Func<Task<T>> operation,
+    Func<T, bool> shouldCommit)
+    {
+        return ExecuteLockedAsync(
+            $"SafyaClinic:FollowUpBooking:{recordId}",
+            operation,
+            shouldCommit);
+    }
 
     // ── Prescription ──────────────────────────────────────────
     private IRepository<Prescription>? _prescriptions;

@@ -103,6 +103,174 @@ public class ReservationService : IReservationService
         return ServiceResult<ReservationDto>.Success(dto);
     }
 
+    public async Task<ServiceResult<ReservationDto>> BookFollowUpAsync(
+    int recordId,
+    CreateReservationRequest request,
+    int currentUserId,
+    bool canManageAll)
+    {
+        if (recordId <= 0 || currentUserId <= 0)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Invalid medical record or user.");
+        }
+
+        try
+        {
+            return await _uow.ExecuteFollowUpBookingAsync(
+                recordId,
+                () => BookFollowUpCoreAsync(
+                    recordId,
+                    request,
+                    currentUserId,
+                    canManageAll),
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Another request is booking this follow-up. " +
+                "Refresh the follow-up list before trying again.");
+        }
+    }
+
+    private async Task<ServiceResult<ReservationDto>> BookFollowUpCoreAsync(
+        int recordId,
+        CreateReservationRequest request,
+        int currentUserId,
+        bool canManageAll)
+    {
+        var record = await _uow.PatientRecords
+            .Query()
+            .Where(r =>
+                r.Id == recordId &&
+                (canManageAll || r.DoctorId == currentUserId))
+            .Select(r => new
+            {
+                r.PatientId,
+                r.DoctorId,
+                r.FollowUpDate,
+                r.FollowUpStatus,
+                r.FollowUpReservationId
+            })
+            .FirstOrDefaultAsync();
+
+        if (record is null)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Follow-up not found or you do not have access.");
+        }
+
+        if (!record.FollowUpDate.HasValue ||
+            record.FollowUpStatus != PatientFollowUpStatus.Pending ||
+            record.FollowUpReservationId.HasValue)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "This follow-up is no longer pending. Refresh the follow-up list.");
+        }
+
+        if (request.PatientId != record.PatientId ||
+            request.DoctorId != record.DoctorId)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "The patient and doctor must match the follow-up record.");
+        }
+
+        if (request.ReservationDate.Date < DateTime.Today)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "A follow-up reservation cannot be booked for a past date.");
+        }
+
+        var reservationResult = await CreateReservationAsync(
+            request,
+            currentUserId);
+
+        if (!reservationResult.IsSuccess)
+            return reservationResult;
+
+        if (reservationResult.Data is null)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "The follow-up reservation could not be loaded.");
+        }
+
+        var reservation = reservationResult.Data;
+        var updatedAtUtc = DateTime.UtcNow;
+
+        var affectedRows = await _uow.PatientRecords
+            .Query()
+            .Where(r =>
+                r.Id == recordId &&
+                r.PatientId == record.PatientId &&
+                r.DoctorId == record.DoctorId &&
+                r.FollowUpDate == record.FollowUpDate &&
+                r.FollowUpStatus == PatientFollowUpStatus.Pending &&
+                r.FollowUpReservationId == null &&
+                (canManageAll || r.DoctorId == currentUserId))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    r => r.FollowUpStatus,
+                    PatientFollowUpStatus.Booked)
+                .SetProperty(
+                    r => r.FollowUpReservationId,
+                    (int?)reservation.Id)
+                .SetProperty(
+                    r => r.FollowUpUpdatedAtUtc,
+                    (DateTime?)updatedAtUtc)
+                .SetProperty(
+                    r => r.FollowUpUpdatedBy,
+                    (int?)currentUserId)
+                .SetProperty(
+                    r => r.FollowUpDismissalReason,
+                    (string?)null)
+                .SetProperty(
+                    r => r.UpdatedAt,
+                    (DateTime?)updatedAtUtc));
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "The follow-up changed while booking. " +
+                "No reservation was saved. Refresh the follow-up list.");
+        }
+
+        return reservationResult;
+    }
+
+    private async Task ReopenFollowUpAfterCancellationAsync(
+    int reservationId,
+    int currentUserId)
+    {
+        var updatedAtUtc = DateTime.UtcNow;
+
+        await _uow.PatientRecords
+            .Query()
+            .Where(r =>
+                r.FollowUpStatus == PatientFollowUpStatus.Booked &&
+                r.FollowUpReservationId == reservationId &&
+                r.FollowUpReservation != null &&
+                r.FollowUpReservation.Status.StatusName == "Cancelled")
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    r => r.FollowUpStatus,
+                    PatientFollowUpStatus.Pending)
+                .SetProperty(
+                    r => r.FollowUpReservationId,
+                    (int?)null)
+                .SetProperty(
+                    r => r.FollowUpDismissalReason,
+                    (string?)null)
+                .SetProperty(
+                    r => r.FollowUpUpdatedAtUtc,
+                    (DateTime?)updatedAtUtc)
+                .SetProperty(
+                    r => r.FollowUpUpdatedBy,
+                    (int?)currentUserId)
+                .SetProperty(
+                    r => r.UpdatedAt,
+                    (DateTime?)updatedAtUtc));
+    }
     public async Task<ServiceResult<ReservationDto>> GetReservationByIdAsync(int reservationId)
     {
         var reservation = await GetReservationDtoByIdAsync(reservationId);
@@ -586,7 +754,35 @@ public class ReservationService : IReservationService
 
     public async Task<ServiceResult<ReservationDto>> UpdateStatusAsync(
     int reservationId,
-    int statusId)
+    int statusId,
+    int currentUserId)
+    {
+        if (reservationId <= 0 || currentUserId <= 0)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Invalid reservation or user.");
+        }
+
+        try
+        {
+            return await _uow.ExecuteReservationStatusAsync(
+                reservationId,
+                () => UpdateStatusCoreAsync(
+                    reservationId,
+                    statusId,
+                    currentUserId),
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Another request is updating this reservation. Refresh and try again.");
+        }
+    }
+    private async Task<ServiceResult<ReservationDto>> UpdateStatusCoreAsync(
+        int reservationId,
+        int statusId,
+        int currentUserId)
     {
         var targetStatus = await _uow.ReservationStatuses
             .Query()
@@ -658,6 +854,12 @@ public class ReservationService : IReservationService
                       "Refresh the page.");
         }
 
+        if (targetStatus == "Cancelled")
+        {
+            await ReopenFollowUpAfterCancellationAsync(
+                reservationId,
+                currentUserId);
+        }
         var reservation = await GetReservationDtoByIdAsync(reservationId);
 
         if (reservation is null)
@@ -687,7 +889,32 @@ public class ReservationService : IReservationService
 
     public async Task<ServiceResult> CancelReservationAsync(
     int reservationId,
+    int currentUserId,
     string? reason = null)
+    {
+        if (reservationId <= 0 || currentUserId <= 0)
+            return ServiceResult.Failure("Invalid reservation or user.");
+
+        try
+        {
+            return await _uow.ExecuteReservationStatusAsync(
+                reservationId,
+                () => CancelReservationCoreAsync(
+                    reservationId,
+                    currentUserId,
+                    reason),
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult.Failure(
+                "Another request is updating this reservation. Refresh and try again.");
+        }
+    }
+    private async Task<ServiceResult> CancelReservationCoreAsync(
+        int reservationId,
+        int currentUserId,
+        string? reason)
     {
         var cancelledStatusId = await _uow.ReservationStatuses
             .Query()
@@ -744,6 +971,9 @@ public class ReservationService : IReservationService
                 "Refresh the page.");
         }
 
+        await ReopenFollowUpAfterCancellationAsync(
+                reservationId,
+                currentUserId);
         return ServiceResult.Success("Reservation cancelled.");
     }
 

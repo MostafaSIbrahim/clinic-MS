@@ -244,6 +244,26 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<DateTime?>("FollowUpDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FollowUpDismissalReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("FollowUpReservationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FollowUpStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime?>("FollowUpUpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("FollowUpUpdatedBy")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsLocked")
                         .HasColumnType("bit");
 
@@ -274,11 +294,17 @@ namespace SafyaClinic.Infrastructure.Migrations
 
                     b.HasIndex("DoctorId");
 
+                    b.HasIndex("FollowUpReservationId");
+
+                    b.HasIndex("FollowUpUpdatedBy");
+
                     b.HasIndex("PatientId");
 
                     b.HasIndex("ReservationId")
                         .IsUnique()
                         .HasFilter("[ReservationId] IS NOT NULL");
+
+                    b.HasIndex("FollowUpStatus", "FollowUpDate", "DoctorId");
 
                     b.ToTable("PatientRecords", (string)null);
                 });
@@ -1635,6 +1661,16 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SafyaClinic.Domain.Entities.Reservation.Reservation", "FollowUpReservation")
+                        .WithMany()
+                        .HasForeignKey("FollowUpReservationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SafyaClinic.Domain.Identity.User", null)
+                        .WithMany()
+                        .HasForeignKey("FollowUpUpdatedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SafyaClinic.Domain.Entities.Patient.Patient", "Patient")
                         .WithMany("Records")
                         .HasForeignKey("PatientId")
@@ -1646,6 +1682,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .HasForeignKey("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", "ReservationId");
 
                     b.Navigation("Doctor");
+
+                    b.Navigation("FollowUpReservation");
 
                     b.Navigation("Patient");
 

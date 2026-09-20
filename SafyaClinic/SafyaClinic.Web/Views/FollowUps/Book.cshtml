@@ -1,0 +1,74 @@
+﻿@model SafyaClinic.Web.Models.BookFollowUpViewModel
+
+@{
+    ViewData["Title"] = "Book Follow-up";
+}
+
+<div class="card" style="max-width:800px;">
+    <div class="card-header">
+        <i class="bi bi-calendar-plus me-2"></i>Book Follow-up
+    </div>
+    <div class="card-body">
+        <div class="bg-light rounded p-3 mb-3">
+            <div class="fw-semibold">@Model.Context!.PatientName</div>
+            <div>Doctor: @Model.Context.DoctorName</div>
+            <div class="text-muted">
+                Requested follow-up: @Model.Context.FollowUpDate.ToString("dd MMM yyyy")
+            </div>
+        </div>
+
+        <form asp-action="Book" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="RecordId" />
+
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="ClinicId" class="form-label">Clinic</label>
+                    <select asp-for="ClinicId" asp-items="Model.Clinics"
+                            class="form-select">
+                        <option value="">Select clinic</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="TreatmentTypeId" class="form-label">Treatment</label>
+                    <select asp-for="TreatmentTypeId" asp-items="Model.Treatments"
+                            class="form-select">
+                        <option value="">Select treatment</option>
+                    </select>
+                    <div class="small text-muted mt-1">
+                        Uses the treatment's standard price and duration.
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="ReservationDate" class="form-label">Date</label>
+                    <input asp-for="ReservationDate" type="date"
+                           class="form-control" />
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="ReservationTime" class="form-label">Time</label>
+                    <input asp-for="ReservationTime" type="time"
+                           class="form-control" />
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Notes" class="form-label">Notes</label>
+                    <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Book Follow-up</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}
