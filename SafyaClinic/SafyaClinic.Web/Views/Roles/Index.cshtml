@@ -1,0 +1,63 @@
+@model SafyaClinic.Web.Models.RoleLookupViewModel
+@{
+    ViewData["Title"] = "Roles";
+}
+@* Role lookup: the list and add form share one admin-only page. *@
+<div class="page-toolbar">
+    <div><h1>Roles</h1><p class="text-muted mb-0">Manage roles available for user assignment.</p></div>
+    <div class="page-actions">
+        <a asp-controller="Users" asp-action="Index" class="btn btn-outline-primary">Users</a>
+        <a asp-controller="Lookups" asp-action="Index" class="btn btn-outline-secondary">System Lookups</a>
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-12 col-lg-5">
+        <div class="card">
+            <div class="card-header"><h2 class="h5 mb-0">Add role</h2></div>
+            <div class="card-body">
+                <p class="small text-muted">New roles can be assigned to users. Access to application pages depends on the configured permission policies.</p>
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+                    <div class="mb-3">
+                        <label asp-for="RoleName" class="form-label"></label>
+                        <input asp-for="RoleName" class="form-control" maxlength="50" required />
+                        <span asp-validation-for="RoleName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label"></label>
+                        <textarea asp-for="Description" class="form-control" maxlength="255" rows="3"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+                    <div class="form-actions"><button type="submit" class="btn btn-primary">Add role</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-lg-7">
+        <div class="card">
+            <div class="card-header"><h2 class="h5 mb-0">Existing roles</h2></div>
+            @if (Model.Roles.Count == 0)
+            {
+                <div class="empty-state">No roles found.</div>
+            }
+            else
+            {
+                <div class="table-responsive" tabindex="0" role="region" aria-label="Existing roles">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th scope="col">Role</th><th scope="col">Description</th></tr></thead>
+                        <tbody>
+                        @foreach (var role in Model.Roles)
+                        {
+                            <tr><th scope="row">@role.Name</th><td class="clinical-text">@(role.Description ?? "—")</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

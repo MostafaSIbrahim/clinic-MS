@@ -1,0 +1,16 @@
+@model PaymentDashboardDto
+@{ ViewData["Title"] = "Unpaid Payments"; }
+@* Payment access: reception receives only current collectible balances. *@
+<div class="page-toolbar">
+    <h1>Unpaid Payments</h1>
+    <a asp-action="Report" class="btn btn-outline-primary">Today's Payments</a>
+</div>
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+@if (ViewData.ModelState.IsValid)
+{
+    <div class="row g-3 mb-4">
+        <div class="col-md-6"><div class="stat-card bg-rose-soft"><div>Unpaid — Finished Visits</div><strong class="fs-3">@Model.TotalUnpaidCompleted.ToString("C")</strong></div></div>
+        <div class="col-md-6"><div class="stat-card bg-primary-soft"><div>Unpaid — In Consultation</div><strong class="fs-3">@Model.TotalUnpaidPending.ToString("C")</strong></div></div>
+    </div>
+    <partial name="_UnpaidSections" model="Model" />
+}

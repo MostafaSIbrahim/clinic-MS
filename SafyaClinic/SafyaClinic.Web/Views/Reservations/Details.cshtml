@@ -119,6 +119,11 @@
             </div>
         }
     </div>
+    <p class="small text-muted mt-1 mb-1 ms-3">
+        Check in places the patient in Waiting. Start Consultation begins the visit.
+        Completing an active consultation finishes the queue entry.
+    </p>
+
 </div>
 <!-- Details and Actions -->
 <div class="row g-3">
@@ -145,7 +150,7 @@
                     <dd class="col-8">@(Model.Notes ?? "—")</dd>
                     <dt class="col-4 text-muted">Amount</dt>
                     <dd class="col-8">@(Model.TotalAmount?.ToString("C") ?? "—")</dd>
-                    <dt class="col-4 text-muted">Paid</dt>
+                    <dt class="col-4 text-muted">Payment coverage</dt>
                     <dd class="col-8">@await Html.PartialAsync("_PaymentStatusToggle", (Model.Id, Model.PatientId, Model.IsPaid))</dd>
                 </dl>
             </div>
@@ -157,17 +162,26 @@
             <div class="card-header"><i class="bi bi-arrow-repeat me-2"></i>Update Status</div>
             <div class="card-body">
                 @{ var isCompleted = Model.StatusName == "Completed"; }
+                @{ var canCompleteFromQueue = Model.StatusName == "Confirmed"
+                        && Model.QueueStatus == PatientQueueStatus.InConsultation
+                        && Model.ConsultationStartedAtUtc.HasValue;
+                    }
+
                 <form asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
                     @Html.AntiForgeryToken()
-                    <select name="statusId" class="form-select form-select-sm" disabled="@isCompleted">
+                    <label for="reservationStatus" class="form-label mb-0 small text-muted">Status</label>
+                    <select id="reservationStatus" name="statusId" class="form-select form-select-sm" disabled="@isCompleted">
                         <option value="1" selected="@(Model.StatusName == "Pending")">Pending</option>
                         <option value="2" selected="@(Model.StatusName == "Confirmed")">Confirmed</option>
-                        <option value="3" selected="@(Model.StatusName == "Completed")">Completed</option>
+                        <option value="3" selected="@(Model.StatusName == "Completed")" disabled="@(!canCompleteFromQueue)">Completed</option>
                         <option value="4" selected="@(Model.StatusName == "Cancelled")">Cancelled</option>
                         <option value="5" selected="@(Model.StatusName == "NoShow")">NoShow</option>
                     </select>
                     <button type="submit" class="btn btn-sm btn-primary" disabled="@isCompleted">Update</button>
                 </form>
+                <p class="small text-muted mt-2 mb-0">
+                    Completion is available after consultation starts
+                </p> 
                 @if (isCompleted)
                 {
                     <small class="text-muted d-block mt-2">This reservation is completed and its status can no longer be changed.</small>
@@ -175,35 +189,53 @@
             </div>
         </div>
 
-        <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-cash-coin me-2"></i>Payment</div>
-            <div class="card-body d-flex gap-2">
-                @if (!Model.IsPaid)
-                {
-                    <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@Model.PatientId"
-                       asp-route-reservationId="@Model.Id" class="btn btn-sm btn-success w-100">
-                        <i class="bi bi-cash me-1"></i>Collect Payment
-                    </a>
-                }
-                else
-                {
-                    <button type="button" class="btn btn-sm btn-outline-secondary w-100" disabled title="No payment required">
-                        <i class="bi bi-check-circle me-1"></i>Fully Paid — No Payment Required
-                    </button>
-                }
-            </div>
-        </div>
+        
+            @if (User.IsInRole("Admin") || User.IsInRole("Reception"))
+             {
+                    <div class="card mb-3">
+                        <div class="card-header">Payment</div>
+                        <div class="card-body">
+                            @if (ViewBag.CanCollectPayment == true)
+                            {
+                                <a asp-controller="Payments" asp-action="Collect"
+                                   asp-route-patientId="@Model.PatientId" asp-route-reservationId="@Model.Id"
+                                   class="btn btn-success w-100">Collect Payment</a>
+                            }
+                            else
+                            {
+                                <p class="text-muted mb-2">
+                                    @(ViewBag.CollectionStateKnown == true
+                                        ? "No collectible balance for this reservation."
+                                        : "Collection eligibility could not be confirmed. Check the payment summary.")
+                                </p>
+                            }
+                            <a asp-controller="Payments" asp-action="PatientSummary"
+                               asp-route-patientId="@Model.PatientId"
+                               class="btn btn-outline-secondary w-100 mt-2">Payment Summary</a>
+                        </div>
+                    </div>
+             }
+
 
         @if (User.IsInRole("Doctor") || User.IsInRole("Admin"))
         {
-            <div class="card">
+            <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-file-medical me-2"></i>Clinical</div>
                 <div class="card-body">
-                    <a asp-controller="MedicalRecords" asp-action="Create"
-                       asp-route-patientId="@Model.PatientId" asp-route-reservationId="@Model.Id"
-                       class="btn btn-sm btn-outline-primary w-100">
-                        <i class="bi bi-plus-lg me-1"></i>Create Medical Record
-                    </a>
+                    @* Review fix: resume through the existing ownership-checked consultation endpoint. *@
+                    @if (hasUserId && (User.IsInRole("Admin") || Model.DoctorId == currentUserId)
+                        && Model.StatusName == "Confirmed"
+                        && Model.QueueStatus == PatientQueueStatus.InConsultation)
+                    {
+                        <a asp-controller="MedicalRecords" asp-action="Consultation"
+                           asp-route-reservationId="@Model.Id" class="btn btn-primary w-100">Open consultation</a>
+                    }
+                    else
+                    {
+                        <p class="small text-muted">Start an eligible consultation using the queue actions. Previous records remain available below.</p>
+                    }
+                    <a asp-controller="MedicalRecords" asp-action="PatientRecords"
+                       asp-route-patientId="@Model.PatientId" class="btn btn-outline-secondary w-100 mt-2">Patient medical records</a>
                 </div>
             </div>
         }

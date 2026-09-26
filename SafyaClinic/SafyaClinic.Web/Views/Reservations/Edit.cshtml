@@ -14,7 +14,8 @@
     <div class="card-body">
         <form method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            @* Review fix: surface errors bound to individual date/number fields. *@
+            <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
 
             <div class="row g-3">
                 <div class="col-md-6">
@@ -36,7 +37,8 @@
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="TreatmentTypeId" class="form-label">Treatment Type *</label>
+                    @* Review fix: labels target the custom IDs used by treatment autofill. *@
+                    <label for="treatmentTypeSelect" class="form-label">Treatment Type *</label>
                     <select asp-for="TreatmentTypeId" id="treatmentTypeSelect" class="form-select" required>
                         <option value="">— Select Treatment Type —</option>
                         @foreach (var t in treatmentTypes)
@@ -65,11 +67,13 @@
                     <input asp-for="ReservationTime" type="time" class="form-control" required />
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="DurationMinutes" class="form-label">Duration (minutes)</label>
+                    @* Review fix: associate the duration label with its control. *@
+                    <label for="durationInput" class="form-label">Duration (minutes)</label>
                     <input asp-for="DurationMinutes" id="durationInput" type="number" class="form-control" />
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="TotalAmount" class="form-label">Amount</label>
+                    @* Review fix: associate the amount label with its control. *@
+                    <label for="totalAmountInput" class="form-label">Amount</label>
                     <input asp-for="TotalAmount" id="totalAmountInput" type="number" step="0.01" class="form-control" />
                     <small class="text-muted">Auto-filled from the treatment type's price — adjust if needed.</small>
                 </div>

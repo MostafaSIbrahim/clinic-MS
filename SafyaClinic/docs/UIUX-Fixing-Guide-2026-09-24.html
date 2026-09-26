@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safya Clinic — UI/UX Implementation Guide</title>
+<style>
+:root{color-scheme:light;--purple:#5b21b6;--line:#ddd6ee}
+*{box-sizing:border-box}body{margin:0;background:#f6f5fb;color:#202332;font:16px/1.65 system-ui,Segoe UI,sans-serif}
+.shell{max-width:1460px;margin:auto;display:grid;grid-template-columns:275px minmax(0,1fr);gap:32px;padding:32px}
+aside{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside strong{color:var(--purple)}aside ol{padding-left:20px}aside li{margin:10px 0}a{color:var(--purple);text-underline-offset:3px}
+main{min-width:0;background:white;border:1px solid var(--line);border-radius:16px;padding:42px}
+h1{font-size:2rem;line-height:1.2;color:#38156d}h2{font-size:1.55rem;border-top:2px solid var(--line);padding-top:30px;margin-top:42px;scroll-margin-top:20px}h3{font-size:1.15rem;color:#38156d;margin-top:28px}p,li{overflow-wrap:anywhere}li{margin-bottom:8px}
+pre{position:relative;background:#151a2a;color:#f3f4ff;border-radius:10px;padding:22px;overflow:auto;line-height:1.55;font-size:13px;tab-size:4}code{font-family:Consolas,monospace}p code,li code,td code{background:#f0ecf7;padding:2px 4px;border-radius:4px}
+.table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;margin:18px 0}th,td{text-align:left;padding:11px;border:1px solid var(--line);vertical-align:top}th{background:#eee8fa}tr:nth-child(even){background:#faf9fd}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}button,.tools a{border:1px solid var(--purple);background:white;color:var(--purple);border-radius:7px;padding:9px 13px;font:inherit;cursor:pointer;text-decoration:none}button:focus-visible,a:focus-visible{outline:3px solid #0e7490;outline-offset:3px}.copy{font-size:12px;margin-bottom:0;padding:5px 9px}
+@media(max-width:1000px){.shell{display:block;padding:16px}aside{position:static;max-height:none;margin-bottom:24px}aside ol{columns:2}main{padding:24px}}
+@media(max-width:600px){aside ol{columns:1}main{padding:18px}h1{font-size:1.6rem}pre{padding:14px}}
+@media print{body{background:white;font-size:10pt}.shell{display:block;padding:0}aside,.tools,.copy{display:none}main{border:0;padding:0}h2{break-before:page}h2,h3{break-after:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;color:#111;border:1px solid #ddd;font-size:8pt}table{font-size:9pt}.table-scroll{overflow:visible}a{color:#222}}
+</style></head><body><div class="shell"><aside><strong>Safya Clinic · Implementation guide</strong><ol><li><a href="#section-1">Review result and scope</a></li><li><a href="#section-2">F1 — make patient selection reliable before further booking UI work</a></li><li><a href="#section-3">F2 — remove the misleading shared payment action</a></li><li><a href="#section-4">F3 — implement the missing pagination replacement</a></li><li><a href="#section-5">F4 — fix collection form markup</a></li><li><a href="#section-6">F5 — remove the stray reservation card wrapper</a></li><li><a href="#section-7">F6 — make validation failures visible</a></li><li><a href="#section-8">F7 — repair labels and filter reset</a></li><li><a href="#section-9">F8 — restore clinical workspace context</a></li><li><a href="#section-10">F9 — finish small presentation gaps</a></li><li><a href="#section-11">F10 — finish the remaining Analysis/Nutrition forms</a></li><li><a href="#section-12">Fix acceptance log</a></li></ol></aside><main>
+<div class="tools"><button onclick="window.print()">Print / Save as PDF</button><a href="UIUX-Fixing-Guide-2026-09-24.md" download>Download Markdown</a></div>
+<h1>UI/UX review and fixing guide</h1>
+<p>Reviewed 24 September 2026. Root: <code>D:\MyDevWork\clinic-MS\SafyaClinic</code>. All paths below are relative to that root.</p>
+<h2 id="section-1">Review result and scope</h2>
+<p>The implementation is substantially in place, but it is <strong>not ready for final UI/UX sign-off</strong>. This review inspected current views, controller changes, shared JavaScript/CSS and the earlier implementation guide. No build, live browser test, database operation or application-source edit was performed. Visual behavior still needs your tests. The snippets below are proposed edits, not compiled changes.</p>
+<p>Correctly present in the inspected source: contact modals and shared submit helper; address validation and contact-removal feedback; patient workspace shortcuts; payment-service-based reservation collection card and role-aware completion redirect; responsive payment cards/history; persistent error/warning alerts; sidebar list semantics; queue filters; clinical field grouping.</p>
+<p>The findings include omissions from the last guide and older workflow defects exposed by this review. Older defects are labelled; they are not attributed to your latest changes.</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Priority</th>
+<th>Finding</th>
+<th>Origin</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>F1</td>
+<td>P1</td>
+<td>Editing a selected patient&#39;s search text leaves the old hidden PatientId; search responses can arrive out of order; popup messages lack origin/source checks</td>
+<td>Existing booking workflow</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>P2</td>
+<td>Shared payment checkbox still opens collection using only IsPaid, including for roles/states that cannot collect</td>
+<td>Existing shared partial, missed by previous guide</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>P2</td>
+<td>Pagination still discards search/date/category filters</td>
+<td>Earlier guide Step 3 not implemented</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>P2</td>
+<td>Clinic validation span/helper text placed inside select on Collect</td>
+<td>New markup error</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>P2</td>
+<td>Reservation Details has an extra unclosed card wrapper around Payment/Clinical</td>
+<td>New markup error</td>
+</tr>
+<tr>
+<td>F6</td>
+<td>P2</td>
+<td>Clinical Create repeats validation summary; several forms have ModelOnly summaries without field messages</td>
+<td>Duplicate is new; missing field feedback is broader unfinished work</td>
+</tr>
+<tr>
+<td>F7</td>
+<td>P2</td>
+<td>Patient search label points to itself; reservation filter labels do not match input IDs</td>
+<td>New accessibility errors</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>P3</td>
+<td>Medical record identity/lock indicator and Back to Queue removed; empty More Actions for locked records</td>
+<td>New workflow/readability regression</td>
+</tr>
+<tr>
+<td>F9</td>
+<td>P3</td>
+<td>Remaining headings, action wrapping and table-region labels are inconsistent</td>
+<td>Partial implementation</td>
+</tr>
+<tr>
+<td>F10</td>
+<td>P2/P3</td>
+<td>Analysis/Nutrition form finish remains; failed analysis submit loses checked selection; discount input forces zero on redisplay</td>
+<td>Existing forms, unfinished pass</td>
+</tr>
+</tbody></table></div>
+<p>Implement in this order. Build/test/checkpoint each fix. Preserve server authorization, reservation/queue state validation, payment transactions and all antiforgery tokens. Do not run migrations or alter demo data for these fixes.</p>
+<h2 id="section-2">F1 — make patient selection reliable before further booking UI work</h2>
+<p><strong>Reproduce first:</strong> open Reservations/Create, select patient A, replace their displayed name with another name without selecting a result, then inspect patientIdHidden. It still contains A. A valid-looking visible name can therefore book against the wrong patient. This is the highest-impact finding.</p>
+<h3>F1.1 — update the Create view hooks</h3>
+<p>File: <code>SafyaClinic.Web/Views/Reservations/Create.cshtml</code>.</p>
+<ol>
+<li>Add <code>id=&quot;reservationCreateForm&quot;</code> to the existing Create form. Keep its action, POST and token.</li>
+<li>Replace the Patient label with <code>&lt;label for=&quot;patientSearchInput&quot; class=&quot;form-label&quot;&gt;Patient (required)&lt;/label&gt;</code>.</li>
+<li>Keep the hidden PatientId and visible search input IDs unchanged. Add the following attributes to the visible input:</li>
+</ol>
+<pre><code class="language-cshtml">data-search-url=&quot;@Url.Content(&quot;~/api/patients/search&quot;)&quot;
+aria-describedby=&quot;patientSearchHelp patientSearchStatus&quot;
+</code></pre>
+<ol start="4">
+<li>Replace the existing “Type at least 2 characters…” small element with:</li>
+</ol>
+<pre><code class="language-html">&lt;small id=&quot;patientSearchHelp&quot; class=&quot;text-muted&quot;&gt;Type at least 2 characters, then select a patient from the results.&lt;/small&gt;
+&lt;div id=&quot;patientSearchStatus&quot; class=&quot;small mt-1&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+&lt;span asp-validation-for=&quot;PatientId&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+</code></pre>
+<ol start="5">
+<li>On Register New Patient, remove <code>onclick=&quot;openNewPatientWindow()&quot;</code>, add <code>id=&quot;registerPatientButton&quot;</code> and <code>data-popup-url=&quot;@Url.Action(&quot;Create&quot;, &quot;Patients&quot;, new { popup = true })&quot;</code>. Keep type=&quot;button&quot;.</li>
+<li>Inside Scripts delete the entire Patient Autocomplete IIFE (from its comment through its matching <code>})();</code>). Delete the New Patient Popup function and message listener at the end. Keep the Treatment Type Auto-fill listener unchanged.</li>
+<li>After the remaining inline script add:</li>
+</ol>
+<pre><code class="language-cshtml">&lt;script src=&quot;~/js/reservation-patient-picker.js&quot; asp-append-version=&quot;true&quot;&gt;&lt;/script&gt;
+</code></pre>
+<h3>F1.2 — add the complete replacement script</h3>
+<p>Create <code>SafyaClinic.Web/wwwroot/js/reservation-patient-picker.js</code>:</p>
+<pre><code class="language-javascript">(() =&gt; {
+    const form = document.getElementById(&#39;reservationCreateForm&#39;);
+    if (!form) return;
+    const input = document.getElementById(&#39;patientSearchInput&#39;);
+    const hidden = document.getElementById(&#39;patientIdHidden&#39;);
+    const status = document.getElementById(&#39;patientSearchStatus&#39;);
+    const register = document.getElementById(&#39;registerPatientButton&#39;);
+    const list = document.createElement(&#39;div&#39;);
+    list.id = &#39;patientSearchResults&#39;;
+    list.className = &#39;list-group shadow-sm position-absolute w-100&#39;;
+    list.style.cssText = &#39;z-index:1050;max-height:260px;overflow-y:auto&#39;;
+    list.setAttribute(&#39;role&#39;, &#39;listbox&#39;);
+    list.setAttribute(&#39;aria-label&#39;, &#39;Matching patients&#39;);
+    list.hidden = true;
+    input.parentElement.appendChild(list);
+    input.setAttribute(&#39;role&#39;, &#39;combobox&#39;);
+    input.setAttribute(&#39;aria-autocomplete&#39;, &#39;list&#39;);
+    input.setAttribute(&#39;aria-controls&#39;, list.id);
+    input.setAttribute(&#39;aria-expanded&#39;, &#39;false&#39;);
+    let timer, request, revision = 0, popup = null, items = [], active = -1;
+
+    function close() {
+        list.hidden = true;
+        list.replaceChildren();
+        items = []; active = -1;
+        input.setAttribute(&#39;aria-expanded&#39;, &#39;false&#39;);
+        input.removeAttribute(&#39;aria-activedescendant&#39;);
+    }
+    function invalidateRequest() {
+        clearTimeout(timer);
+        request?.abort();
+        revision++;
+    }
+    function validateSelection() {
+        const valid = Number.isSafeInteger(Number(hidden.value)) &amp;&amp; Number(hidden.value) &gt; 0
+            &amp;&amp; input.value.trim().length &gt; 0;
+        input.setCustomValidity(valid ? &#39;&#39; : &#39;Select a patient from the search results.&#39;);
+        return valid;
+    }
+    function select(patient) {
+        const id = Number(patient?.id);
+        if (!Number.isSafeInteger(id) || id &lt;= 0 || typeof patient.fullName !== &#39;string&#39;) return;
+        invalidateRequest();
+        hidden.value = String(id);
+        input.value = patient.fullName + (patient.primaryPhone ? &#39; — &#39; + patient.primaryPhone : &#39;&#39;);
+        validateSelection(); close();
+        status.textContent = &#39;Selected patient #&#39; + id + &#39;: &#39; + patient.fullName;
+        input.focus();
+    }
+    function highlight(index) {
+        active = index;
+        [...list.children].forEach((el, i) =&gt; {
+            el.classList.toggle(&#39;active&#39;, i === index);
+            el.setAttribute(&#39;aria-selected&#39;, String(i === index));
+        });
+        if (list.children[index]) {
+            input.setAttribute(&#39;aria-activedescendant&#39;, list.children[index].id);
+            list.children[index].scrollIntoView({ block: &#39;nearest&#39; });
+        }
+    }
+    function render(results) {
+        close();
+        items = results.filter(p =&gt; Number.isSafeInteger(Number(p.id))
+            &amp;&amp; Number(p.id) &gt; 0 &amp;&amp; typeof p.fullName === &#39;string&#39;);
+        if (!items.length) { status.textContent = &#39;No matching patients. Try another search or register a patient.&#39;; return; }
+        items.forEach((p, i) =&gt; {
+            const option = document.createElement(&#39;button&#39;);
+            option.type = &#39;button&#39;; option.tabIndex = -1;
+            option.id = &#39;patientOption-&#39; + i;
+            option.className = &#39;list-group-item list-group-item-action text-start&#39;;
+            option.setAttribute(&#39;role&#39;, &#39;option&#39;);
+            option.setAttribute(&#39;aria-selected&#39;, &#39;false&#39;);
+            option.textContent = p.fullName + &#39; · #&#39; + p.id +
+                (p.primaryPhone ? &#39; · &#39; + p.primaryPhone : &#39;&#39;) +
+                (p.nationalId ? &#39; · ID: &#39; + p.nationalId : &#39;&#39;);
+            option.addEventListener(&#39;mousedown&#39;, e =&gt; e.preventDefault());
+            option.addEventListener(&#39;click&#39;, () =&gt; select(p));
+            list.appendChild(option);
+        });
+        list.hidden = false;
+        input.setAttribute(&#39;aria-expanded&#39;, &#39;true&#39;);
+        status.textContent = items.length + &#39; matches. Use arrow keys and Enter to select.&#39;;
+    }
+    input.addEventListener(&#39;input&#39;, () =&gt; {
+        invalidateRequest(); close();
+        hidden.value = &#39;&#39;;
+        validateSelection();
+        const term = input.value.trim();
+        if (term.length &lt; 2) { status.textContent = &#39;Type at least 2 characters.&#39;; return; }
+        const current = revision;
+        status.textContent = &#39;Searching…&#39;;
+        timer = setTimeout(async () =&gt; {
+            const controller = new AbortController(); request = controller;
+            try {
+                const url = new URL(input.dataset.searchUrl, location.origin);
+                url.searchParams.set(&#39;query&#39;, term);
+                const response = await fetch(url, { signal: controller.signal,
+                    credentials: &#39;same-origin&#39;, headers: { Accept: &#39;application/json&#39; } });
+                if (!response.ok || response.redirected ||
+                    !(response.headers.get(&#39;content-type&#39;) || &#39;&#39;).includes(&#39;application/json&#39;))
+                    throw new Error(&#39;Search unavailable&#39;);
+                const results = await response.json();
+                if (current !== revision || input.value.trim() !== term || document.activeElement !== input) return;
+                if (!Array.isArray(results)) throw new Error(&#39;Invalid response&#39;);
+                render(results);
+            } catch (error) {
+                if (error.name === &#39;AbortError&#39; || current !== revision) return;
+                close(); status.textContent = &#39;Patient search is unavailable. Check your connection/sign-in, then try again.&#39;;
+            }
+        }, 300);
+    });
+    input.addEventListener(&#39;keydown&#39;, e =&gt; {
+        if (e.key === &#39;Escape&#39;) { invalidateRequest(); close(); return; }
+        if (list.hidden) return;
+        if (e.key === &#39;ArrowDown&#39;) { e.preventDefault(); highlight(Math.min(active + 1, items.length - 1)); }
+        else if (e.key === &#39;ArrowUp&#39;) { e.preventDefault(); highlight(Math.max(active - 1, 0)); }
+        else if (e.key === &#39;Enter&#39;) {
+            e.preventDefault();
+            if (active &gt;= 0) select(items[active]);
+            else status.textContent = &#39;Choose a result with the arrow keys or click a patient.&#39;;
+        }
+    });
+    input.addEventListener(&#39;blur&#39;, () =&gt; setTimeout(() =&gt; {
+        if (!list.contains(document.activeElement)) { invalidateRequest(); close(); }
+    }, 150));
+    form.addEventListener(&#39;submit&#39;, e =&gt; {
+        if (!validateSelection()) { e.preventDefault(); input.reportValidity(); input.focus(); }
+    });
+    register.addEventListener(&#39;click&#39;, () =&gt; {
+        popup = window.open(register.dataset.popupUrl, &#39;NewPatient&#39;,
+            &#39;width=900,height=700,scrollbars=yes,resizable=yes&#39;);
+        if (!popup) status.textContent = &#39;Allow popups to register a patient, then try again.&#39;;
+    });
+    window.addEventListener(&#39;message&#39;, e =&gt; {
+        if (e.origin !== location.origin || !popup || e.source !== popup ||
+            e.data?.type !== &#39;NEW_PATIENT_CREATED&#39;) return;
+        select(e.data.patient);
+    });
+    validateSelection();
+    if (Number(hidden.value) &gt; 0) status.textContent = &#39;Selected patient #&#39; + hidden.value;
+})();
+</code></pre>
+<p>Keep server validation. The script prevents accidental mismatches; a hidden ID is not an authorization boundary.</p>
+<h3>F1.3 — encode and restrict the popup&#39;s reply</h3>
+<p>File: <code>Views/Patients/CreateSuccessPopup.cshtml</code>. Replace its complete script block with the following. Keep Layout=null and all visual markup unchanged:</p>
+<pre><code class="language-cshtml">&lt;script&gt;
+    const createdPatient = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+        id = ViewBag.NewPatientId,
+        fullName = ViewBag.NewPatientName,
+        primaryPhone = ViewBag.NewPatientPhone
+    }));
+    function sendAndClose() {
+        if (window.opener) {
+            window.opener.postMessage({ type: &#39;NEW_PATIENT_CREATED&#39;, patient: createdPatient },
+                window.location.origin);
+        }
+        window.close();
+    }
+    setTimeout(sendAndClose, 3000);
+&lt;/script&gt;
+</code></pre>
+<p>Use the default System.Text.Json encoder, not UnsafeRelaxedJsonEscaping. Html.Raw here surrounds JSON serialized with that encoder; do not use it on raw patient text.</p>
+<p><strong>Test:</strong> preselected patient opens correctly; select A then type B clears ID immediately; raw text cannot submit; valid B sets B&#39;s ID; fast typing never displays obsolete results; shortening input clears results; keyboard and mouse work; blank/no-match/network-error states are distinct; popup creates/selects correct patient; apostrophes and Arabic names display correctly; unrelated messages are ignored; existing treatment autofill and server validation still work.</p>
+<h2 id="section-3">F2 — remove the misleading shared payment action</h2>
+<p>File: <code>Views/Shared/_PaymentStatusToggle.cshtml</code>. Used by Dashboard, Reservations/Today and Reservations/Details. The new Details collection card is correct, but this separate checkbox still offers a route to Collect when IsPaid=false. Backend collection checks remain; this is misleading UI, not evidence that an invalid payment succeeds.</p>
+<p>Replace the entire partial with this compatible tuple-based implementation:</p>
+<pre><code class="language-cshtml">@model (int ReservationId, int PatientId, bool IsPaid)
+&lt;span class=&quot;badge @(Model.IsPaid ? &quot;bg-success&quot; : &quot;bg-secondary&quot;)&quot;&gt;
+    @(Model.IsPaid ? &quot;Covered&quot; : &quot;Not fully covered&quot;)
+&lt;/span&gt;
+@if (User.IsInRole(&quot;Admin&quot;) || User.IsInRole(&quot;Reception&quot;))
+{
+    &lt;a asp-controller=&quot;Payments&quot; asp-action=&quot;PatientSummary&quot;
+       asp-route-patientId=&quot;@Model.PatientId&quot;
+       class=&quot;btn btn-sm btn-outline-secondary ms-1&quot;&gt;Payment summary&lt;/a&gt;
+}
+</code></pre>
+<p>Keep the partial name and every caller unchanged for now. This status is coverage, not collectible eligibility. Rename the adjacent “Paid” column/description to “Payment coverage” on the three active callers. The summary and Details card already provide correct collectible actions; do not add per-row database calls in Razor. “Covered” also avoids misrepresenting a write-off as cash paid.</p>
+<p><strong>Test:</strong> Pending/Waiting no longer offer direct Collect through the checkbox; doctors have no payment link; reception can inspect summary; InConsultation/Finished positive balances retain the authoritative collection buttons; write-off/partial/zero balances still behave as before.</p>
+<h2 id="section-4">F3 — implement the missing pagination replacement</h2>
+<p>Replace <code>Views/Shared/_Pagination.cshtml</code> in full with the code below. Preserve callers&#39; PagedResult<object> conversion and PaginationAction. These current filters are single-valued.</p>
+<pre><code class="language-cshtml">@model PagedResult&lt;object&gt;
+@using Microsoft.AspNetCore.Routing
+@{
+    var action = ViewData[&quot;PaginationAction&quot;]?.ToString() ?? &quot;Index&quot;;
+    string PageUrl(int page)
+    {
+        var values = new RouteValueDictionary();
+        foreach (var pair in Context.Request.Query)
+        {
+            if (pair.Key.Equals(&quot;page&quot;, StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals(&quot;pageSize&quot;, StringComparison.OrdinalIgnoreCase)) continue;
+            values[pair.Key] = pair.Value.ToString();
+        }
+        values[&quot;page&quot;] = page;
+        values[&quot;pageSize&quot;] = Model.PageSize;
+        return Url.Action(action, values) ?? &quot;#&quot;;
+    }
+}
+@if (Model != null &amp;&amp; Model.TotalPages &gt; 1)
+{
+    &lt;nav aria-label=&quot;Results pages&quot; class=&quot;mt-3&quot;&gt;
+        &lt;ul class=&quot;pagination justify-content-center flex-wrap gap-1&quot;&gt;
+            &lt;li class=&quot;page-item @(!Model.HasPrev ? &quot;disabled&quot; : &quot;&quot;)&quot;&gt;
+                @if (Model.HasPrev)
+                {
+                    &lt;a class=&quot;page-link&quot; href=&quot;@PageUrl(Model.Page - 1)&quot;&gt;Previous&lt;/a&gt;
+                }
+                else { &lt;span class=&quot;page-link&quot; aria-disabled=&quot;true&quot;&gt;Previous&lt;/span&gt; }
+            &lt;/li&gt;
+            @for (var page = Math.Max(1, Model.Page - 2);
+                  page &lt;= Math.Min(Model.TotalPages, Model.Page + 2); page++)
+            {
+                &lt;li class=&quot;page-item @(page == Model.Page ? &quot;active&quot; : &quot;&quot;)&quot;&gt;
+                    @if (page == Model.Page)
+                    {
+                        &lt;span class=&quot;page-link&quot; aria-current=&quot;page&quot;&gt;@page&lt;/span&gt;
+                    }
+                    else { &lt;a class=&quot;page-link&quot; href=&quot;@PageUrl(page)&quot;&gt;@page&lt;/a&gt; }
+                &lt;/li&gt;
+            }
+            &lt;li class=&quot;page-item @(!Model.HasNext ? &quot;disabled&quot; : &quot;&quot;)&quot;&gt;
+                @if (Model.HasNext)
+                {
+                    &lt;a class=&quot;page-link&quot; href=&quot;@PageUrl(Model.Page + 1)&quot;&gt;Next&lt;/a&gt;
+                }
+                else { &lt;span class=&quot;page-link&quot; aria-disabled=&quot;true&quot;&gt;Next&lt;/span&gt; }
+            &lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;p class=&quot;small text-muted text-center&quot;&gt;Page @Model.Page of @Model.TotalPages&lt;/p&gt;
+    &lt;/nav&gt;
+}
+</code></pre>
+<p><strong>Test:</strong> Patients search followed by Next keeps search; reservations retains dates/category; Previous works; new filter submissions start at page 1; disabled boundaries cannot navigate; several dozen pages do not overflow mobile. Search the solution for <code>_Pagination</code> and test all active callers. Do not change the separate audit modal&#39;s pagination unless it has the same confirmed defect.</p>
+<h2 id="section-5">F4 — fix collection form markup</h2>
+<p>File: <code>Views/Payments/Collect.cshtml</code>.</p>
+<p>Inside <code>&lt;select asp-for=&quot;ClinicId&quot; ...&gt;</code> delete the placeholder small element containing “…first visit… deduction…” and remove the validation span from inside that select. Keep the empty option and clinics loop. Immediately after the matching <code>&lt;/select&gt;</code> insert:</p>
+<pre><code class="language-cshtml">&lt;span asp-validation-for=&quot;ClinicId&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+</code></pre>
+<p>Keep the existing real deduction helper paragraph after it. Only option/optgroup content belongs in this ordinary select; the current browser parsing can discard the validation element.</p>
+<p>Wrap the existing final Collect Payment button and Cancel anchor in <code>&lt;div class=&quot;form-actions&quot;&gt;…&lt;/div&gt;</code>, still inside the form. Do not wrap any surrounding form. Keep the hidden IDs, token, Amount binding, clinic selection and POST action unchanged.</p>
+<p><strong>Test:</strong> inspect the rendered DOM: ClinicId message is a sibling after the select, not a child. Invalid clinic displays error; other errors retain entered values; reservation clinic remains selected; payment is recorded once after correction.</p>
+<h2 id="section-6">F5 — remove the stray reservation card wrapper</h2>
+<p>File: <code>Views/Reservations/Details.cshtml</code>. Near the end, the current structure starts:</p>
+<pre><code class="language-cshtml">        &lt;div class=&quot;card mb-3&quot;&gt;
+            @if (User.IsInRole(&quot;Admin&quot;) || User.IsInRole(&quot;Reception&quot;))
+                {
+                    &lt;div class=&quot;card mb-3&quot;&gt;
+</code></pre>
+<p>Delete <strong>only the first opening <code>&lt;div class=&quot;card mb-3&quot;&gt;</code> immediately before this payment-role if</strong>. Keep the inner card inside the if. Do not remove either of the final two closing divs: they close the right column and outer row after this correction. The Clinical card should be a sibling after the payment if, within <code>col-md-5</code>.</p>
+<p>Expected nesting:</p>
+<pre><code class="language-text">row
+  col-md-7: reservation details
+  col-md-5
+    Update Status card
+    if Admin/Reception: Payment card
+    if Doctor/Admin: Clinical card
+</code></pre>
+<p><strong>Test:</strong> admin, reception and doctor renders have no blank outer card/double border; both columns close inside the page content; footer/layout are not nested in a card; resize to phone width; existing forms/routes still work.</p>
+<h2 id="section-7">F6 — make validation failures visible</h2>
+<p>In <code>Views/MedicalRecords/Create.cshtml</code>, two identical ModelOnly summaries exist (before and after hidden IDs). Delete the second. Change the remaining summary to:</p>
+<pre><code class="language-cshtml">&lt;div asp-validation-summary=&quot;All&quot; class=&quot;alert alert-danger py-2&quot;
+     role=&quot;alert&quot; tabindex=&quot;-1&quot;&gt;&lt;/div&gt;
+</code></pre>
+<p>Use one All summary with these attributes in each of: MedicalRecords/Edit, Patients/Create, Patients/EditBasic and Patients/EditMedical. They currently lack field-level message spans; ModelOnly omits errors keyed to an individual property. A malformed date/number can therefore return the form without a readable explanation. Do not remove server validators or clear ModelState.</p>
+<p>For clinical Create/Edit, add a span immediately after each corresponding control:</p>
+<pre><code class="language-cshtml">&lt;span asp-validation-for=&quot;FollowUpDate&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+</code></pre>
+<p>Repeat for ChiefComplaint, PresentIllnessHistory, Diagnosis, DifferentialDiagnosis, TreatmentPlan and Notes; also Category on Create. Use the actual property name for each. Keep the spans outside textarea/select elements. You may add matching spans on patient forms the same way; the All summary is the minimum complete fix.</p>
+<p><strong>Test:</strong> a server-rejected value displays a message, entered clinical text stays intact, Create shows one summary not two; valid submit succeeds. Test actual server errors as well as native browser required-field prompts.</p>
+<h2 id="section-8">F7 — repair labels and filter reset</h2>
+<p><code>Views/Patients/Index.cshtml</code>: replace <code>&lt;label for=&quot;patientsearch&quot; class=&quot;form-label&quot; id=&quot;patientsearch&quot;&gt;Search&lt;/label&gt;</code> with <code>&lt;label for=&quot;patientSearch&quot; class=&quot;form-label&quot;&gt;Name, phone or national ID&lt;/label&gt;</code>. Add <code>id=&quot;patientSearch&quot;</code> to the adjacent search input. Keep name/value. Give the form <code>asp-action=&quot;Index&quot;</code> and keep method=get.</p>
+<p><code>Views/Reservations/Index.cshtml</code>: change label for values according to this table; input IDs already use the right-hand values:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Current for</th>
+<th>Replace with</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DateFrom</td>
+<td>reservationDateFrom</td>
+</tr>
+<tr>
+<td>DateTo</td>
+<td>reservationDateTo</td>
+</tr>
+<tr>
+<td>Category</td>
+<td>reservationCategory</td>
+</tr>
+</tbody></table></div>
+<p>Add <code>asp-action=&quot;Index&quot;</code> and use <code>class=&quot;row g-3 align-items-end mb-3 filter-panel&quot;</code> on its GET form. After Filter, add <code>&lt;a asp-action=&quot;Index&quot; class=&quot;btn btn-outline-secondary&quot;&gt;Clear&lt;/a&gt;</code>. Change the no-results text to “No reservations match these filters.” (one period).</p>
+<p>Add a visible label for the status select in Reservations/Details, e.g. <code>for=&quot;reservationStatus&quot;</code>, and add that ID to the select. Keep name=statusId and all eligibility attributes.</p>
+<p><strong>Test:</strong> clicking every label focuses its input; screen-reader names are meaningful; Clear removes date/category query values; pagination from F3 continues retaining active filters.</p>
+<h2 id="section-9">F8 — restore clinical workspace context</h2>
+<p>File: <code>Views/MedicalRecords/Details.cshtml</code>.</p>
+<ol>
+<li>Replace <code>&lt;h1 class=&quot;mb-0&quot;&gt;Medical Record&lt;/h1&gt;</code> with:</li>
+</ol>
+<pre><code class="language-cshtml">&lt;h1 class=&quot;mb-0&quot;&gt;Medical record #@Model.Id&lt;/h1&gt;
+&lt;span class=&quot;badge @(Model.IsLocked ? &quot;bg-secondary&quot; : &quot;bg-success&quot;)&quot;&gt;
+    @(Model.IsLocked ? &quot;Locked&quot; : &quot;Editable&quot;)
+&lt;/span&gt;
+</code></pre>
+<ol start="2">
+<li>Keep Back to Patient. Add this sibling in page-actions to restore the clinician&#39;s queue return:</li>
+</ol>
+<pre><code class="language-cshtml">&lt;a asp-controller=&quot;Reservations&quot; asp-action=&quot;Queue&quot;
+   class=&quot;btn btn-outline-secondary&quot;&gt;Back to Queue&lt;/a&gt;
+</code></pre>
+<ol start="3">
+<li>Wrap the entire More Actions dropdown div in <code>@if (!Model.IsLocked) { ... }</code>. Do not include Complete Consultation or other forms in this wrapper. The existing Edit and Admin Lock conditions stay. Locked records currently render an empty dropdown.</li>
+<li>Remove the placeholder <code>id=&quot;...no...&quot;</code> from the Clinical Notes h2. Keep record-clinical on its container.</li>
+<li>Remove the span surrounding the Prescriptions h2; put h2 directly inside the card-header.</li>
+<li>Rename “OrderAnalyses” to “Order analyses”. Replace the h2 inside the Request Medical Analysis anchor with plain icon/text; an action is not a section heading.</li>
+<li>Move <code>id=&quot;record-analyses&quot;</code> from the order-action card to the card headed “Analyses from this Record”. The Analyses shortcut should reach existing results, not merely the request button. Keep request action and existing analysis links.</li>
+<li>Add visible “Open analysis” text to the eye-only analysis link. Keep its controller/action/id.</li>
+</ol>
+<p><strong>Test:</strong> record number and lock state visible; locked record has no empty menu; section shortcuts land correctly; Back to Queue works; prescription print/analysis/attachment actions and completion conditions unchanged.</p>
+<h2 id="section-10">F9 — finish small presentation gaps</h2>
+<p>These are polish items, not changes to business behavior.</p>
+<h3>List headers</h3>
+<p>Patients/Index and Reservations/Index still use nonwrapping card headers and span titles. Keep the card design if you prefer it. Change their header class to <code>card-header page-toolbar mb-0</code>, use a direct <code>&lt;div&gt;</code> for the heading/description, and put the title in <code>&lt;h1 class=&quot;mb-1&quot;&gt;Patients&lt;/h1&gt;</code> or Reservations. Use page-actions on the action wrapper; remove its conflicting plain nonwrapping d-flex gap-2 wrapper. Do not nest a p or h1 inside a span. Preserve all anchor routes.</p>
+<p>In MedicalRecords/PatientRecords, remove the span around its h1; place the icon inside h1. Keep the New Record link.</p>
+<h3>Summary tables and actions</h3>
+<p>Payments/PatientSummary: the <strong>first</strong> table wrapper under Ready for collection is currently labelled “Payment history”. Change it to <code>aria-label=&quot;Ready for collection&quot;</code>; leave the second history wrapper unchanged. Change its blank th to <code>&lt;th scope=&quot;col&quot;&gt;&lt;span class=&quot;visually-hidden&quot;&gt;Actions&lt;/span&gt;&lt;/th&gt;</code>.</p>
+<p>Payments/Report: add <code>tabindex=&quot;0&quot; role=&quot;region&quot; aria-label=&quot;Payment report results&quot;</code> to its table-responsive wrapper. Keep audit popup markup/script targets wherever they already exist; Report did not gain a new audit action in this pass and this guide does not invent one.</p>
+<p>MedicalRecords/Create and Edit: add a page-toolbar h1 before the card, retaining the current ViewData title. Remove the redundant card title text or make it a section title; keep the form. Add a shared <code>.clinical-form-card { max-width: 50rem; }</code> rule and replace their inline width with that class if desired.</p>
+<p><strong>Test:</strong> no duplicate h1 per page; 360px layout wraps buttons; table regions have distinct names; keyboard focus and print remain usable. Keep current design tokens rather than adding another palette.</p>
+<h2 id="section-11">F10 — finish the remaining Analysis/Nutrition forms</h2>
+<p>These forms were not changed in your current diff. They are remaining scope from the earlier guide, not proof that they fail all runtime tests.</p>
+<h3>Analysis request: retain selections on a failed submit</h3>
+<p>In <code>Views/Analysis/Request.cshtml</code>, add to each AnalysisTypeIds checkbox:</p>
+<pre><code class="language-cshtml">checked=&quot;@(Model.AnalysisTypeIds.Contains(t.Id))&quot;
+</code></pre>
+<p>Keep name, id and value. Change its one summary to All as in F6. Use a fieldset/legend around the analysis-type checkbox group instead of the unassociated outer label: legend text “Analysis types (select all that apply)”. Keep each checkbox&#39;s existing matching label.</p>
+<p>Add page-toolbar with h1 “Request medical analysis” before the card. Wrap existing Request/Cancel controls in form-actions. When Model.RecordId has a value, Cancel should use MedicalRecords/Details with that id; otherwise preserve Patients/Details with Model.PatientId. This retains consultation context.</p>
+<h3>Nutrition enrollment: stop overwriting submitted discount</h3>
+<p>In <code>Views/Nutrition/Enroll.cshtml</code>, remove only the hard-coded <code>value=&quot;0&quot;</code> on <code>asp-for=&quot;DiscountPercent&quot;</code>. Let the tag helper use the model/ModelState value so invalid POST redisplay does not silently show zero. Keep the default set by the DTO/controller and the existing discount/price-preview script.</p>
+<p>Give Enroll and RecordFollowUp one page-toolbar/h1, one All validation summary, and form-actions around their current final buttons. Keep existing form routes (including enrollmentId), hidden FollowUpId and patient/package/doctor IDs. Do not rename FollowUpId during a styling change. Keep all existing field names and measurement units.</p>
+<p><strong>Test:</strong> failed analysis submit retains checked types; Cancel returns to the originating record when linked; failed enrollment retains discount/notes/package; successful enrollment price follows the existing server calculation; follow-up measurements persist after failed validation; no duplicate submit/form nesting. Treat any discovered controller failure to repopulate option lists as a separate review item rather than removing validation.</p>
+<h2 id="section-12">Fix acceptance log</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Fix</th>
+<th>Build</th>
+<th>Test result / notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>F1 Patient identity and popup</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F2 Payment status UI</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F3 Pagination</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F4 Collect markup</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F5 Reservation structure</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F6 Validation</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F7 Labels/filters</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F8 Clinical context</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F9 Presentation finish</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F10 Remaining forms</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table></div>
+<p>Then use <code>UIUX-Next-Step-Reservation-Workflow-2026-09-24.md</code>. Do not skip failed fixes to begin the next step. If an anchor differs from your current file, send the exact block for review. Preserve your last working checkpoint and revert only the failed edit when necessary. No database reset is part of this procedure.</p>
+
+</main></div><script>
+document.querySelectorAll('pre').forEach(pre=>{const b=document.createElement('button');b.className='copy';b.textContent='Copy code';b.onclick=async()=>{try{await navigator.clipboard.writeText(pre.querySelector('code').textContent);b.textContent='Copied';setTimeout(()=>b.textContent='Copy code',1500)}catch{b.textContent='Select code and copy manually'}};pre.before(b)});
+</script></body></html>

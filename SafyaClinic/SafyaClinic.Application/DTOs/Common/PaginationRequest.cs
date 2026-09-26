@@ -2,8 +2,11 @@
 
 public class PaginationRequest
 {
+    private const int DefaultPageSize = 20;
+    private const int MaxPageSize = 100;
+
     private int _page = 1;
-    private int _pageSize = 20;
+    private int _pageSize = DefaultPageSize;
 
     public int Page
     {
@@ -14,7 +17,8 @@ public class PaginationRequest
     public int PageSize
     {
         get => _pageSize;
-        init => _pageSize = value < 1 ? 20 : value > 100 ? 100 : value;
+        init => _pageSize = value < 1 ? DefaultPageSize :
+                            value > MaxPageSize ? MaxPageSize : value;
     }
 
     public string? Search { get; init; }

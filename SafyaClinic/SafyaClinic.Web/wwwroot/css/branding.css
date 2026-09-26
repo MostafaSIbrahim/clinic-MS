@@ -1,0 +1,34 @@
+/* Branding: shared sizing for the approved logo, including standalone and print views. */
+.clinic-logo {
+    display: block;
+    width: 240px;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.clinic-brand-link {
+    display: block;
+    min-width: 0;
+}
+
+.clinic-brand-link:focus-visible {
+    outline: 3px solid #5b21b6;
+    outline-offset: 4px;
+    border-radius: 4px;
+}
+
+.clinic-logo--sidebar { width: 204px; }
+.clinic-logo--landing { width: 210px; }
+.clinic-logo--login { width: 290px; margin: 0 auto 1rem; }
+.clinic-logo--print { width: 200px; margin-bottom: .5rem; }
+
+/* Branding: leave room for the menu control on narrow landing pages. */
+@media (max-width: 575.98px) {
+    .clinic-logo--landing { width: 170px; }
+}
+
+/* Branding: use physical dimensions for predictable letterheads across paper sizes. */
+@media print {
+    .clinic-logo--print { width: 48mm; break-inside: avoid; }
+}

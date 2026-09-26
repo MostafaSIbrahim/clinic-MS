@@ -5,9 +5,13 @@
 }
 
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-calendar2-week me-2"></i>Reservations</span>
-        <div class="d-flex gap-2">
+    @* Review fix: allow header actions to wrap and use a real page heading. *@
+    <div class="card-header page-toolbar mb-0">
+        <div>
+            <h1 class="mb-1"><i class="bi bi-calendar2-week me-2" aria-hidden="true"></i>Reservations</h1>
+            <p class="text-muted mb-2">Find a reservation or register a new reservation.</p>
+        </div>
+        <div class="page-actions">
             <a asp-action="Today" class="btn btn-sm btn-outline-secondary"><i class="bi bi-calendar-day me-1"></i>Today</a>
             <a asp-action="Create" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Reservation</a>
             <a asp-action="Board" class="btn btn-sm btn-outline-primary">
@@ -16,15 +20,21 @@
         </div>
     </div>
     <div class="card-body">
-        <form method="get" class="row g-2 mb-3">
+        <form method="get" asp-action="Index" class="row g-3 align-items-end mb-3 filter-panel">
             <div class="col-md-2">
-                <input type="date" name="DateFrom" value="@filter?.DateFrom?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+                 <label for="reservationDateFrom" class="form-label">From:</label>
+                @* Review fix: names bind the filter DTO; IDs associate the visible labels. *@
+                <input type="date" name="DateFrom" value="@filter?.DateFrom?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" id="reservationDateFrom"/>
             </div>
             <div class="col-md-2">
-                <input type="date" name="DateTo" value="@filter?.DateTo?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+                <label for="reservationDateTo" class="form-label">To:</label>    
+                @* Review fix: preserve the DateTo model-binding key. *@
+                <input type="date" name="DateTo" value="@filter?.DateTo?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" id="reservationDateTo"/>
             </div>
             <div class="col-md-2">
-                <select name="Category" class="form-select form-select-sm">
+                <label for="reservationCategory" class="form-label">Treatment Category:</label>
+                @* Review fix: preserve the Category model-binding key. *@
+                <select name="Category" class="form-select form-select-sm" id="reservationCategory">
                     <option value="">All Categories</option>
                     <option value="InternalMedicine" selected="@(filter?.Category == "InternalMedicine")">Internal Medicine</option>
                     <option value="Nutritional" selected="@(filter?.Category == "Nutritional")">Nutritional</option>
@@ -32,29 +42,40 @@
             </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-funnel me-1"></i>Filter</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
             </div>
         </form>
 
-        @if (Model == null || !Model.Items.Any())
+        @* Search-first: do not imply there are no reservations before the user applies criteria. *@
+        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+        @if (!ViewData.ModelState.IsValid)
         {
-            <div class="text-center text-muted py-5">
+            <p class="text-muted py-3">Check the filters above and try again.</p>
+        }
+        else if (ViewBag.HasSearch != true)
+        {
+            <div class="empty-state" role="status">Choose at least one date or treatment category, then select Filter to load reservations.</div>
+        }
+        else if (Model == null || !Model.Items.Any())
+        {
+            <div class="text-center text-muted py-5" tabindex="0" role="region" aria-label="Reservation results">
                 <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-50"></i>
-                No reservations found.
+                No reservations match these filters.
             </div>
         }
         else
         {
-            <div class="table-responsive">
+            <div class="table-responsive" tabindex="0" role="region" aria-label="Reservation results">
                 <table class="table table-hover align-middle">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Patient</th>
-                            <th>Doctor</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th></th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Time</th>
+                            <th scope="col">Patient</th>
+                            <th scope="col">Doctor</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Status</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -69,7 +90,7 @@
                                 <td><span class="badge" style="background-color:@r.StatusColor;color:#fff;">@r.StatusName</span></td>
                                 <td class="text-end">
                                     <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-eye"></i> View
                                     </a>
                                 </td>
                             </tr>

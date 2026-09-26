@@ -2,6 +2,24 @@
 @{
     ViewData["Title"] = "Dashboard";
 }
+<div class="page-toolbar">
+    <div><h1>Dashboard</h1><p class="text-muted mb-0">Choose your next task.</p></div>
+</div>
+<nav class="workspace-shortcuts" aria-label="Dashboard shortcuts">
+    @if (User.IsInRole("Admin") || User.IsInRole("Reception") || User.IsInRole("Doctor"))
+    {
+        <a asp-controller="Reservations" asp-action="Queue" class="btn btn-outline-primary">
+            @(User.IsInRole("Doctor") && !User.IsInRole("Admin")
+                && !User.IsInRole("Reception") ? "My Queue" : "Doctor Queues")
+        </a>
+    }
+    @if (User.IsInRole("Admin") || User.IsInRole("Reception"))
+    {
+        <a asp-controller="Patients" asp-action="Index" class="btn btn-outline-primary">Find Patient</a>
+        <a asp-controller="Reservations" asp-action="Create" class="btn btn-primary">Book Reservation</a>
+        <a asp-controller="Payments" asp-action="Dashboard" class="btn btn-outline-primary">Payments</a>
+    }
+</nav>
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
@@ -82,7 +100,7 @@
                             <th>Doctor</th>
                             <th>Category</th>
                             <th>Status</th>
-                            <th>Paid</th>
+                            <th>Payment coverage</th>
                         </tr>
                     </thead>
                     <tbody>

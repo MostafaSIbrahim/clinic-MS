@@ -4,15 +4,21 @@
     var enrollmentId = Model.FollowUpId;
 }
 
+<div class="page-toolbar d-flex justify-content-between align-items-start mb-3">
+    <h1 class="mb-0">Record Weekly Follow-Up</h1>
+</div>
+
 <div class="card" style="max-width:800px;">
-    <div class="card-header"><i class="bi bi-clipboard2-pulse me-2"></i>Record Weekly Follow-Up</div>
     <div class="card-body">
         <form asp-action="RecordFollowUp" asp-route-enrollmentId="@enrollmentId" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <div asp-validation-summary="All"
+                 class="alert alert-danger d-flex justify-content-center align-items-center py-1"
+                 role="alert" tabindex="-1">
+                Record Weekly Follow-Up for the Patient
+            </div>
             <input type="hidden" asp-for="FollowUpId" />
 
-            <!-- NEW: Follow-up Date -->
             <div class="mb-3">
                 <label asp-for="FollowUpDate" class="form-label">Follow-Up Date *</label>
                 <input asp-for="FollowUpDate" type="date" class="form-control" required />
@@ -123,7 +129,7 @@
                 <i class="bi bi-plus"></i> Add Lab Result
             </button>
 
-            <div>
+            <div class="form-actions">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Follow-Up</button>
                 <a asp-action="EnrollmentDetails" asp-route-id="@enrollmentId" class="btn btn-outline-secondary">Cancel</a>
             </div>
@@ -142,9 +148,9 @@
             const row = document.createElement('div');
             row.className = 'row g-2 mb-2';
             row.innerHTML = `
-                <div class="col-md-4"><input type="number" name="AdministeredItems[${itemIdx}].PackageItemId" class="form-control form-control-sm" placeholder="Package Item ID" /></div>
-                <div class="col-md-3"><input type="number" step="0.01" name="AdministeredItems[${itemIdx}].ActualQuantity" class="form-control form-control-sm" placeholder="Actual Qty" /></div>
-                <div class="col-md-5"><input type="text" name="AdministeredItems[${itemIdx}].Notes" class="form-control form-control-sm" placeholder="Notes" /></div>`;
+                        <div class="col-md-4"><input type="number" name="AdministeredItems[${itemIdx}].PackageItemId" class="form-control form-control-sm" placeholder="Package Item ID" /></div>
+                        <div class="col-md-3"><input type="number" step="0.01" name="AdministeredItems[${itemIdx}].ActualQuantity" class="form-control form-control-sm" placeholder="Actual Qty" /></div>
+                        <div class="col-md-5"><input type="text" name="AdministeredItems[${itemIdx}].Notes" class="form-control form-control-sm" placeholder="Notes" /></div>`;
             c.appendChild(row);
             itemIdx++;
         });
@@ -153,14 +159,14 @@
             const row = document.createElement('div');
             row.className = 'row g-2 mb-2';
             row.innerHTML = `
-                <div class="col-md-3"><input type="number" name="LabResults[${labIdx}].AnalysisTypeId" class="form-control form-control-sm" placeholder="Analysis Type ID" /></div>
-                <div class="col-md-3"><input type="text" name="LabResults[${labIdx}].ResultValue" class="form-control form-control-sm" placeholder="Result" /></div>
-                <div class="col-md-3"><input type="text" name="LabResults[${labIdx}].ReferenceRange" class="form-control form-control-sm" placeholder="Reference Range" /></div>
-                <div class="col-md-3">
-                    <select name="LabResults[${labIdx}].IsNormal" class="form-select form-select-sm">
-                        <option value="">Normal?</option><option value="true">Normal</option><option value="false">Abnormal</option>
-                    </select>
-                </div>`;
+                        <div class="col-md-3"><input type="number" name="LabResults[${labIdx}].AnalysisTypeId" class="form-control form-control-sm" placeholder="Analysis Type ID" /></div>
+                        <div class="col-md-3"><input type="text" name="LabResults[${labIdx}].ResultValue" class="form-control form-control-sm" placeholder="Result" /></div>
+                        <div class="col-md-3"><input type="text" name="LabResults[${labIdx}].ReferenceRange" class="form-control form-control-sm" placeholder="Reference Range" /></div>
+                        <div class="col-md-3">
+                            <select name="LabResults[${labIdx}].IsNormal" class="form-select form-select-sm">
+                                <option value="">Normal?</option><option value="true">Normal</option><option value="false">Abnormal</option>
+                            </select>
+                        </div>`;
             c.appendChild(row);
             labIdx++;
         });

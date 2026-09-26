@@ -1,14 +1,9 @@
 @model CreateUserRequest
 @{
     ViewData["Title"] = "Add User";
-    var allRoles = new[]
-    {
-        (Id: 1, Name: "Admin"),
-        (Id: 2, Name: "Doctor"),
-        (Id: 3, Name: "Reception"),
-        (Id: 4, Name: "Patient"),
-        (Id: 5, Name: "Nutritionist")
-    };
+    // Role lookup: use the actual catalog, including newly created roles.
+    var allRoles = ViewBag.AllRoles as IEnumerable<SafyaClinic.Web.Models.RoleLookupItem>
+        ?? Enumerable.Empty<SafyaClinic.Web.Models.RoleLookupItem>();
 }
 
 <div class="card" style="max-width:700px;">
@@ -16,7 +11,8 @@
     <div class="card-body">
         <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            @* Role lookup: show errors for invalid submitted role IDs and other fields. *@
+            <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert"></div>
 
             <div class="row g-3">
                 <div class="col-md-6">
@@ -50,7 +46,9 @@
                         @foreach (var role in allRoles)
                         {
                             <div class="form-check">
-                                <input type="checkbox" name="RoleIds" value="@role.Id" class="form-check-input" id="role_@role.Id" />
+                                @* Role lookup: retain selections if user creation is rejected. *@
+                                <input type="checkbox" name="RoleIds" value="@role.Id" class="form-check-input" id="role_@role.Id"
+                                       checked="@(Model.RoleIds?.Contains(role.Id) == true)" />
                                 <label class="form-check-label" for="role_@role.Id">@role.Name</label>
                             </div>
                         }

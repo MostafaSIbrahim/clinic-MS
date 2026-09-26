@@ -3,31 +3,39 @@
     ViewData["Title"] = "Payment Summary";
 }
 
-<div class="mb-3">
-    <h4 class="mb-0">@Model.PatientName</h4>
-    <small class="text-muted">Financial Summary</small>
+<div class="page-toolbar">
+    <div>
+        <h1>@Model.PatientName</h1>
+        <p class="text-muted mb-0">Payment summary</p>
+    </div>
+    <div class="page-actions">
+        <a asp-controller="Patients" asp-action="Details"
+           asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">Patient workspace</a>
+        <a asp-action="Dashboard" class="btn btn-outline-secondary">Payment dashboard</a>
+    </div>
 </div>
 
+
 <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card bg-primary-soft">
             <div class="small opacity-75">Total Charged</div>
             <div class="fs-3 fw-bold">@Model.TotalCharged.ToString("C")</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card bg-teal-soft">
             <div class="small opacity-75">Total Paid</div>
             <div class="fs-3 fw-bold">@Model.TotalPaid.ToString("C")</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card bg-amber-soft">
             <div class="small opacity-75">Written Off (Cancelled)</div>
             <div class="fs-3 fw-bold">@Model.TotalWrittenOff.ToString("C")</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card @(Model.CollectibleBalance > 0 ? "bg-rose-soft" : "bg-teal-soft")">
             <div class="small opacity-75">Collectible Balance</div>
 
@@ -49,10 +57,11 @@
 </div>
 <div class="card mb-4">
     <div class="card-header">
-        <i class="bi bi-cash-coin me-2"></i>Pending Payments
+        <i class="bi bi-cash-coin me-2"></i>Ready for collection
     </div>
 
     <div class="card-body">
+        <p class="small text-muted">Balances currently eligible for collection.</p>
         @if (Model.UnallocatedCoverage > 0)
         {
             <div class="alert alert-warning mb-0">
@@ -76,15 +85,17 @@
         }
         else
         {
-            <div class="table-responsive">
+            @* Review fix: distinguish the collectible balances table from payment history. *@
+            <div class="table-responsive" tabindex="0" role="region" aria-label="Ready for collection">
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Service</th>
-                            <th>Clinic</th>
-                            <th>Remaining Amount</th>
-                            <th></th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Service</th>
+                            <th scope="col">Clinic</th>
+                            <th scope="col">Remaining Amount</th>
+                            @* Review fix: name the action column for assistive technology. *@
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -131,14 +142,16 @@
         }
         else
         {
-            <table class="table table-hover mb-0 align-middle">
-                <thead>
-                    <tr>
-                        <th>Date</th><th>Amount</th><th>Method</th><th>Clinic</th><th>Source</th>
-                        <th>Deduction</th><th>Clinic Net</th><th>Status</th><th>Collected By</th><th></th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div class="table-responsive" tabindex="0" role="region" aria-label="Payment history">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Date</th><th scope="col">Amount</th><th scope="col">Method</th><th scope="col">Clinic</th><th scope="col">Source</th>
+                            <th scope="col">Deduction</th><th scope="col">Clinic Net</th><th scope="col">Status</th><th scope="col">Collected By</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
                     @foreach (var p in Model.Payments)
                     {
                         <tr class="@(p.Status == "Cancelled" ? "text-muted text-decoration-line-through" : "")">
@@ -194,8 +207,9 @@
                             </td>
                         </tr>
                     }
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 </div>

@@ -14,11 +14,11 @@
         User.IsInRole("Admin") || User.IsInRole("Doctor");
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="page-toolbar d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h4 class="mb-1">
+        <h1 class="mb-1">
             @(Model.CanViewAllQueues ? "Doctor Queues" : "My Queue")
-        </h4>
+        </h1>
         <div class="text-muted">
             @DateTime.Today.ToString("dddd, dd MMM yyyy")
         </div>
@@ -54,7 +54,7 @@
             <div class="col-md-4">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-arrow-clockwise me-1"></i>
-                    Apply / Refresh
+                    Apply filters/ Refresh
                 </button>
                 <a asp-action="Queue" class="btn btn-outline-secondary">
                     Reset
@@ -65,8 +65,7 @@
         @if (Model.CanViewAllQueues)
         {
             <div class="small text-muted mt-2">
-                Doctor options are based on today's reservations
-                at the selected clinic.
+                Queue data updates when you refresh. Actions are checked against the latest saved state.
             </div>
         }
     </div>
@@ -89,14 +88,15 @@
             </div>
         </div>
     </div>
+    <p class="small text-muted mt-2">These counts reflect the selected filters.</p>
 </div>
 
 @if (!Model.Entries.Any())
 {
     <div class="card">
-        <div class="card-body text-center text-muted py-5">
+        <div class="card-body empty-state text-center text-muted py-5">
             <i class="bi bi-people fs-1 d-block mb-2"></i>
-            No patients are waiting or in consultation for these filters.
+            No patients in this queue for the selected filters.
         </div>
     </div>
 }
@@ -117,16 +117,16 @@ else
                 </span>
             </div>
 
-            <div class="table-responsive">
+            <div class="table-responsive" tabindex="0" role="region" aria-label="Doctor queue results">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Patient</th>
-                            <th>Clinic</th>
-                            <th>Treatment</th>
-                            <th>Appointment</th>
-                            <th>Queue Status</th>
-                            <th class="text-end">Actions</th>
+                            <th scope="col">Patient</th>
+                            <th scope="col">Clinic</th>
+                            <th scope="col">Treatment</th>
+                            <th scope="col">Appointment</th>
+                            <th scope="col">Queue Status</th>
+                            <th scope="col" class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -151,7 +151,7 @@ else
                                         <a asp-action="Details"
                                            asp-route-id="@entry.ReservationId"
                                            class="btn btn-sm btn-outline-primary">
-                                            Open
+                                            Open Reservation
                                         </a>
                                         @if (canStartConsultation &&
                                                   entry.QueueStatus == PatientQueueStatus.InConsultation)

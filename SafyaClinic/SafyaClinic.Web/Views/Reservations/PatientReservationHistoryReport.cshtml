@@ -12,6 +12,8 @@
     <title>تقرير سجل الحجوزات - @(patient?.FullName ?? "مريض")</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" />
     <link rel="stylesheet" href="~/css/site.css" />
+    @* Branding: load print logo sizing for this standalone report. *@
+    <link rel="stylesheet" href="~/css/branding.css" asp-append-version="true" />
     <style>
             body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -62,7 +64,8 @@
     <!-- Header -->
     <div class="report-header d-flex justify-content-between align-items-center">
         <div>
-            <h3 class="fw-bold mb-1">عيادة صافيا - Safya Clinic</h3>
+            @* Branding: preserve the Arabic report title beneath the clinic wordmark. *@
+            @await Html.PartialAsync("_ClinicLogo", "clinic-logo--print")
             <h5 class="text-muted mb-0">تقرير سجل حجوزات وجلسات المريض</h5>
         </div>
         <div class="text-end text-muted small">

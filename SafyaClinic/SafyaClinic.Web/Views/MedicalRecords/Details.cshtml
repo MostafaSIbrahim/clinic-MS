@@ -3,77 +3,118 @@
     ViewData["Title"] = "Medical Record";
 }
 
-<div class="d-flex justify-content-between align-items-start mb-3">
+<div class="page-toolbar d-flex justify-content-between align-items-start mb-3">
     <div>
-        <h4 class="mb-0">Record #@Model.Id @(Model.IsLocked ? "🔒" : "")</h4>
+        <h1 class="mb-0">Medical record #@Model.Id</h1>
+        <span class="badge @(Model.IsLocked ? "bg-secondary" : "bg-success")">
+            @(Model.IsLocked ? "Locked" : "Editable")
+        </span>
+
+      
         <small class="text-muted">@Model.PatientName • @Model.CreatedAt.ToString("dd MMM yyyy")</small>
     </div>
-    <div class="d-flex flex-wrap gap-2">
-        <a asp-controller="Reservations"
-           asp-action="Queue"
-           class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>Back to Queue
-        </a>
+    <div class="page-actions d-flex flex-wrap gap-2 align-items-start">
+        <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Patient
+            </a>
+            <a asp-controller="Reservations" asp-action="Queue"
+               class="btn btn-outline-secondary">Back to Queue</a>
 
+    
         @if (Model.ReservationId.HasValue)
         {
-            <a asp-controller="Reservations"
-               asp-action="Details"
+            <a asp-controller="Reservations" asp-action="Details"
                asp-route-id="@Model.ReservationId.Value"
                class="btn btn-sm btn-outline-primary">
                 View Reservation
             </a>
         }
+
         @if (ViewBag.CanCompleteConsultation is bool canComplete && canComplete)
         {
-            <form asp-action="CompleteConsultation"
-                  method="post"
-                  class="d-inline"
+        
+            <form asp-action="CompleteConsultation" method="post" class="d-inline"
                   onsubmit="return confirm('Complete this consultation? The reservation will be marked completed.');">
                 @Html.AntiForgeryToken()
-
                 <input type="hidden" name="recordId" value="@Model.Id" />
-
                 <button type="submit" class="btn btn-sm btn-success">
-                    <i class="bi bi-check-circle me-1"></i>
-                    Complete Consultation
+                    <i class="bi bi-check-circle me-1"></i>Complete Consultation
                 </button>
             </form>
         }
-        @if (!Model.IsLocked)
-        {
-            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil me-1"></i>Edit</a>
-        }
-        @if (User.IsInRole("Admin") && !Model.IsLocked)
-        {
-            <form asp-action="Lock" asp-route-id="@Model.Id" method="post" class="d-inline" onsubmit="return confirm('Lock this record? It cannot be edited afterwards.')">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-lock me-1"></i>Lock Record</button>
-            </form>
-        }
+
+            @if(!Model.IsLocked)
+            {
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        More Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                    
+                            <li>
+                                <a class="dropdown-item" asp-action="Edit" asp-route-id="@Model.Id">
+                                    <i class="bi bi-pencil me-1"></i>Edit
+                                </a>
+                            </li>
+                    
+                        @if (User.IsInRole("Admin") && !Model.IsLocked)
+                        {
+                            <li>
+                                @* Lock form moved whole — NOT wrapped in another form *@
+                                <form asp-action="Lock" asp-route-id="@Model.Id" method="post"
+                                      onsubmit="return confirm('Lock this record? It cannot be edited afterwards.');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="bi bi-lock me-1"></i>Lock Record
+                                    </button>
+                                </form>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+            @* Review fix: close only the Razor condition; do not render a stray parenthesis. *@
+    
     </div>
 </div>
+
+<nav class="workspace-shortcuts" aria-label="Record sections">
+    <a href="#record-clinical" class="btn btn-outline-secondary">
+        <i class="bi bi-clipboard2-data me-1"></i>Clinical notes
+    </a>
+    <a href="#record-treatments" class="btn btn-outline-secondary">
+        <i class="bi bi-bandaid me-1"></i>Treatments
+    </a>
+    <a href="#record-prescriptions" class="btn btn-outline-secondary">
+        <i class="bi bi-capsule-pill me-1"></i>Prescriptions
+    </a>
+    <a href="#record-analyses" class="btn btn-outline-secondary">
+        <i class="bi bi-clipboard2-pulse me-1"></i>Analyses
+    </a>
+</nav>
 
 <div class="row g-3">
     <div class="col-md-7">
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-clipboard2-data me-2"></i>Clinical Notes</div>
+            <div class="card-header" id="record-clinical"><h2 class="h5 mb-0"><i class="bi bi-clipboard2-data me-2"></i>Clinical Notes</h2></div>
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-4 text-muted">Category</dt>
                     <dd class="col-8"><span class="badge bg-secondary">@Model.Category</span></dd>
                     <dt class="col-4 text-muted">Chief Complaint</dt>
-                    <dd class="col-8">@(Model.ChiefComplaint ?? "—")</dd>
+                    <dd class="col-8 clinical-text">@(Model.ChiefComplaint ?? "—")</dd>
                     <dt class="col-4 text-muted">History</dt>
-                    <dd class="col-8">@(Model.PresentIllnessHistory ?? "—")</dd>
+                    <dd class="col-8 clinical-text">@(Model.PresentIllnessHistory ?? "—")</dd>
                     <dt class="col-4 text-muted">Diagnosis</dt>
-                    <dd class="col-8">@(Model.Diagnosis ?? "—")</dd>
+                    <dd class="col-8 clinical-text">@(Model.Diagnosis ?? "—")</dd>
                     <dt class="col-4 text-muted">Differential Dx</dt>
-                    <dd class="col-8">@(Model.DifferentialDiagnosis ?? "—")</dd>
+                    <dd class="col-8 clinical-text">@(Model.DifferentialDiagnosis ?? "—")</dd>
                     <dt class="col-4 text-muted">Treatment Plan</dt>
-                    <dd class="col-8">@(Model.TreatmentPlan ?? "—")</dd>
+                    <dd class="col-8 clinical-text">@(Model.TreatmentPlan ?? "—")</dd>
                     <dt class="col-4 text-muted">Notes</dt>
-                    <dd class="col-8">@(Model.Notes ?? "—")</dd>
+                    <dd class="col-8 clinical-text">@(Model.Notes ?? "—")</dd>
                     <dt class="col-4 text-muted">Follow-up Date</dt>
                     <dd class="col-8">@(Model.FollowUpDate?.ToString("dd MMM yyyy") ?? "—")</dd>
                 </dl>
@@ -81,8 +122,8 @@
         </div>
 
         <!-- ── Treatments ── -->
-        <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-bandaid me-2"></i>Treatments</div>
+        <div class="card mb-3" id="record-treatments">
+            <div class="card-header"><h2 class="h5 mb-0"><i class="bi bi-bandaid me-2"></i>Treatments</h2></div>
             <div class="card-body">
                 @if (!Model.Treatments.Any())
                 {
@@ -129,104 +170,10 @@
                 }
             </div>
         </div>
-
         <!-- ── Prescriptions ── -->
-        @* <div class="card">
-            <div class="card-header"><i class="bi bi-capsule-pill me-2"></i>Prescriptions</div>
-            <div class="card-body">
-                @if (!Model.Prescriptions.Any())
-                {
-                    <p class="text-muted small mb-3">No prescriptions added.</p>
-                }
-                else
-                {
-                    @foreach (var p in Model.Prescriptions)
-                    {
-                        <div class="border rounded p-2 mb-2">
-                            <div class="d-flex justify-content-between">
-                                <strong>@p.MedicationName</strong>
-                                <div class="d-flex gap-2 align-items-center">
-                                    <a asp-action="PrintPrescription" asp-route-prescriptionId="@p.Id" target="_blank" class="btn btn-sm btn-link p-0">
-                                        <i class="bi bi-printer"></i> Print
-                                    </a>
-                                    @if (!p.IsPrinted)
-                                    {
-                                        <form asp-action="MarkPrescriptionPrinted" method="post">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="prescriptionId" value="@p.Id" />
-                                            <input type="hidden" name="recordId" value="@Model.Id" />
-                                            <button type="submit" class="btn btn-sm btn-link p-0"><i class="bi bi-check2"></i> Mark Printed</button>
-                                        </form>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-success">Printed</span>
-                                    }
-                                </div>
-                            </div>
-                            <div class="small text-muted">
-                                @(p.Dosage ?? "") @(p.Frequency != null ? $"• {p.Frequency}" : "") @(p.Duration != null ? $"• {p.Duration}" : "")
-                            </div>
-                            @if (p.Instructions != null)
-                            {
-                                <div class="small mt-1">@p.Instructions</div>
-                            }
-
-                            @if (p.Attachments.Any())
-                            {
-                                <div class="mt-2">
-                                    @foreach (var a in p.Attachments)
-                                    {
-                                        <span class="badge bg-light text-dark border me-1">
-                                            <a href="javascript:void(0)" class="text-decoration-none text-dark"
-                                               onclick="showAttachmentPreview('@Url.Action("ViewAttachment", new { attachmentId = a.Id })', '@Url.Action("DownloadAttachment", new { attachmentId = a.Id })', '@a.FileName')">
-                                                <i class="bi bi-eye"></i> @a.FileName
-                                            </a>
-                                            @if (User.IsInRole("Admin"))
-                                            {
-                                                <form asp-action="DeleteAttachment" method="post" class="d-inline">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="attachmentId" value="@a.Id" />
-                                                    <input type="hidden" name="recordId" value="@Model.Id" />
-                                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1">×</button>
-                                                </form>
-                                            }
-                                        </span>
-                                    }
-                                </div>
-                            }
-
-                            <form asp-action="UploadPrescriptionAttachment" method="post" enctype="multipart/form-data" class="d-flex gap-2 mt-2">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="prescriptionId" value="@p.Id" />
-                                <input type="hidden" name="recordId" value="@Model.Id" />
-                                <input type="file" name="file" class="form-control form-control-sm" />
-                                <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-upload"></i></button>
-                            </form>
-                        </div>
-                    }
-                }
-
-                @if (!Model.IsLocked)
-                {
-                    <form asp-action="AddPrescription" method="post" class="row g-2 mt-2">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="recordId" value="@Model.Id" />
-                        <div class="col-md-4 position-relative">
-                            <input type="text" id="medicationNameInput" name="MedicationName" class="form-control form-control-sm" placeholder="Medication" autocomplete="off" required />
-                        </div>
-                        <div class="col-md-2"><input type="text" id="dosageInput" name="Dosage" class="form-control form-control-sm" placeholder="Dosage" /></div>
-                        <div class="col-md-2"><input type="text" name="Frequency" class="form-control form-control-sm" placeholder="Frequency" /></div>
-                        <div class="col-md-2"><input type="text" name="Duration" class="form-control form-control-sm" placeholder="Duration" /></div>
-                        <div class="col-md-2"><button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus"></i> Add</button></div>
-                    </form>
-                }
-            </div>
-        </div> *@
-        <!-- ── Prescriptions ── -->
-        <div class="card">
+        <div class="card mb-3" id="record-prescriptions">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-capsule-pill me-2"></i>Prescriptions</span>
+                <h2 class="h5 mb-0"><i class="bi bi-capsule-pill me-2"></i>Prescriptions</h2>
                 @if (!Model.IsLocked)
                 {
                     <a asp-action="CreatePrescription" asp-route-recordId="@Model.Id" class="btn btn-sm btn-outline-primary">
@@ -290,17 +237,18 @@
 
     <div class="col-md-5">
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-clipboard2-pulse me-2"></i>Order Analysis</div>
+            <div class="card-header"><h2 class="h5 mb-0"><i class="bi bi-clipboard2-data me-2"></i>Order Analyses</h2></div>
             <div class="card-body">
                 <a asp-controller="Analysis" asp-action="Request"
                    asp-route-patientId="@Model.PatientId" asp-route-recordId="@Model.Id"
                    class="btn btn-sm btn-outline-info w-100">
-                    <i class="bi bi-plus-lg me-1"></i>Request Medical Analysis
+                   <i class="bi bi-plus-lg me-1"></i>Request Medical Analysis
                 </a>
             </div>
         </div>
 
-        <div class="card">
+        @* Review fix: match the Analyses shortcut's fragment exactly. *@
+        <div class="card" id="record-analyses">
             <div class="card-header"><i class="bi bi-clipboard2-data me-2"></i>Analyses from this Record</div>
             <div class="card-body">
                 @{
@@ -319,7 +267,7 @@
                             <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
                                 <span>@a.AnalysisTypeName <span class="badge bg-secondary ms-1">@a.Status</span></span>
                                 <a asp-controller="Analysis" asp-action="Details" asp-route-id="@a.Id" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i>
+                                    <i class="bi bi-eye"></i>Open Analysis
                                 </a>
                             </li>
                         }

@@ -26,17 +26,17 @@
         .ToList();
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<div class="page-toolbar d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div>
-        <h4 class="mb-1">
+        <h1 class="mb-1">
             <i class="bi bi-kanban text-primary me-2"></i>Appointment Board
-        </h4>
+        </h1>
         <div class="text-muted">
             @Model.Date.ToString("dddd, dd MMM yyyy")
             · @Model.Reservations.Count appointment(s)
         </div>
     </div>
-    <div class="d-flex gap-2">
+    <div class="page-actions d-flex gap-2">
         <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-list-ul me-1"></i>List View
         </a>
@@ -109,6 +109,11 @@
             </div>
         </form>
     </div>
+    <p class="small text-muted mb-4 ms-3">
+        Columns show reservation status. Use Doctor Queues to follow Waiting and In Consultation.
+        This avoids confusing Confirmed with consultation progress.
+    </p>
+
 </div>
 
 @if (Model.Reservations.Count == 0)

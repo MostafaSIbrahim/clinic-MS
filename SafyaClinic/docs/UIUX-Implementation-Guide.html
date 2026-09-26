@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safya Clinic — UI/UX Implementation Guide</title>
+<style>
+:root{color-scheme:light;--purple:#5b21b6;--line:#ddd6ee}
+*{box-sizing:border-box}body{margin:0;background:#f6f5fb;color:#202332;font:16px/1.65 system-ui,Segoe UI,sans-serif}
+.shell{max-width:1460px;margin:auto;display:grid;grid-template-columns:275px minmax(0,1fr);gap:32px;padding:32px}
+aside{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside strong{color:var(--purple)}aside ol{padding-left:20px}aside li{margin:10px 0}a{color:var(--purple);text-underline-offset:3px}
+main{min-width:0;background:white;border:1px solid var(--line);border-radius:16px;padding:42px}
+h1{font-size:2rem;line-height:1.2;color:#38156d}h2{font-size:1.55rem;border-top:2px solid var(--line);padding-top:30px;margin-top:42px;scroll-margin-top:20px}h3{font-size:1.15rem;color:#38156d;margin-top:28px}p,li{overflow-wrap:anywhere}li{margin-bottom:8px}
+pre{position:relative;background:#151a2a;color:#f3f4ff;border-radius:10px;padding:22px;overflow:auto;line-height:1.55;font-size:13px;tab-size:4}code{font-family:Consolas,monospace}p code,li code,td code{background:#f0ecf7;padding:2px 4px;border-radius:4px}
+.table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;margin:18px 0}th,td{text-align:left;padding:11px;border:1px solid var(--line);vertical-align:top}th{background:#eee8fa}tr:nth-child(even){background:#faf9fd}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}button,.tools a{border:1px solid var(--purple);background:white;color:var(--purple);border-radius:7px;padding:9px 13px;font:inherit;cursor:pointer;text-decoration:none}button:focus-visible,a:focus-visible{outline:3px solid #0e7490;outline-offset:3px}.copy{font-size:12px;margin-bottom:0;padding:5px 9px}
+@media(max-width:1000px){.shell{display:block;padding:16px}aside{position:static;max-height:none;margin-bottom:24px}aside ol{columns:2}main{padding:24px}}
+@media(max-width:600px){aside ol{columns:1}main{padding:18px}h1{font-size:1.6rem}pre{padding:14px}}
+@media print{body{background:white;font-size:10pt}.shell{display:block;padding:0}aside,.tools,.copy{display:none}main{border:0;padding:0}h2{break-before:page}h2,h3{break-after:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;color:#111;border:1px solid #ddd;font-size:8pt}table{font-size:9pt}.table-scroll{overflow:visible}a{color:#222}}
+</style></head><body><div class="shell"><aside><strong>Safya Clinic · Implementation guide</strong><ol><li><a href="#section-1">Review of the step you just implemented</a></li><li><a href="#section-2">How to use this guide</a></li><li><a href="#section-3">Step 1 — reusable contact-popup behavior and Add Address</a></li><li><a href="#section-4">Step 2 — contact actions and patient-information readability</a></li><li><a href="#section-5">Step 3 — preserve filters through pagination</a></li><li><a href="#section-6">Step 4 — consistent page headers, filters and tables</a></li><li><a href="#section-7">Step 5 — Reservation Details: clearer actions and truthful collection state</a></li><li><a href="#section-8">Step 6 — doctor queue and appointment-board clarity</a></li><li><a href="#section-9">Step 7 — consultation workspace and long-form usability</a></li><li><a href="#section-10">Step 8 — financial screens and collection-form clarity</a></li><li><a href="#section-11">Step 9 — follow-ups and task-focused dashboard navigation</a></li><li><a href="#section-12">Step 10 — remaining forms, navigation and accessibility finish</a></li><li><a href="#section-13">Step 11 — final acceptance and handoff for review</a></li></ol></aside><main>
+<div class="tools"><button onclick="window.print()">Print / Save as PDF</button><a href="UIUX-Implementation-Guide.md" download>Download Markdown</a></div>
+<h1>Safya Clinic — remaining UI/UX implementation guide</h1>
+<p>Prepared 20 September 2026 against the current workspace. Project root: <code>D:\MyDevWork\clinic-MS\SafyaClinic</code>.</p>
+<p>This is a finite plan for completing the current UI/UX pass, not a new feature backlog. The order and implementation details below are proposed for the current code. They are not quotations or mandatory instructions from OptimizationPlan.docx. No application source was modified to prepare this guide.</p>
+<h2 id="section-1">Review of the step you just implemented</h2>
+<p><strong>Add Phone popup: no blocking finding in the inspected code.</strong> The modal is outside other forms; the POST has antiforgery protection; controller validation covers patient ID, number length and supported phone types; validation failures stay in the popup; entered values remain available; the submit guard prevents a second click while the request is running. A redirected/non-JSON response does not get treated as a confirmed save. Error messages use textContent rather than HTML injection.</p>
+<p>Review covered <code>SafyaClinic.Web/Views/Patients/Details.cshtml</code> and the AddPhone action in <code>SafyaClinic.Web/Controllers/PatientsController.cs</code>. This is source inspection, not a build or a browser test. Before continuing, test blank/overlong numbers, all three types, double-clicking Save, closing while saving, keyboard navigation, and an expired login. After a connection error, refresh and inspect the phone list before retrying: the browser cannot know whether the server saved before the connection failed.</p>
+<p>Two adjacent issues are addressed below: shared pagination drops active filters; Reservation Details still bases its collection link on IsPaid rather than authoritative collectible balance and role. These do not invalidate the phone-popup step.</p>
+<h2 id="section-2">How to use this guide</h2>
+<ol>
+<li>Start from your currently working version and create a source-control checkpoint.</li>
+<li>Complete one numbered step at a time. Do not paste every step before testing.</li>
+<li>Paths below are relative to the project root above. “Replace” means replace that exact block, not append a second copy. “Add” means insert once.</li>
+<li>Build the solution after each step involving Razor or C#. Then run that step&#39;s tests. For CSS/JS, hard-refresh the browser before testing.</li>
+<li>Record PASS/FAIL and a short note in the implementation log at the end. Keep a separate commit/checkpoint per passing step.</li>
+<li>If an anchor no longer matches your source, stop that edit and request review with the file and surrounding code. Do not guess at a large replacement.</li>
+</ol>
+<p>No database migration, package upgrade, seed update, payment backfill, or demo-data deletion is required by this plan. Keep the existing Bootstrap version and violet/teal design tokens.</p>
+<h3>Rules that every step must preserve</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Event/state</th>
+<th>Required behavior</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Check In</td>
+<td>Reservation Confirmed; queue Waiting</td>
+</tr>
+<tr>
+<td>Waiting</td>
+<td>Reservation remains Confirmed; no collectible consultation charge yet</td>
+</tr>
+<tr>
+<td>Start Consultation</td>
+<td>Queue InConsultation; reservation remains Confirmed</td>
+</tr>
+<tr>
+<td>Complete reservation/consultation</td>
+<td>Only through existing server validation of an active consultation; reservation Completed and queue Finished together</td>
+</tr>
+<tr>
+<td>Collection</td>
+<td>Positive authoritative balance for InConsultation or Finished; preserve existing exclusion/reconciliation rules</td>
+</tr>
+<tr>
+<td>Finished with unpaid balance</td>
+<td>Balance remains collectible</td>
+</tr>
+<tr>
+<td>Completed reservation</td>
+<td>Editing remains disabled and server-protected</td>
+</tr>
+<tr>
+<td>Doctor queues</td>
+<td>Doctor sees own queue; reception/admin can filter by clinic and doctor</td>
+</tr>
+<tr>
+<td>Patient timeline/history report</td>
+<td>Open in a new tab, with rel=&quot;noopener&quot;</td>
+</tr>
+<tr>
+<td>Payment audit</td>
+<td>Remains a styled popup</td>
+</tr>
+<tr>
+<td>Authorization</td>
+<td>Existing server policies, ownership checks and transactions remain authoritative</td>
+</tr>
+</tbody></table></div>
+<p>Do not move completion to Check In or Waiting. Do not add a separate client-side “Finish queue” operation. Never recalculate money in JavaScript or infer an amount due from IsPaid.</p>
+<h2 id="section-3">Step 1 — reusable contact-popup behavior and Add Address</h2>
+<p><strong>Result:</strong> Add Address behaves like Add Phone, without duplicating the submit implementation. This helper is only for the two small contact forms; do not attach it to payment or clinical forms.</p>
+<h3>1A. Add the helper</h3>
+<p>Create <code>SafyaClinic.Web/wwwroot/js/contact-modal-forms.js</code> with this entire content:</p>
+<pre><code class="language-javascript">(() =&gt; {
+    document.querySelectorAll(&#39;form[data-contact-modal]&#39;).forEach(form =&gt; {
+        if (form.dataset.bound === &#39;true&#39;) return;
+        const modal = form.closest(&#39;.modal&#39;);
+        const errorBox = form.querySelector(&#39;[data-modal-error]&#39;);
+        const submit = form.querySelector(&#39;button[type=&quot;submit&quot;]&#39;);
+        if (!modal || !errorBox || !submit) return;
+        form.dataset.bound = &#39;true&#39;;
+        const originalText = submit.textContent;
+        let saving = false;
+        modal.addEventListener(&#39;shown.bs.modal&#39;, () =&gt; {
+            form.querySelector(&#39;[data-modal-focus]&#39;)?.focus();
+        });
+        modal.addEventListener(&#39;hide.bs.modal&#39;, event =&gt; {
+            if (saving) event.preventDefault();
+        });
+        form.addEventListener(&#39;submit&#39;, async event =&gt; {
+            event.preventDefault();
+            if (saving || !form.reportValidity()) return;
+            const body = new FormData(form);
+            saving = true;
+            submit.disabled = true;
+            submit.textContent = &#39;Saving…&#39;;
+            form.setAttribute(&#39;aria-busy&#39;, &#39;true&#39;);
+            errorBox.hidden = true;
+            let saved = false;
+            try {
+                const response = await fetch(form.action, {
+                    method: &#39;POST&#39;, body,
+                    headers: {
+                        &#39;X-Requested-With&#39;: &#39;XMLHttpRequest&#39;,
+                        &#39;Accept&#39;: &#39;application/json&#39;
+                    }
+                });
+                if (response.redirected ||
+                    !(response.headers.get(&#39;content-type&#39;) || &#39;&#39;)
+                        .includes(&#39;application/json&#39;)) {
+                    throw new Error(&#39;Could not confirm the save. Refresh and check &#39; +
+                        &#39;the contact list and your sign-in before submitting again.&#39;);
+                }
+                let data;
+                try { data = await response.json(); }
+                catch {
+                    throw new Error(&#39;Could not confirm the save. Refresh and check &#39; +
+                        &#39;the contact list before submitting again.&#39;);
+                }
+                if (!response.ok || data.success !== true) {
+                    const errors = Array.isArray(data.errors) &amp;&amp; data.errors.length
+                        ? data.errors : [&#39;Could not save. Check the values and try again.&#39;];
+                    throw new Error(errors.join(&#39; &#39;));
+                }
+                saved = true;
+                window.location.reload();
+            } catch (error) {
+                errorBox.textContent = error instanceof TypeError
+                    ? &#39;The connection was interrupted. Refresh and check the contact &#39; +
+                      &#39;list before submitting again.&#39;
+                    : error.message;
+                errorBox.hidden = false;
+                errorBox.focus();
+            } finally {
+                if (!saved) {
+                    saving = false;
+                    submit.disabled = false;
+                    submit.textContent = originalText;
+                    form.removeAttribute(&#39;aria-busy&#39;);
+                }
+            }
+        });
+    });
+})();
+</code></pre>
+<p>In <code>Views/Patients/Details.cshtml</code>, add <code>data-contact-modal</code> to the existing form with <code>id=&quot;addPhoneForm&quot;</code>, <code>data-modal-error</code> to <code>id=&quot;addPhoneError&quot;</code>, and <code>data-modal-focus</code> to the phone-number input. Keep every existing name, ID, field, token and modal attribute.</p>
+<p>Replace the current <strong>entire phone-only <code>@section Scripts</code> at the bottom</strong> with:</p>
+<pre><code class="language-cshtml">@section Scripts {
+    &lt;script src=&quot;~/js/contact-modal-forms.js&quot; asp-append-version=&quot;true&quot;&gt;&lt;/script&gt;
+}
+</code></pre>
+<p>There must be one Scripts section and one submit handler per contact form. Do not keep the old inline phone script as well.</p>
+<h3>1B. Replace the inline address form</h3>
+<p>In the Contact Information card, replace only the existing <code>&lt;form asp-action=&quot;AddAddress&quot; ...&gt;</code> through its matching <code>&lt;/form&gt;</code> with:</p>
+<pre><code class="language-html">&lt;button type=&quot;button&quot; class=&quot;btn btn-outline-primary&quot;
+        data-bs-toggle=&quot;modal&quot; data-bs-target=&quot;#addAddressModal&quot;&gt;
+    &lt;i class=&quot;bi bi-plus-lg me-1&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Add Address
+&lt;/button&gt;
+</code></pre>
+<p>Add the following modal <strong>after the closing div of the existing Add Phone modal, before <code>@functions</code></strong>. It must not be inside any other form:</p>
+<pre><code class="language-cshtml">&lt;div class=&quot;modal fade&quot; id=&quot;addAddressModal&quot; tabindex=&quot;-1&quot;
+     aria-labelledby=&quot;addAddressTitle&quot; aria-hidden=&quot;true&quot;&gt;
+    &lt;div class=&quot;modal-dialog modal-dialog-centered modal-dialog-scrollable&quot;&gt;
+        &lt;div class=&quot;modal-content&quot;&gt;
+            &lt;form asp-action=&quot;AddAddress&quot; method=&quot;post&quot; data-contact-modal&gt;
+                @Html.AntiForgeryToken()
+                &lt;input type=&quot;hidden&quot; name=&quot;patientId&quot; value=&quot;@patient.Id&quot; /&gt;
+                &lt;div class=&quot;modal-header&quot;&gt;
+                    &lt;h2 class=&quot;modal-title fs-5&quot; id=&quot;addAddressTitle&quot;&gt;Add Address&lt;/h2&gt;
+                    &lt;button type=&quot;button&quot; class=&quot;btn-close&quot; data-bs-dismiss=&quot;modal&quot;
+                            aria-label=&quot;Close&quot;&gt;&lt;/button&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;modal-body&quot;&gt;
+                    &lt;p class=&quot;text-muted&quot;&gt;@patient.FullName&lt;/p&gt;
+                    &lt;div class=&quot;alert alert-danger&quot; role=&quot;alert&quot; tabindex=&quot;-1&quot;
+                         data-modal-error hidden&gt;&lt;/div&gt;
+                    &lt;div class=&quot;mb-3&quot;&gt;
+                        &lt;label for=&quot;addressStreet&quot; class=&quot;form-label&quot;&gt;Street&lt;/label&gt;
+                        &lt;input id=&quot;addressStreet&quot; name=&quot;Street&quot; class=&quot;form-control&quot;
+                               maxlength=&quot;200&quot; autocomplete=&quot;street-address&quot; data-modal-focus /&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;mb-3&quot;&gt;
+                        &lt;label for=&quot;addressCity&quot; class=&quot;form-label&quot;&gt;City (required)&lt;/label&gt;
+                        &lt;input id=&quot;addressCity&quot; name=&quot;City&quot; class=&quot;form-control&quot;
+                               maxlength=&quot;50&quot; autocomplete=&quot;address-level2&quot; required /&gt;
+                    &lt;/div&gt;
+                    &lt;div&gt;
+                        &lt;label for=&quot;addressGovernorate&quot; class=&quot;form-label&quot;&gt;Governorate&lt;/label&gt;
+                        &lt;input id=&quot;addressGovernorate&quot; name=&quot;Governorate&quot; class=&quot;form-control&quot;
+                               maxlength=&quot;50&quot; autocomplete=&quot;address-level1&quot; /&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;modal-footer&quot;&gt;
+                    &lt;button type=&quot;button&quot; class=&quot;btn btn-outline-secondary&quot;
+                            data-bs-dismiss=&quot;modal&quot;&gt;Cancel&lt;/button&gt;
+                    &lt;button type=&quot;submit&quot; class=&quot;btn btn-primary&quot;&gt;Save Address&lt;/button&gt;
+                &lt;/div&gt;
+            &lt;/form&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<p>This retains the old form&#39;s three visible fields and existing IsPrimary default. Do not introduce new primary-address semantics in this UI step.</p>
+<h3>1C. Replace the AddAddress controller action</h3>
+<p>In <code>Controllers/PatientsController.cs</code>, replace the AddAddress action <strong>including its two attributes</strong> with:</p>
+<pre><code class="language-csharp">[HttpPost]
+[ValidateAntiForgeryToken]
+public async Task&lt;IActionResult&gt; AddAddress(
+    int patientId, CreatePatientAddressRequest model)
+{
+    var isAjax = Request.Headers[&quot;X-Requested-With&quot;].ToString() == &quot;XMLHttpRequest&quot;;
+    model = new CreatePatientAddressRequest
+    {
+        City = model.City?.Trim() ?? &quot;&quot;,
+        Street = model.Street?.Trim(),
+        Governorate = model.Governorate?.Trim(),
+        PostalCode = model.PostalCode?.Trim(),
+        IsPrimary = model.IsPrimary
+    };
+
+    if (patientId &lt;= 0)
+        ModelState.AddModelError(&quot;&quot;, &quot;Invalid patient.&quot;);
+    if (string.IsNullOrWhiteSpace(model.City) || model.City.Length &gt; 50)
+        ModelState.AddModelError(nameof(model.City), &quot;Enter a city of up to 50 characters.&quot;);
+    if (model.Street?.Length &gt; 200)
+        ModelState.AddModelError(nameof(model.Street), &quot;Street must be 200 characters or fewer.&quot;);
+    if (model.Governorate?.Length &gt; 50)
+        ModelState.AddModelError(nameof(model.Governorate), &quot;Governorate must be 50 characters or fewer.&quot;);
+    if (model.PostalCode?.Length &gt; 10)
+        ModelState.AddModelError(nameof(model.PostalCode), &quot;Postal code must be 10 characters or fewer.&quot;);
+
+    if (!ModelState.IsValid)
+    {
+        var errors = ModelState.Values.SelectMany(v =&gt; v.Errors)
+            .Select(e =&gt; string.IsNullOrWhiteSpace(e.ErrorMessage)
+                ? &quot;Check the entered values.&quot; : e.ErrorMessage).ToArray();
+        if (isAjax) return BadRequest(new { errors });
+        Error(string.Join(&quot; &quot;, errors));
+        return RedirectToAction(nameof(Details), new { id = patientId });
+    }
+
+    var result = await _patientService.AddAddressAsync(patientId, model);
+    if (!result.IsSuccess)
+    {
+        if (isAjax) return BadRequest(new { errors = result.Errors });
+        Error(result.Errors.FirstOrDefault() ?? &quot;Could not add the address.&quot;);
+        return RedirectToAction(nameof(Details), new { id = patientId });
+    }
+
+    Success(&quot;Address added.&quot;);
+    if (isAjax) return Json(new { success = true });
+    return RedirectToAction(nameof(Details), new { id = patientId });
+}
+</code></pre>
+<p><strong>Test before Step 2:</strong> Phone still works; address opens centered; City required; spaces-only City returns a visible error without closing; Street/City/Governorate maximum lengths match 200/50/50; one successful save creates one address; Cancel saves nothing; phone and address popups do not interfere; invalid/session-expired responses do not show success; test at 360px width and with keyboard only.</p>
+<h2 id="section-4">Step 2 — contact actions and patient-information readability</h2>
+<p><strong>Files:</strong> <code>Views/Patients/Details.cshtml</code>, <code>Controllers/PatientsController.cs</code>, <code>wwwroot/css/site.css</code>.</p>
+<ol>
+<li>Keep removal as an explicit POST with antiforgery and the current confirmation prompt. A second confirmation-modal implementation is unnecessary for finishing this pass.</li>
+<li>In the phone removal button, replace the <code>btn-link ... p-0</code> classes with <code>btn btn-sm btn-outline-danger</code>. Keep its onclick confirmation and form fields. Change its content to <code>&lt;i class=&quot;bi bi-trash me-1&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Remove phone</code>.</li>
+<li>Apply the same change to the address button with text “Remove address”. Keep each button inside its own existing form. Add <code>flex-wrap gap-2</code> to each contact-list row&#39;s flex classes so long text does not squeeze the button.</li>
+<li>In RemovePhone, replace <code>await _patientService.RemovePhoneAsync(patientId, phoneId);</code> with:</li>
+</ol>
+<pre><code class="language-csharp">var result = await _patientService.RemovePhoneAsync(patientId, phoneId);
+if (!result.IsSuccess)
+    Error(result.Errors.FirstOrDefault() ?? &quot;Could not remove the phone.&quot;);
+else
+    Success(&quot;Phone removed.&quot;);
+</code></pre>
+<p>In RemoveAddress use the identical pattern with RemoveAddressAsync(patientId, addressId), “Could not remove the address.” and “Address removed.” Keep both action signatures, attributes and redirects unchanged.</p>
+<ol start="5">
+<li>In the existing Medical Information card, group the existing dt/dd pairs into two clearly headed blocks: “Patient information” for demographic/source details and “Medical information” for blood group, height, weight, allergies, chronic conditions and notes. Move whole dt/dd pairs; keep the expressions and existing edit links. Use <code>&lt;h2 class=&quot;h6&quot;&gt;…&lt;/h2&gt;</code> followed by a <code>&lt;dl class=&quot;row mb-0&quot;&gt;</code> for each block. Do not put a heading directly inside a dl. Do not create editable fields here.</li>
+<li>For multiline notes/allergies text add <code>class=&quot;clinical-text&quot;</code> to the containing dd, preserving Razor encoding. Never use Html.Raw on patient-entered text. Use “Not recorded” for missing information; do not imply that an unrecorded allergy was clinically ruled out.</li>
+<li>Append to site.css:</li>
+</ol>
+<pre><code class="language-css">.clinical-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.contact-value { overflow-wrap: anywhere; min-width: 0; }
+</code></pre>
+<p>Add contact-value to the phone/address text wrapper, not the whole removal form.</p>
+<p><strong>Test:</strong> Cancel removal leaves data; confirmed removal removes only the chosen contact; stale/nonexistent contact displays the service failure; long address and multiline notes wrap; no patient data disappears; timeline/report still open a new tab; role-specific shortcuts are unchanged.</p>
+<h2 id="section-5">Step 3 — preserve filters through pagination</h2>
+<p><strong>Why now:</strong> <code>_Pagination.cshtml</code> currently supplies only page and pageSize, so a second page can silently lose the user&#39;s search/date/category selection.</p>
+<p>Replace the entire <code>Views/Shared/_Pagination.cshtml</code> with:</p>
+<pre><code class="language-cshtml">@model PagedResult&lt;object&gt;
+@using Microsoft.AspNetCore.Routing
+@{
+    var action = ViewData[&quot;PaginationAction&quot;]?.ToString() ?? &quot;Index&quot;;
+    string PageUrl(int page)
+    {
+        var values = new RouteValueDictionary();
+        foreach (var pair in Context.Request.Query)
+        {
+            if (pair.Key.Equals(&quot;page&quot;, StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals(&quot;pageSize&quot;, StringComparison.OrdinalIgnoreCase)) continue;
+            values[pair.Key] = pair.Value.ToString();
+        }
+        values[&quot;page&quot;] = page;
+        values[&quot;pageSize&quot;] = Model.PageSize;
+        return Url.Action(action, values) ?? &quot;#&quot;;
+    }
+}
+@if (Model != null &amp;&amp; Model.TotalPages &gt; 1)
+{
+    &lt;nav aria-label=&quot;Results pages&quot; class=&quot;mt-3&quot;&gt;
+        &lt;ul class=&quot;pagination justify-content-center flex-wrap gap-1&quot;&gt;
+            &lt;li class=&quot;page-item @(!Model.HasPrev ? &quot;disabled&quot; : &quot;&quot;)&quot;&gt;
+                @if (Model.HasPrev)
+                {
+                    &lt;a class=&quot;page-link&quot; href=&quot;@PageUrl(Model.Page - 1)&quot;&gt;Previous&lt;/a&gt;
+                }
+                else { &lt;span class=&quot;page-link&quot; aria-disabled=&quot;true&quot;&gt;Previous&lt;/span&gt; }
+            &lt;/li&gt;
+            @for (var page = Math.Max(1, Model.Page - 2);
+                  page &lt;= Math.Min(Model.TotalPages, Model.Page + 2); page++)
+            {
+                &lt;li class=&quot;page-item @(page == Model.Page ? &quot;active&quot; : &quot;&quot;)&quot;&gt;
+                    @if (page == Model.Page)
+                    {
+                        &lt;span class=&quot;page-link&quot; aria-current=&quot;page&quot;&gt;@page&lt;/span&gt;
+                    }
+                    else { &lt;a class=&quot;page-link&quot; href=&quot;@PageUrl(page)&quot;&gt;@page&lt;/a&gt; }
+                &lt;/li&gt;
+            }
+            &lt;li class=&quot;page-item @(!Model.HasNext ? &quot;disabled&quot; : &quot;&quot;)&quot;&gt;
+                @if (Model.HasNext)
+                {
+                    &lt;a class=&quot;page-link&quot; href=&quot;@PageUrl(Model.Page + 1)&quot;&gt;Next&lt;/a&gt;
+                }
+                else { &lt;span class=&quot;page-link&quot; aria-disabled=&quot;true&quot;&gt;Next&lt;/span&gt; }
+            &lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;p class=&quot;small text-muted text-center&quot;&gt;Page @Model.Page of @Model.TotalPages&lt;/p&gt;
+    &lt;/nav&gt;
+}
+</code></pre>
+<p>This targets the current single-value filters and existing same-controller pagination callers. It does not introduce arbitrary return URLs. Before testing, search the solution for <code>_Pagination</code> and include every calling screen in the smoke test. Keep their existing PagedResult<object> mapping and PaginationAction values.</p>
+<p>In each filter form, make <code>method=&quot;get&quot;</code> and the intended <code>asp-action</code> explicit. Do not carry a hidden current <code>page</code> into a new search; new filters should start on page 1. Keep pageSize if the screen already lets the user choose it.</p>
+<p><strong>Test:</strong> Patients search with enough results for two pages retains search on Next/Previous; Reservations retains DateFrom, DateTo and Category; changing filters starts page 1; no-match search remains no-match; first/last page disabled controls cannot navigate; many pages do not overflow mobile; page URLs remain on the intended controller/action. Test any other shared-partial callers you found.</p>
+<h2 id="section-6">Step 4 — consistent page headers, filters and tables</h2>
+<h3>4A. Shared CSS</h3>
+<p>In <code>wwwroot/css/site.css</code>, find <code>.card:hover</code> and remove just <code>transform: translateY(-2px);</code>. Remove its hover-only shadow change too, or remove the complete <code>.card:hover</code> rule if those are its only declarations. Ordinary form cards should not move when the user points at an input. Leave normal card styling intact.</p>
+<p>Append once:</p>
+<pre><code class="language-css">.page-toolbar { display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+.page-toolbar h1 { margin: 0; font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+    overflow-wrap: anywhere; }
+.page-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.page-actions .btn, .filter-panel .btn { min-height: 44px; }
+.filter-panel { padding: 1rem; border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md); background: var(--surface); }
+.form-actions { display: flex; flex-wrap: wrap; gap: .75rem;
+    padding-top: 1rem; margin-top: 1rem; border-top: 1px solid var(--border-soft); }
+.form-actions .btn { min-height: 44px; }
+.empty-state { padding: 2rem 1rem; text-align: center; color: #4b5563; }
+.table-responsive:focus-visible, .btn:focus-visible, a:focus-visible {
+    outline: 3px solid var(--brand-primary); outline-offset: 3px;
+}
+@media (max-width: 575.98px) {
+    .page-actions { width: 100%; }
+    .page-actions &gt; .btn { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .card, .btn, .modal.fade .modal-dialog { transition: none !important; }
+}
+@media print {
+    .page-actions, .filter-panel, .form-actions { display: none !important; }
+}
+</code></pre>
+<h3>4B. Apply the same header structure, preserving links</h3>
+<p>Start with <code>Views/Patients/Index.cshtml</code>. Move Register Patient into a page-toolbar immediately before the outer card, using this complete header. Remove the old card-header block that duplicated the title/button:</p>
+<pre><code class="language-cshtml">&lt;div class=&quot;page-toolbar&quot;&gt;
+    &lt;div&gt;&lt;h1&gt;Patients&lt;/h1&gt;&lt;p class=&quot;text-muted mb-0&quot;&gt;Find a patient or register a new patient.&lt;/p&gt;&lt;/div&gt;
+    &lt;div class=&quot;page-actions&quot;&gt;
+        &lt;a asp-action=&quot;Create&quot; class=&quot;btn btn-primary&quot;&gt;
+            &lt;i class=&quot;bi bi-plus-lg me-1&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Register Patient
+        &lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<p>For <code>Views/Reservations/Index.cshtml</code>, use the same structure with h1 “Reservations”. Move its existing Today, New Reservation and Appointment Board anchors into page-actions without altering routes; make New Reservation the primary button. Remove the duplicate old card-header.</p>
+<p>Do not refactor into a dynamic header partial yet: these two simple headers can be read and edited directly without hiding authorization or route parameters.</p>
+<h3>4C. Label filters</h3>
+<p>Patients: add <code>&lt;label for=&quot;patientSearch&quot; class=&quot;form-label&quot;&gt;Name, phone or national ID&lt;/label&gt;</code> before the search input, and add <code>id=&quot;patientSearch&quot;</code> to it. Keep <code>name=&quot;search&quot;</code> and <code>value=&quot;@ViewBag.Search&quot;</code>. Use <code>class=&quot;row g-3 align-items-end mb-3 filter-panel&quot;</code> on the form. Add <code>&lt;a asp-action=&quot;Index&quot; class=&quot;btn btn-outline-secondary&quot;&gt;Clear&lt;/a&gt;</code> beside Search.</p>
+<p>Reservations: add IDs <code>reservationDateFrom</code>, <code>reservationDateTo</code>, <code>reservationCategory</code> to the existing DateFrom, DateTo and Category inputs/select. Add matching labels “From”, “To”, “Category”. Keep the exact existing names, values and selected expressions. Use the same filter-panel form classes, normal-size form-control/form-select, and normal-size buttons. Add the same Clear link beside Filter.</p>
+<p>For the existing table wrappers on these two pages, add <code>tabindex=&quot;0&quot; role=&quot;region&quot; aria-label=&quot;Patient results&quot;</code> or <code>aria-label=&quot;Reservation results&quot;</code>. Keep table-responsive. Add <code>scope=&quot;col&quot;</code> to column headers. Replace a blank action header with <code>&lt;th scope=&quot;col&quot;&gt;&lt;span class=&quot;visually-hidden&quot;&gt;Actions&lt;/span&gt;&lt;/th&gt;</code>. Replace eye-only row-link contents with visible “Open” and preserve all asp-* attributes. Do not make the whole row clickable.</p>
+<p>Change no-match text to “No patients match your search.” / “No reservations match these filters.” with a visible Clear filters link to Index. The separate primary create action remains available above.</p>
+<p><strong>Test:</strong> search/date/category still bind; Clear removes filters; pagination still retains filters; at 360/768/1280px actions wrap, table scrolls within its container and body does not scroll horizontally; keyboard focus visible; long names do not overlap actions.</p>
+<h2 id="section-7">Step 5 — Reservation Details: clearer actions and truthful collection state</h2>
+<p>This step includes a small controller/view correction: opening a payment form is a UI action, but eligibility must come from the existing payment service.</p>
+<h3>5A. Load the authoritative collection state</h3>
+<p>In <code>Controllers/ReservationsController.cs</code>, add this field beside the other injected services:</p>
+<pre><code class="language-csharp">private readonly IPaymentService _paymentService;
+</code></pre>
+<p>Add <code>IPaymentService paymentService</code> as the last constructor parameter (add a comma after IPatientService patientService). In the constructor body add <code>_paymentService = paymentService;</code>. The services namespace is already imported and IPaymentService is already used by PaymentsController; no new service implementation is needed.</p>
+<p>In Details(int id), immediately after its existing failed-result return and <strong>before <code>return View(result.Data);</code></strong>, insert:</p>
+<pre><code class="language-csharp">ViewBag.CanCollectPayment = false;
+ViewBag.CollectionStateKnown = false;
+if ((IsAdmin || IsReception) &amp;&amp; result.Data is { } reservation)
+{
+    var due = await _paymentService.GetDueAmountAsync(
+        reservation.PatientId, reservation.Id, null);
+    ViewBag.CollectionStateKnown = due.IsSuccess;
+    ViewBag.CanCollectPayment = due.IsSuccess &amp;&amp; due.Data &gt; 0m;
+}
+</code></pre>
+<p>In <code>Views/Reservations/Details.cshtml</code>, replace the complete card whose header text is “Payment” (through its matching closing card div), with:</p>
+<pre><code class="language-cshtml">@if (User.IsInRole(&quot;Admin&quot;) || User.IsInRole(&quot;Reception&quot;))
+{
+    &lt;div class=&quot;card mb-3&quot;&gt;
+        &lt;div class=&quot;card-header&quot;&gt;Payment&lt;/div&gt;
+        &lt;div class=&quot;card-body&quot;&gt;
+            @if (ViewBag.CanCollectPayment == true)
+            {
+                &lt;a asp-controller=&quot;Payments&quot; asp-action=&quot;Collect&quot;
+                   asp-route-patientId=&quot;@Model.PatientId&quot; asp-route-reservationId=&quot;@Model.Id&quot;
+                   class=&quot;btn btn-success w-100&quot;&gt;Collect Payment&lt;/a&gt;
+            }
+            else
+            {
+                &lt;p class=&quot;text-muted mb-2&quot;&gt;
+                    @(ViewBag.CollectionStateKnown == true
+                        ? &quot;No collectible balance for this reservation.&quot;
+                        : &quot;Collection eligibility could not be confirmed. Check the payment summary.&quot;)
+                &lt;/p&gt;
+            }
+            &lt;a asp-controller=&quot;Payments&quot; asp-action=&quot;PatientSummary&quot;
+               asp-route-patientId=&quot;@Model.PatientId&quot;
+               class=&quot;btn btn-outline-secondary w-100 mt-2&quot;&gt;Payment Summary&lt;/a&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+}
+</code></pre>
+<p>Do not replace a failed due lookup with “Fully paid”. Keep Collect GET and POST validation; the amount can change after this page was rendered.</p>
+<h3>5B. Correct the completion redirect for roles</h3>
+<p>In ReservationsController.UpdateStatus replace only the existing <code>if (statusId == 3 &amp;&amp; result.Data is { IsPaid: false } r) { ... }</code> block with:</p>
+<pre><code class="language-csharp">if (result.Data is { StatusName: &quot;Completed&quot; } r &amp;&amp; (IsAdmin || IsReception))
+{
+    var due = await _paymentService.GetDueAmountAsync(r.PatientId, id, null);
+    if (due.IsSuccess &amp;&amp; due.Data &gt; 0m)
+        return RedirectToAction(&quot;Collect&quot;, &quot;Payments&quot;,
+            new { patientId = r.PatientId, reservationId = id });
+    if (!due.IsSuccess)
+        Error(&quot;Reservation completed, but collection eligibility could not be confirmed. Check the payment summary.&quot;);
+}
+</code></pre>
+<p>Keep the existing final redirect to Details. Keep the call to UpdateStatusAsync, its current user ID and its failure branch. This does not change the atomic transition or authorize another role to complete: it only avoids sending a doctor to a payment page they cannot use.</p>
+<h3>5C. Layout and status explanations</h3>
+<p>In the view&#39;s top header, use page-toolbar/page-actions and h1 as in Step 4. Preserve Edit&#39;s completed-state disabling and the Cancel POST. Keep cancellation visually secondary/danger; do not make it the primary action.</p>
+<p>Add the following paragraph below the queue badge/timestamps:</p>
+<pre><code class="language-html">&lt;p class=&quot;small text-muted mt-2 mb-0&quot;&gt;
+    Check in places the patient in Waiting. Start Consultation begins the visit.
+    Completing an active consultation finishes the queue entry.
+&lt;/p&gt;
+</code></pre>
+<p>Above the status form declare:</p>
+<pre><code class="language-cshtml">@{
+    var canCompleteFromQueue = Model.StatusName == &quot;Confirmed&quot;
+        &amp;&amp; Model.QueueStatus == PatientQueueStatus.InConsultation
+        &amp;&amp; Model.ConsultationStartedAtUtc.HasValue;
+}
+</code></pre>
+<p>The enum namespace is already imported. On the existing Completed option add <code>disabled=&quot;@(!canCompleteFromQueue)&quot;</code>; retain value and selected expression. Keep the existing completed-state disabling on select/button. Add visible help under the form: “Completion is available after consultation starts. The server rechecks the current queue state.” This is a UI hint, not a replacement for server validation. Do not rewrite other transitions here.</p>
+<p><strong>Test:</strong> Pending/Waiting have no collectible link; InConsultation with positive balance has one; Finished with positive balance still has one; zero/fully covered balance does not; reconciliation failure is not described as paid; doctor sees no payment collection card; successful completion as doctor stays on an authorized page; reception/admin follows collection only when due is positive; stale-tab/forged completion from Waiting is rejected by existing server logic; Completed Edit stays disabled.</p>
+<h2 id="section-8">Step 6 — doctor queue and appointment-board clarity</h2>
+<p><strong>Files:</strong> <code>Views/Reservations/Queue.cshtml</code>, <code>Board.cshtml</code>, <code>_BoardAppointment.cshtml</code>.</p>
+<ol>
+<li>In Queue replace the top header wrapper classes with page-toolbar, change h4 to h1, and keep the conditional “Doctor Queues” / “My Queue” title and current date.</li>
+<li>Keep clinic and doctor filters, their element IDs <code>queueClinic</code>/<code>queueDoctor</code>, their model bindings and existing doctor-option script. Do not remove the doctor filter because multiple doctors can share one clinic.</li>
+<li>Change the Apply / Refresh button text to “Apply filters / Refresh”. Add <code>filter-panel</code> to its existing form classes. Add this visible text below the form: “Queue data updates when you refresh. Actions are checked against the latest saved state.” Do not introduce timed refresh that might discard input or move keyboard focus.</li>
+<li>Retain separate Waiting and In Consultation counts. Below them add a small sentence: “These counts reflect the selected filters.” Do not replace them with global dashboard counts.</li>
+<li>In the queue table, preserve all existing eligibility conditions and POST forms. Make action text visible (“Start Consultation”, “Open Consultation”, “Open reservation”), add scope to headers and an accessible, focusable table-responsive wrapper as in Step 4. Do not merge several patients into one form.</li>
+<li>Give its no-result block the empty-state class. Use “No patients in this queue for the selected filters.” Keep Reset accessible. For doctors, do not add an All Doctors option outside the existing Model.CanViewAllQueues block.</li>
+<li>In Board apply page-toolbar/h1/page-actions to its existing header without changing links or filters. Keep columns grouped by reservation status. Add below the header: “Columns show reservation status. Use Doctor Queues to follow Waiting and In Consultation.” This avoids confusing Confirmed with consultation progress.</li>
+<li>In <code>_BoardAppointment.cshtml</code>, preserve existing patient/reservation links and status badges. Give icon-only actions readable text or an aria-label. Add <code>overflow-wrap: anywhere</code> via a class to long patient names; do not truncate away identity with no way to inspect it.</li>
+</ol>
+<p><strong>Test:</strong> doctor A cannot see doctor B by changing query parameters; reception can filter clinic then doctor; selected filters survive refresh; waiting/start buttons behave exactly as before; a stale tab cannot start a cancelled visit; board counts/status columns unchanged; mobile cards/table remain usable; no automatic refresh or duplicate action request.</p>
+<h2 id="section-9">Step 7 — consultation workspace and long-form usability</h2>
+<p><strong>Files:</strong> <code>Views/MedicalRecords/Details.cshtml</code>, <code>Create.cshtml</code>, <code>Edit.cshtml</code>, <code>PatientRecords.cshtml</code>.</p>
+<p>This is layout-only. Do not rewrite clinical POST actions, introduce automatic saving, or alter the record lock/completion checks.</p>
+<ol>
+<li>In Details change the top header to page-toolbar and h1 “Medical record #@Model.Id”. Keep patient name and record date directly below it. Keep the locked/unlocked badge as readable text.</li>
+<li>Move the existing Back to Queue, reservation link, completion form, Edit link and admin Lock form into page-actions. <strong>Move complete form elements</strong>, including tokens and hidden inputs. Keep the existing <code>ViewBag.CanCompleteConsultation</code>, IsLocked and role checks unchanged. Never wrap these in another form.</li>
+<li>Add a patient workspace link with <code>asp-controller=&quot;Patients&quot; asp-action=&quot;Details&quot; asp-route-id=&quot;@Model.PatientId&quot;</code>. Its text should be “Patient workspace”. Keep Back to Queue too.</li>
+<li>Under the header add an anchor navigation bar using existing workspace-shortcuts styling. Link only to sections that exist on the rendered page: Clinical notes, Treatments, Prescriptions, Analyses. Assign IDs <code>record-clinical</code>, <code>record-treatments</code>, <code>record-prescriptions</code>, <code>record-analyses</code> to the corresponding existing outer section containers. If a section is role/condition gated, put its navigation link under the same condition. Do not rename existing IDs used by scripts.</li>
+<li>Use h2 with class h5 for section headings and clinical-text on displayed multiline note values. Keep normal Razor output. Keep existing add/edit/delete forms, modal targets, prescription links and analysis scripts in their original sections.</li>
+<li>On Create/Edit, retain the existing single clinical form. Group existing fields with <code>&lt;fieldset class=&quot;mb-4&quot;&gt;</code> and <code>&lt;legend class=&quot;h5&quot;&gt;…&lt;/legend&gt;</code> around the current logical field groups. Do not cross form boundaries. Every asp-for remains unchanged. Use normal-size labels/inputs and rows=&quot;4&quot; or more for clinical narrative textareas.</li>
+<li>Wrap the existing final Save and Cancel controls in <code>&lt;div class=&quot;form-actions&quot;&gt;</code>. Keep their original endpoints and IDs. Keep validation summary and field-validation elements inside the form. Place the summary before the first editable group.</li>
+<li>Use page-toolbar/h1 and responsive-table conventions on PatientRecords; retain links opening records and existing patient ID routes. Do not duplicate the full patient record on Patient Details.</li>
+</ol>
+<p><strong>Test:</strong> doctor resumes an active consultation through the existing queue; existing record is reused; adding prescriptions/analyses still works; failed validation retains every field; completion remains conditional; locked records cannot be edited by manipulating URLs; long notes retain line breaks; section links target the correct section; patient workspace/back links return correctly; printing prescriptions unaffected.</p>
+<h2 id="section-10">Step 8 — financial screens and collection-form clarity</h2>
+<p><strong>Files:</strong> <code>Views/Payments/PatientSummary.cshtml</code>, <code>Collect.cshtml</code>, <code>Dashboard.cshtml</code>, <code>Report.cshtml</code>. Keep Audit popup and its JavaScript unchanged except accessible labels if needed.</p>
+<h3>8A. Patient summary</h3>
+<p>Replace the initial patient-name header block with:</p>
+<pre><code class="language-cshtml">&lt;div class=&quot;page-toolbar&quot;&gt;
+    &lt;div&gt;
+        &lt;h1&gt;@Model.PatientName&lt;/h1&gt;
+        &lt;p class=&quot;text-muted mb-0&quot;&gt;Payment summary&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;page-actions&quot;&gt;
+        &lt;a asp-controller=&quot;Patients&quot; asp-action=&quot;Details&quot;
+           asp-route-id=&quot;@Model.PatientId&quot; class=&quot;btn btn-outline-secondary&quot;&gt;Patient workspace&lt;/a&gt;
+        &lt;a asp-action=&quot;Dashboard&quot; class=&quot;btn btn-outline-secondary&quot;&gt;Payment dashboard&lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<p>Keep all four amount expressions and the UnallocatedCoverage branches. Change each summary column from <code>col-md-3</code> to <code>col-12 col-sm-6 col-xl-3</code> for readable tablet cards. Change the “Pending Payments” heading to “Ready for collection”, followed inside its body by <code>&lt;p class=&quot;small text-muted&quot;&gt;Balances currently eligible for collection.&lt;/p&gt;</code>. Keep the existing list and exact per-row reservation/enrollment IDs.</p>
+<p>The Payment History table currently lacks its own responsive wrapper. Wrap only that table (from its opening table to matching closing table) in <code>&lt;div class=&quot;table-responsive&quot; tabindex=&quot;0&quot; role=&quot;region&quot; aria-label=&quot;Payment history&quot;&gt;…&lt;/div&gt;</code>. Do not include modal markup in this wrapper. Add scope to headers and a readable Actions header as in Step 4. Preserve Audit triggers, data attributes and script IDs.</p>
+<h3>8B. Collection form</h3>
+<p>Keep collection as a full page: amount, clinic, method and validation deserve room. Add a page-toolbar/h1 “Collect Payment” above its card and a secondary Patient Summary link using Model.PatientId. Replace the card&#39;s inline max-width style with <code>class=&quot;card payment-form-card&quot;</code>; append <code>.payment-form-card { max-width: 46rem; }</code> to site.css.</p>
+<p>Inside the card, before the form, add this context block using fields already on CollectPaymentRequest:</p>
+<pre><code class="language-cshtml">&lt;div class=&quot;alert alert-light border&quot;&gt;
+    &lt;strong&gt;Patient #@Model.PatientId&lt;/strong&gt;
+    @if (Model.ReservationId.HasValue)
+    {
+        &lt;span&gt; · Reservation #@Model.ReservationId&lt;/span&gt;
+    }
+    @if (Model.EnrollmentId.HasValue)
+    {
+        &lt;span&gt; · Nutrition enrollment #@Model.EnrollmentId&lt;/span&gt;
+    }
+&lt;/div&gt;
+</code></pre>
+<p>This provides dependable context even when POST validation redisplays the model; do not invent a ViewBag.PatientName that the controller does not populate on every path.</p>
+<p>Keep the ClinicId select and its selected model value. Do not disable it without an equivalent submitted value. The existing GET preselects the reservation clinic and the service validates the transaction; preserve both. Replace the amount helper text with: “Enter the amount being collected. For partial payment, enter less than the current balance. The balance is checked again when you submit.” Keep the amount binding/step, hidden IDs and antiforgery token unchanged.</p>
+<p>Add <code>asp-validation-for</code> spans below ClinicId, Amount, PaymentMethod, ReferenceNumber and Notes if absent, each with class text-danger. Keep the existing validation summary and <code>_ValidationScriptsPartial</code>. Wrap the existing submit/Cancel controls in form-actions. Do not attach the contact-modal helper, automatic retries or client-calculated deductions.</p>
+<h3>8C. Dashboard/report</h3>
+<p>Use page-toolbar/h1 for the existing titles and filter-panel for existing GET date filters. Keep date names, values and report drill-down route arguments. Add labels where absent, responsive wrappers to wide tables, scope to headers, and explicit no-results text. Keep all calculated numbers, permission checks and audit actions unchanged.</p>
+<p><strong>Test:</strong> no collectible balance has no active collection action; partial balance is exact; finished unpaid remains collectible; reservation clinic is preselected and remains correct after invalid submit; zero/negative/excess/stale amounts follow existing validation; successful payment appears once; cancellation/write-off behavior unchanged; unallocated coverage still blocks collection; audit opens styled in a popup from summary/report; date filters and dashboard drill-down agree. Do not delete data to make this test pass.</p>
+<h2 id="section-11">Step 9 — follow-ups and task-focused dashboard navigation</h2>
+<p><strong>Files:</strong> <code>Views/FollowUps/Index.cshtml</code>, <code>Views/Dashboard/Index.cshtml</code>.</p>
+<p>Follow-ups: convert its initial h4/header to page-toolbar/h1 while retaining Model.CanViewAll title logic. Keep the sentence explaining that results are pending, unbooked and not dismissed. Add filter-panel to the current GET form; preserve Due/From/To/DoctorId binding, validation and role checks. Apply responsive-table and visible-action-label patterns. Keep Book/Dismiss controls with their existing conditions and forms. Use “No pending follow-ups match these filters.” for empty results. Do not add new status tabs, bulk dismiss or a new scheduling flow.</p>
+<p>Dashboard: insert the following block immediately after the initial Razor block and before the first summary-card row:</p>
+<pre><code class="language-cshtml">&lt;div class=&quot;page-toolbar&quot;&gt;
+    &lt;div&gt;&lt;h1&gt;Dashboard&lt;/h1&gt;&lt;p class=&quot;text-muted mb-0&quot;&gt;Choose your next task.&lt;/p&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;nav class=&quot;workspace-shortcuts&quot; aria-label=&quot;Dashboard shortcuts&quot;&gt;
+    @if (User.IsInRole(&quot;Admin&quot;) || User.IsInRole(&quot;Reception&quot;) || User.IsInRole(&quot;Doctor&quot;))
+    {
+        &lt;a asp-controller=&quot;Reservations&quot; asp-action=&quot;Queue&quot; class=&quot;btn btn-outline-primary&quot;&gt;
+            @(User.IsInRole(&quot;Doctor&quot;) &amp;&amp; !User.IsInRole(&quot;Admin&quot;)
+                &amp;&amp; !User.IsInRole(&quot;Reception&quot;) ? &quot;My Queue&quot; : &quot;Doctor Queues&quot;)
+        &lt;/a&gt;
+    }
+    @if (User.IsInRole(&quot;Admin&quot;) || User.IsInRole(&quot;Reception&quot;))
+    {
+        &lt;a asp-controller=&quot;Patients&quot; asp-action=&quot;Index&quot; class=&quot;btn btn-outline-primary&quot;&gt;Find Patient&lt;/a&gt;
+        &lt;a asp-controller=&quot;Reservations&quot; asp-action=&quot;Create&quot; class=&quot;btn btn-primary&quot;&gt;Book Reservation&lt;/a&gt;
+        &lt;a asp-controller=&quot;Payments&quot; asp-action=&quot;Dashboard&quot; class=&quot;btn btn-outline-primary&quot;&gt;Payments&lt;/a&gt;
+    }
+&lt;/nav&gt;
+</code></pre>
+<p>Keep every existing dashboard metric and its server query unchanged. The shortcuts are additive; existing navigation for other roles stays available. Do not relabel the unpaid count as all Pending/Confirmed reservations.</p>
+<p><strong>Test:</strong> reception can start patient search/booking/payment tasks; doctors get own queue navigation; nutritionist gets no doctor-queue shortcut; follow-up filtering still works; booked follow-up leaves pending results; cancellation reopens according to existing rules; dismiss validation remains; dashboard money/counts unchanged.</p>
+<h2 id="section-12">Step 10 — remaining forms, navigation and accessibility finish</h2>
+<p>Finish the existing screens without adding new functionality. Apply the already-tested patterns rather than introducing another component system.</p>
+<h3>10A. Form pass</h3>
+<p>Inspect existing views under Patients (Create/EditBasic/EditMedical), Reservations (Create/Edit), Nutrition and Analysis. For each rendered form:</p>
+<ol>
+<li>Keep one h1 page title; use existing page-toolbar styles for title/back action.</li>
+<li>Keep an explicit Cancel/Back anchor to the existing owning patient/list screen. Preserve its patient/reservation/enrollment route ID. Do not implement <code>history.back()</code> as the only way out.</li>
+<li>Add visible labels with matching for/id, or asp-for labels. Placeholders are hints, not labels.</li>
+<li>Retain validation summary and field messages; retain posted names/IDs, hidden context, antiforgery and role checks.</li>
+<li>Use row g-3 and col-12 col-md-6 for short paired fields; full-width for long text. Keep a single containing form and avoid moving controls outside it.</li>
+<li>Use form-actions for Save/Cancel. Do not rename action parameters or replace native form submission with fetch.</li>
+<li>Add table-responsive wrappers to wide nested tables. Preserve script-used IDs and data-* attributes.</li>
+</ol>
+<p>These are mechanical presentation changes. If a screen needs a new DTO, service query or workflow to fit the design, leave that change out and request review; that is beyond this finishing pass.</p>
+<h3>10B. Shared layout</h3>
+<p>In <code>Views/Shared/_Layout.cshtml</code>, add <code>aria-label=&quot;Close&quot;</code> to alert close buttons that lack it. Keep errors and warnings persistent; only success may auto-dismiss as currently implemented.</p>
+<p>Inside the sidebar&#39;s ul, change any direct <code>&lt;div class=&quot;nav-section-label ...&quot;&gt;…&lt;/div&gt;</code> child to <code>&lt;li class=&quot;nav-section-label ...&quot; role=&quot;presentation&quot;&gt;…&lt;/li&gt;</code>. Change both opening and closing tag, preserving class/content. Do not change divs outside the list. Keep offcanvas controls, sidebar ID, skip link and mainContent target.</p>
+<p>Do not add a second Bootstrap bundle, site.css, or site.js include. Keep versioned local assets. Do not change the font/library versions during this pass.</p>
+<h3>10C. Keyboard, responsive and print checks</h3>
+<p>Walk through each principal screen using Tab/Shift+Tab/Enter/Escape. Every action needs an accessible name; decorative icons can use aria-hidden. Every modal needs a visible title, labelledby, labelled Close control, sensible initial focus and focus returning to its trigger. Keep the contact helper&#39;s blocked dismissal while saving.</p>
+<p>Check 360px, 768px and 1280px widths, then browser zoom at 200%. Content may grow vertically; it must not overlap or disappear. Tables may scroll in their own labelled region. Check long Arabic and English names, long addresses, empty values and large balances using existing demo records; do not change application-wide language/direction or currency behavior in this pass.</p>
+<p>Print an existing prescription and reservation-history report: no clipped clinical content, no sidebar, and no UI action buttons covering output. Do not redesign the report&#39;s data content as part of the shell styling.</p>
+<p><strong>Test:</strong> all relevant forms still save and retain invalid values; keyboard operation works without a mouse; no new browser-console error; mobile sidebar closes and focus remains usable; persistent warning/error messages stay visible; existing print outputs remain readable.</p>
+<h2 id="section-13">Step 11 — final acceptance and handoff for review</h2>
+<p>Run the complete journey with a fresh demo reservation and separate browser sessions for reception and its assigned doctor. Record IDs so failures can be reproduced.</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Expected result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Reception opens patient workspace</td>
+<td>Identity, contact details and permitted shortcuts clear</td>
+</tr>
+<tr>
+<td>Add phone/address; invalid then valid</td>
+<td>Error stays in popup; values retained; successful item visible once</td>
+</tr>
+<tr>
+<td>Book from patient workspace</td>
+<td>Correct patient preselected</td>
+</tr>
+<tr>
+<td>New Pending reservation</td>
+<td>Not collectible</td>
+</tr>
+<tr>
+<td>Check In</td>
+<td>Confirmed + Waiting; not collectible</td>
+</tr>
+<tr>
+<td>Complete while Waiting</td>
+<td>UI discourages; server rejects a forged/stale submission</td>
+</tr>
+<tr>
+<td>Assigned doctor starts consultation</td>
+<td>Confirmed + InConsultation</td>
+</tr>
+<tr>
+<td>Other doctor attempts access</td>
+<td>Existing ownership restriction enforced</td>
+</tr>
+<tr>
+<td>Reception collects partial amount</td>
+<td>Correct reservation/clinic; positive remaining balance retained</td>
+</tr>
+<tr>
+<td>Doctor saves notes/prescription/analysis</td>
+<td>Same linked record; no lost fields</td>
+</tr>
+<tr>
+<td>Complete active consultation</td>
+<td>Completed + Finished; no unrelated payment created by the UI</td>
+</tr>
+<tr>
+<td>Finished reservation with remaining balance</td>
+<td>Still collectible; collection link disappears after full coverage</td>
+</tr>
+<tr>
+<td>Edit completed reservation</td>
+<td>Disabled and server-protected</td>
+</tr>
+<tr>
+<td>Cancel a separate waiting reservation</td>
+<td>Existing cancellation/Left rules preserved</td>
+</tr>
+<tr>
+<td>Search/filter, then next page</td>
+<td>Search/filter still active</td>
+</tr>
+<tr>
+<td>Payment audit</td>
+<td>Popup, styled, readable, pagination functional</td>
+</tr>
+<tr>
+<td>Timeline/history</td>
+<td>New tab, correct patient</td>
+</tr>
+<tr>
+<td>Follow-up booking/cancellation</td>
+<td>Existing pending/booked/reopen behavior preserved</td>
+</tr>
+<tr>
+<td>Roles</td>
+<td>Reception, Doctor, Admin, Nutritionist see only their permitted actions</td>
+</tr>
+<tr>
+<td>Responsive/keyboard/print</td>
+<td>No overlap, inaccessible control or clipped print content</td>
+</tr>
+</tbody></table></div>
+<p>For concurrency, use two tabs to attempt the same queue transition and to collect against the same balance. The UI must show the server&#39;s rejection/recomputed state; do not weaken existing transaction checks to make both submissions succeed.</p>
+<h3>Completion criteria</h3>
+<p>The UI/UX pass is finished when Steps 1–10 and this matrix pass, builds succeed, there are no new console errors, and the existing business rules still hold. Stop here and request a combined review before starting another feature batch. No additional feature is required to call this phase complete.</p>
+<h3>Implementation log</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Build</th>
+<th>Tests</th>
+<th>Checkpoint / notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1 Contact popups</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>2 Patient readability/removal feedback</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>3 Pagination</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>4 Lists/shared presentation</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>5 Reservation actions</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>6 Queue/board</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>7 Consultation</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>8 Payments</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>9 Follow-ups/dashboard</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>10 Forms/accessibility</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>11 End-to-end acceptance</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table></div>
+<h3>What to send when requesting help</h3>
+<p>Include the step/substep number, affected file, exact build error or browser message, signed-in role, starting reservation/queue/payment state, expected vs actual result, and the relevant changed block. For UI problems, a screenshot is useful. For final review, provide the changed files/diff and completed test log. Do not send database credentials or real patient-identifying data.</p>
+<h3>Recovering from a failed step</h3>
+<p>Keep the last passing checkpoint. Revert only the changes from the failing step using your source-control tool, keeping unrelated work. Rebuild and retest the previous baseline. Do not reset the database or run payment maintenance/backfill actions to fix a presentation error. If the source has evolved since this guide was prepared, ask for review before adapting a controller replacement.</p>
+
+</main></div><script>
+document.querySelectorAll('pre').forEach(pre=>{const b=document.createElement('button');b.className='copy';b.textContent='Copy code';b.onclick=async()=>{try{await navigator.clipboard.writeText(pre.querySelector('code').textContent);b.textContent='Copied';setTimeout(()=>b.textContent='Copy code',1500)}catch{b.textContent='Select code and copy manually'}};pre.before(b)});
+</script></body></html>

@@ -207,11 +207,6 @@ header.topbar h6 {
 main {
     padding: 2rem;
 }
-
-@media (max-width: 991.98px) {
-    #sidebar { display: none; }
-}
-
 /* ── Cards ────────────────────────────────────────────────── */
 .card {
     border-radius: var(--radius-lg);
@@ -220,10 +215,6 @@ main {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lift) !important;
-}
 
 .card-header {
     background: var(--surface);
@@ -385,3 +376,299 @@ body { padding-top: 0; }
 .text-primary { color: var(--brand-primary) !important; }
 .bg-primary   { background-color: var(--brand-primary) !important; }
 hr { border-color: var(--border-soft); }
+/*responsive Design*/
+/* Shared responsive application layout */
+
+.app-content,
+.min-width-0 {
+    min-width: 0;
+}
+
+.app-topbar {
+    padding: 1rem 1.5rem;
+}
+
+main.app-main {
+    min-width: 0;
+    padding: 1.5rem;
+}
+
+.app-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+}
+
+#sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+    #sidebar > .sidebar-footer {
+        margin-top: auto;
+    }
+
+    #sidebar .nav-link {
+        min-height: 44px;
+    }
+
+.app-skip-link {
+    position: fixed;
+    top: 0.75rem;
+    left: 0.75rem;
+    z-index: 1100;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    color: var(--brand-primary-dark);
+    border: 2px solid var(--brand-primary);
+    border-radius: var(--radius-md);
+    transform: translateY(-200%);
+}
+
+    .app-skip-link:focus {
+        transform: translateY(0);
+    }
+
+#sidebar a:focus-visible,
+.app-menu-toggle:focus-visible,
+#sidebar .btn-close:focus-visible {
+    outline: 3px solid var(--brand-teal);
+    outline-offset: 3px;
+}
+
+@media (min-width: 992px) {
+    #sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        height: 100dvh;
+        flex-shrink: 0;
+        align-self: flex-start;
+    }
+}
+
+@media (max-width: 991.98px) {
+    #sidebar {
+        --bs-offcanvas-width: min(280px, 90vw);
+        width: var(--bs-offcanvas-width);
+        min-width: 0;
+    }
+
+    .app-topbar {
+        padding: 0.75rem 1rem;
+    }
+
+    main.app-main {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    main.app-main {
+        padding: 0.75rem;
+    }
+}
+
+@media print {
+    #sidebar,
+    .app-topbar,
+    .app-skip-link,
+    .offcanvas-backdrop {
+        display: none !important;
+    }
+
+    main.app-main {
+        padding: 0;
+    }
+}
+/*# reusable workspace styles */
+/* Workspace headers and contextual navigation */
+
+.workspace-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.workspace-heading {
+    flex: 1 1 18rem;
+    min-width: 0;
+}
+
+.workspace-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.65rem;
+    color: var(--muted);
+    font-size: 0.875rem;
+    text-decoration: none;
+}
+
+.workspace-title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.workspace-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1rem;
+    color: var(--muted);
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.workspace-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+    .workspace-actions .btn,
+    .workspace-shortcuts .btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+.workspace-shortcuts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.875rem;
+    margin-bottom: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+}
+
+@media (max-width: 575.98px) {
+    .workspace-actions {
+        width: 100%;
+    }
+
+        .workspace-actions > .btn,
+        .workspace-actions > .dropdown {
+            flex: 1 1 auto;
+        }
+
+            .workspace-actions > .dropdown > .btn {
+                width: 100%;
+            }
+
+    .workspace-shortcuts .btn {
+        flex: 1 1 auto;
+    }
+}
+
+@media print {
+    .workspace-back,
+    .workspace-actions,
+    .workspace-shortcuts {
+        display: none !important;
+    }
+}
+.clinical-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.contact-value {
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+.page-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+    .page-toolbar h1 {
+        margin: 0;
+        font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+        overflow-wrap: anywhere;
+    }
+
+.page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+    .page-actions .btn, .filter-panel .btn {
+        min-height: 44px;
+    }
+
+.filter-panel {
+    padding: 1rem;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+}
+
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-soft);
+}
+
+    .form-actions .btn {
+        min-height: 44px;
+    }
+
+.empty-state {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #4b5563;
+}
+
+.table-responsive:focus-visible, .btn:focus-visible, a:focus-visible {
+    outline: 3px solid var(--brand-primary);
+    outline-offset: 3px;
+}
+
+@media (max-width: 575.98px) {
+    .page-actions {
+        width: 100%;
+    }
+
+        .page-actions > .btn {
+            flex: 1 1 auto;
+        }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card, .btn, .modal.fade .modal-dialog {
+        transition: none !important;
+    }
+}
+
+@media print {
+    .page-actions, .filter-panel, .form-actions {
+        display: none !important;
+    }
+}
+.wrap-anywhere {
+    overflow-wrap: anywhere;
+}
+.payment-form-card {
+    max-width: 46rem;
+}
+

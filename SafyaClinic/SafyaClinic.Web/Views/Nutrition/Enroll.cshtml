@@ -3,15 +3,22 @@
 @{
     ViewData["Title"] = "Enroll Patient";
     var packages = ViewBag.Packages as IEnumerable<NutritionPackageDto> ?? Enumerable.Empty<NutritionPackageDto>();
-    var doctors  = ViewBag.Doctors as IEnumerable<UserDto> ?? Enumerable.Empty<UserDto>();
+    var doctors = ViewBag.Doctors as IEnumerable<UserDto> ?? Enumerable.Empty<UserDto>();
 }
 
+<div class="page-toolbar d-flex justify-content-between align-items-start mb-3">
+    <h1 class="mb-0">Enroll Patient in Nutrition Package</h1>
+</div>
+
 <div class="card" style="max-width:600px;">
-    <div class="card-header"><i class="bi bi-capsule me-2"></i>Enroll Patient in Nutrition Package</div>
     <div class="card-body">
         <form asp-action="Enroll" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <div asp-validation-summary="All"
+                 class="alert alert-danger d-flex justify-content-center align-items-center py-1"
+                 role="alert" tabindex="-1">
+                Enroll Patient in Nutrition Package
+            </div>
             <input type="hidden" asp-for="PatientId" />
 
             <div class="mb-3">
@@ -25,6 +32,7 @@
                         </option>
                     }
                 </select>
+                <span asp-validation-for="PackageId" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
@@ -36,16 +44,20 @@
                         <option value="@d.Id">@d.FullName</option>
                     }
                 </select>
+                <span asp-validation-for="DoctorId" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
                 <label asp-for="StartDate" class="form-label">Start Date *</label>
                 <input asp-for="StartDate" type="date" class="form-control" required />
+                <span asp-validation-for="StartDate" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
                 <label asp-for="DiscountPercent" class="form-label">Discount % <span id="maxDiscountHint" class="text-muted small"></span></label>
-                <input asp-for="DiscountPercent" type="number" step="0.1" class="form-control" id="discountInput" value="0" />
+                @* No value="0": asp-for re-renders the attempted value from the model/ModelState *@
+                <input asp-for="DiscountPercent" type="number" step="0.1" class="form-control" id="discountInput" />
+                <span asp-validation-for="DiscountPercent" class="text-danger"></span>
             </div>
 
             <div class="alert alert-light border d-flex justify-content-between" id="pricePreview" style="display:none;">
@@ -56,28 +68,33 @@
             <div class="mb-3">
                 <label asp-for="Notes" class="form-label">Notes</label>
                 <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Notes" class="text-danger"></span>
             </div>
 
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enroll Patient</button>
-            <a asp-action="PatientEnrollments" asp-route-patientId="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enroll Patient</button>
+                <a asp-action="PatientEnrollments" asp-route-patientId="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+            </div>
         </form>
     </div>
 </div>
 
 @section Scripts {
-    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
     <script>
-        const pkgSelect   = document.getElementById('packageSelect');
-        const discount    = document.getElementById('discountInput');
-        const preview     = document.getElementById('pricePreview');
-        const priceText   = document.getElementById('finalPriceText');
-        const maxHint     = document.getElementById('maxDiscountHint');
+        const pkgSelect = document.getElementById('packageSelect');
+        const discount = document.getElementById('discountInput');
+        const preview = document.getElementById('pricePreview');
+        const priceText = document.getElementById('finalPriceText');
+        const maxHint = document.getElementById('maxDiscountHint');
 
         function recalc() {
             const opt = pkgSelect.options[pkgSelect.selectedIndex];
             if (!opt || !opt.value) { preview.style.display = 'none'; return; }
             const price = parseFloat(opt.dataset.price);
-            const max   = parseFloat(opt.dataset.maxdiscount);
+            const max = parseFloat(opt.dataset.maxdiscount);
             maxHint.textContent = `(max ${max}%)`;
             let d = parseFloat(discount.value) || 0;
             const final = price * (1 - d / 100);
@@ -86,5 +103,7 @@
         }
         pkgSelect.addEventListener('change', recalc);
         discount.addEventListener('input', recalc);
+        // Review fix: show the preview for values restored after a rejected submission without changing them.
+        recalc();
     </script>
 }

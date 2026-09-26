@@ -1,0 +1,85 @@
+@model PaymentDashboardDto
+@* Payment access: shared collectible lists, without revenue breakdowns. *@
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-exclamation-triangle text-danger me-2"></i>Unpaid — Finished Visits</div>
+            <div class="card-body p-0">
+                @if (!Model.UnpaidCompletedReservations.Any())
+                {
+                    <div class="text-center text-muted py-4">No collectible balances for finished visits.</div>
+                }
+                else
+                {
+                    <div class="table-responsive" style="max-height:340px; overflow:auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr><th scope="col">Patient</th><th scope="col">Clinic</th><th scope="col">Date</th><th scope="col">Written Off</th><th scope="col">Balance</th><th scope="col"><span class="visually-hidden">Collect</span></th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in Model.UnpaidCompletedReservations)
+                                {
+                                    <tr>
+                                        <td>@r.PatientName</td>
+                                        <td>@r.ClinicName</td>
+                                        <td>@r.ReservationDate.ToString("dd MMM yyyy")</td>
+                                        <td class="text-muted">@(r.WrittenOff > 0 ? r.WrittenOff.ToString("C") : "—")</td>
+                                        <td class="fw-semibold text-danger">@r.Balance.ToString("C")</td>
+                                        <td>
+                                            <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@r.PatientId"
+                                               asp-route-reservationId="@r.ReservationId" class="btn btn-sm btn-success" aria-label="Collect payment from @r.PatientName">
+                                                <i class="bi bi-cash-coin"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-hourglass-split text-warning me-2"></i>Unpaid — In Consultation</div>
+            <div class="card-body p-0">
+                @if (!Model.UnpaidPendingReservations.Any())
+                {
+                    <div class="text-center text-muted py-4">No collectible balances for consultations in progress.</div>
+                }
+                else
+                {
+                    <div class="table-responsive" style="max-height:340px; overflow:auto;">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead>
+                                <tr><th scope="col">Patient</th><th scope="col">Clinic</th><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Written Off</th><th scope="col">Balance</th><th scope="col"><span class="visually-hidden">Collect</span></th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in Model.UnpaidPendingReservations)
+                                {
+                                    <tr>
+                                        <td>@r.PatientName</td>
+                                        <td>@r.ClinicName</td>
+                                        <td>@r.ReservationDate.ToString("dd MMM yyyy")</td>
+                                        <td><span class="badge bg-light text-dark border">@r.StatusName</span></td>
+                                        <td class="text-muted">@(r.WrittenOff > 0 ? r.WrittenOff.ToString("C") : "—")</td>
+                                        <td class="fw-semibold text-warning">@r.Balance.ToString("C")</td>
+                                        <td>
+                                            <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@r.PatientId"
+                                               asp-route-reservationId="@r.ReservationId" class="btn btn-sm btn-success" aria-label="Collect payment from @r.PatientName">
+                                                <i class="bi bi-cash-coin"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+

@@ -22,10 +22,19 @@ public class PatientsController : BaseController
 
     public async Task<IActionResult> Index([FromQuery] PaginationRequest request)
     {
-        var result = await _patientService.SearchPatientsAsync(request);
         ViewBag.Search = request.Search;
         ViewBag.Page = request.Page;
         ViewBag.PageSize = request.PageSize;
+        // Search-first: opening or clearing the index must not execute a patient list/count query.
+        var hasSearch = !string.IsNullOrWhiteSpace(request.Search);
+        ViewBag.HasSearch = hasSearch;
+        if (!ModelState.IsValid || !hasSearch)
+            return View(new PagedResult<PatientSummaryDto> { Page = 1, PageSize = request.PageSize });
+
+        var result = await _patientService.SearchPatientsAsync(request);
+        // Keep a failed search distinct from an empty set of matching patients.
+        if (!result.IsSuccess)
+            ModelState.AddModelError("", "Could not load patients. Please try the search again.");
         return View(result.IsSuccess ? result.Data : null);
     }
 
@@ -182,10 +191,60 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddPhone(int patientId, CreatePatientPhoneRequest model)
+    public async Task<IActionResult> AddPhone(
+    int patientId,
+    CreatePatientPhoneRequest model)
     {
+        var isAjax =
+            Request.Headers["X-Requested-With"].ToString() == "XMLHttpRequest";
+
+        var number = model.PhoneNumber?.Trim();
+
+        if (patientId <= 0)
+            ModelState.AddModelError("", "Invalid patient.");
+
+        if (string.IsNullOrWhiteSpace(number) || number.Length > 20)
+        {
+            ModelState.AddModelError(
+                nameof(model.PhoneNumber),
+                "Enter a phone number of up to 20 characters.");
+        }
+
+        if (model.PhoneType is not ("Mobile" or "Home" or "Work"))
+            ModelState.AddModelError(nameof(model.PhoneType), "Select a valid phone type.");
+
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage)
+                    ? "Check the entered values."
+                    : e.ErrorMessage)
+                .ToArray();
+
+            if (isAjax)
+                return BadRequest(new { errors });
+
+            Error(string.Join(" ", errors));
+            return RedirectToAction(nameof(Details), new { id = patientId });
+        }
+
         var result = await _patientService.AddPhoneAsync(patientId, model);
-        if (!result.IsSuccess) Error(result.Errors.First());
+
+        if (!result.IsSuccess)
+        {
+            if (isAjax)
+                return BadRequest(new { errors = result.Errors });
+
+            Error(result.Errors.FirstOrDefault() ?? "Could not add the phone.");
+            return RedirectToAction(nameof(Details), new { id = patientId });
+        }
+
+        Success("Phone added.");
+
+        if (isAjax)
+            return Json(new { success = true });
+
         return RedirectToAction(nameof(Details), new { id = patientId });
     }
 
@@ -193,7 +252,12 @@ public class PatientsController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RemovePhone(int patientId, int phoneId)
     {
-        await _patientService.RemovePhoneAsync(patientId, phoneId);
+        var result = await _patientService.RemovePhoneAsync(patientId, phoneId);
+        if (!result.IsSuccess)
+            Error(result.Errors.FirstOrDefault() ?? "Could not remove the phone.");
+        else
+            Success("Phone removed.");
+
         return RedirectToAction(nameof(Details), new { id = patientId });
     }
 
@@ -201,18 +265,64 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AddAddress(int patientId, CreatePatientAddressRequest model)
+    public async Task<IActionResult> AddAddress(
+    int patientId, CreatePatientAddressRequest model)
     {
+        var isAjax = Request.Headers["X-Requested-With"].ToString() == "XMLHttpRequest";
+        model = new CreatePatientAddressRequest
+        {
+            City = model.City?.Trim() ?? "",
+            Street = model.Street?.Trim(),
+            Governorate = model.Governorate?.Trim(),
+            PostalCode = model.PostalCode?.Trim(),
+            IsPrimary = model.IsPrimary
+        };
+
+        if (patientId <= 0)
+            ModelState.AddModelError("", "Invalid patient.");
+        if (string.IsNullOrWhiteSpace(model.City) || model.City.Length > 50)
+            ModelState.AddModelError(nameof(model.City), "Enter a city of up to 50 characters.");
+        if (model.Street?.Length > 200)
+            ModelState.AddModelError(nameof(model.Street), "Street must be 200 characters or fewer.");
+        if (model.Governorate?.Length > 50)
+            ModelState.AddModelError(nameof(model.Governorate), "Governorate must be 50 characters or fewer.");
+        if (model.PostalCode?.Length > 10)
+            ModelState.AddModelError(nameof(model.PostalCode), "Postal code must be 10 characters or fewer.");
+
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage)
+                    ? "Check the entered values." : e.ErrorMessage).ToArray();
+            if (isAjax) return BadRequest(new { errors });
+            Error(string.Join(" ", errors));
+            return RedirectToAction(nameof(Details), new { id = patientId });
+        }
+
         var result = await _patientService.AddAddressAsync(patientId, model);
-        if (!result.IsSuccess) Error(result.Errors.First());
+        if (!result.IsSuccess)
+        {
+            if (isAjax) return BadRequest(new { errors = result.Errors });
+            Error(result.Errors.FirstOrDefault() ?? "Could not add the address.");
+            return RedirectToAction(nameof(Details), new { id = patientId });
+        }
+
+        Success("Address added.");
+        if (isAjax) return Json(new { success = true });
         return RedirectToAction(nameof(Details), new { id = patientId });
     }
+
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RemoveAddress(int patientId, int addressId)
     {
-        await _patientService.RemoveAddressAsync(patientId, addressId);
+        var result = await _patientService.RemoveAddressAsync(patientId, addressId);
+        if (!result.IsSuccess)
+            Error(result.Errors.FirstOrDefault() ?? "Could not remove the address.");
+        else
+            Success("Address removed.");
+
         return RedirectToAction(nameof(Details), new { id = patientId });
     }
 }
