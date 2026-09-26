@@ -9,10 +9,11 @@
     <div class="card shadow-lg border-0" style="width: 100%; max-width: 400px; border-radius: 20px;">
         <div class="card-body p-4 p-md-5">
             <div class="text-center mb-4">
-                <span class="brand-mark mx-auto mb-3" style="width:52px;height:52px;font-size:1.4rem;">
-                    <i class="bi bi-heart-pulse-fill"></i>
-                </span>
-                <h4 class="mt-1 mb-0 fw-bold">Safya Clinic</h4>
+                @* Branding: keep the colored logo on the white login card for contrast. *@
+                <a asp-controller="Home" asp-action="Index" class="clinic-brand-link">
+                    @await Html.PartialAsync("_ClinicLogo", "clinic-logo--login")
+                </a>
+                <h1 class="visually-hidden">Safya Clinic sign in</h1>
                 <small class="text-muted">Sign in to your account</small>
             </div>
 

@@ -7,6 +7,27 @@
     <p class="text-muted">Select a lookup category to add or manage reference data across the application.</p>
 
     <div class="row g-4 mt-2">
+        @* Role lookup: expose the same administration destinations from the lookup overview. *@
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <div class="card-body">
+                    <i class="bi bi-person-gear display-4 text-primary mb-3" aria-hidden="true"></i>
+                    <h5 class="card-title">Users</h5>
+                    <p class="card-text text-muted">Manage system users and assign roles.</p>
+                    <a asp-controller="Users" asp-action="Index" class="btn btn-outline-primary w-100">Manage</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100 shadow-sm border-0 text-center p-3">
+                <div class="card-body">
+                    <i class="bi bi-shield-lock display-4 text-primary mb-3" aria-hidden="true"></i>
+                    <h5 class="card-title">Roles</h5>
+                    <p class="card-text text-muted">View existing roles and add new roles.</p>
+                    <a asp-controller="Roles" asp-action="Index" class="btn btn-outline-primary w-100">Manage</a>
+                </div>
+            </div>
+        </div>
         <div class="col-md-6 col-lg-3">
             <div class="card h-100 shadow-sm border-0 text-center p-3">
                 <div class="card-body">

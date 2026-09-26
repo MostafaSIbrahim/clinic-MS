@@ -31,9 +31,24 @@ namespace SafyaClinic.Web.Controllers
         //    patient name or analysis type) ──────────────────────────────
         public async Task<IActionResult> Index([FromQuery] PaginationRequest request, string? status)
         {
-            var result = await _analysisService.SearchAnalysesAsync(request, status);
+            // Search-first: opening or clearing this index must not query the analysis list/count.
+            status = status?.Trim();
             ViewBag.Search = request.Search;
             ViewBag.Status = status;
+            var hasSearch = !string.IsNullOrWhiteSpace(request.Search) || !string.IsNullOrWhiteSpace(status);
+            ViewBag.HasSearch = hasSearch;
+            // Unknown statuses must not be silently ignored and broaden the query.
+            if (!string.IsNullOrWhiteSpace(status)
+                && (!Enum.TryParse<SafyaClinic.Domain.Enums.AnalysisStatus>(status, out var parsedStatus)
+                    || !Enum.IsDefined(parsedStatus)))
+                ModelState.AddModelError(nameof(status), "Select a valid analysis status.");
+            if (!ModelState.IsValid || !hasSearch)
+                return View(new PagedResult<MedicalAnalysisDto> { Page = 1, PageSize = request.PageSize });
+
+            var result = await _analysisService.SearchAnalysesAsync(request, status);
+            // Keep service failures distinct from successful searches with no matches.
+            if (!result.IsSuccess)
+                ModelState.AddModelError("", "Could not load analyses. Please try the search again.");
             return View(result.IsSuccess ? result.Data : new PagedResult<MedicalAnalysisDto>());
         }
 

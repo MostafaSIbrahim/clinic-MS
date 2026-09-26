@@ -21,20 +21,21 @@
         </div>
     </div>
     <script>
+            const createdPatient = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    id = ViewBag.NewPatientId,
+                        fullName = ViewBag.NewPatientName,
+                        primaryPhone = ViewBag.NewPatientPhone
+                }));
             function sendAndClose() {
                 if (window.opener) {
-                    window.opener.postMessage({
-                        type: 'NEW_PATIENT_CREATED',
-                        patient: {
-                            id: @ViewBag.NewPatientId,
-                            fullName: '@(ViewBag.NewPatientName?.ToString().Replace("'", "\\'") ?? "")',
-                            primaryPhone: '@(ViewBag.NewPatientPhone?.ToString().Replace("'", "\\'") ?? "")'
-                        }
-                    }, '*');
+                    window.opener.postMessage({ type: 'NEW_PATIENT_CREATED', patient: createdPatient },
+                        window.location.origin);
                 }
                 window.close();
             }
             setTimeout(sendAndClose, 3000);
     </script>
+
 </body>
 </html>

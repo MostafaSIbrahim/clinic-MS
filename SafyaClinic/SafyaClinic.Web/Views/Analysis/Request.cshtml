@@ -9,12 +9,15 @@
     <div class="card-body">
         <form asp-action="Request" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            @* Review fix: include errors attached to the selected analysis IDs. *@
+            <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
             <input type="hidden" asp-for="PatientId" />
             <input type="hidden" asp-for="DoctorId" />
             <input type="hidden" asp-for="RecordId" />
 
-            <label class="form-label">Analysis Types * <small class="text-muted">(select all that apply)</small></label>
+            @* Review fix: give the checkbox group an accessible name without an unbound label. *@
+            <fieldset>
+            <legend class="h6">Analysis types (select all that apply)</legend>
             @if (!types.Any())
             {
                 <p class="text-muted small">No analysis types configured.</p>
@@ -25,8 +28,9 @@
                     @foreach (var t in types)
                     {
                         <div class="form-check">
+                            @* Review fix: the controller can redisplay a missing selection; keep that path null-safe. *@
                             <input class="form-check-input" type="checkbox" name="AnalysisTypeIds"
-                                   value="@t.Id" id="type_@t.Id" />
+                                   value="@t.Id" id="type_@t.Id" checked="@(Model.AnalysisTypeIds?.Contains(t.Id) == true)" />
                             <label class="form-check-label" for="type_@t.Id">
                                 @t.TypeName @(t.DefaultCost != null ? $"({t.DefaultCost:C})" : "")
                                 @if (!string.IsNullOrWhiteSpace(t.PreparationInstructions))
@@ -39,13 +43,24 @@
                 </div>
             }
 
+            </fieldset>
             <div class="form-check mb-3">
                 <input asp-for="IsUrgent" class="form-check-input" />
                 <label asp-for="IsUrgent" class="form-check-label">Mark as urgent</label>
             </div>
 
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Request Selected Analyses</button>
-            <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+            @* Review fix: return to the originating clinical record when this request is linked to one. *@
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Request Selected Analyses</button>
+                @if (Model.RecordId.HasValue)
+                {
+                    <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@Model.RecordId.Value" class="btn btn-outline-secondary">Cancel</a>
+                }
+                else
+                {
+                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+                }
+            </div>
         </form>
     </div>
 </div>

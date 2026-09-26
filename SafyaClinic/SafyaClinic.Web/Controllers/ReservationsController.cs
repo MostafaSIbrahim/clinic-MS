@@ -15,26 +15,50 @@ public class ReservationsController : BaseController
     private readonly IUserService _userService;
     private readonly IClinicService _clinicService;
     private readonly IPatientService _patientService;
+    private readonly IPaymentService _paymentService;
+
 
     public ReservationsController(
         IReservationService reservationService,
         IUserService userService,
         IClinicService clinicService,
-        IPatientService patientService)
+        IPatientService patientService,
+        IPaymentService paymentService)
     {
         _reservationService = reservationService;
         _userService = userService;
         _clinicService = clinicService;
         _patientService = patientService;
+        _paymentService = paymentService;
     }
 
     public async Task<IActionResult> Index(
         [FromQuery] ReservationFilterRequest filter,
         [FromQuery] PaginationRequest pagination)
     {
-        var result = await _reservationService.GetReservationsAsync(filter, pagination);
         ViewBag.Filter = filter;
         ViewBag.Pagination = pagination;
+        // Search-first: honor selected filters/deep links, but never query the unfiltered index.
+        var hasFilter = filter.DateFrom.HasValue || filter.DateTo.HasValue
+            || !string.IsNullOrWhiteSpace(filter.Category) || filter.DoctorId.HasValue
+            || filter.PatientId.HasValue || filter.ClinicId.HasValue
+            || filter.StatusId.HasValue || filter.IsPaid.HasValue;
+        ViewBag.HasSearch = hasFilter;
+
+        // Reject invalid criteria instead of letting the service silently ignore an unknown category.
+        if (!string.IsNullOrWhiteSpace(filter.Category)
+            && (!Enum.TryParse<SafyaClinic.Domain.Enums.TreatmentCategory>(filter.Category, out var category)
+                || !Enum.IsDefined(category)))
+            ModelState.AddModelError(nameof(filter.Category), "Select a valid treatment category.");
+        if (filter.DateFrom.HasValue && filter.DateTo.HasValue && filter.DateFrom > filter.DateTo)
+            ModelState.AddModelError(nameof(filter.DateTo), "The end date must be on or after the start date.");
+        if (!ModelState.IsValid || !hasFilter)
+            return View(new PagedResult<ReservationSummaryDto> { Page = 1, PageSize = pagination.PageSize });
+
+        var result = await _reservationService.GetReservationsAsync(filter, pagination);
+        // A service failure should not be presented as a successful search with no matches.
+        if (!result.IsSuccess)
+            ModelState.AddModelError("", "Could not load reservations. Please try the filters again.");
         return View(result.IsSuccess ? result.Data : null);
     }
 
@@ -171,6 +195,16 @@ public class ReservationsController : BaseController
     {
         var result = await _reservationService.GetReservationByIdAsync(id);
         if (!result.IsSuccess) { Error("Reservation not found."); return RedirectToAction(nameof(Index)); }
+        ViewBag.CanCollectPayment = false;
+        ViewBag.CollectionStateKnown = false;
+        if ((IsAdmin || IsReception) && result.Data is { } reservation)
+        {
+            var due = await _paymentService.GetDueAmountAsync(
+                reservation.PatientId, reservation.Id, null);
+            ViewBag.CollectionStateKnown = due.IsSuccess;
+            ViewBag.CanCollectPayment = due.IsSuccess && due.Data > 0m;
+        }
+
         return View(result.Data);
     }
 
@@ -300,9 +334,9 @@ public class ReservationsController : BaseController
     public async Task<IActionResult> UpdateStatus(int id, int statusId)
     {
         var result = await _reservationService.UpdateStatusAsync(
-    id,
-    statusId,
-    CurrentUserId);
+            id,
+            statusId,
+            CurrentUserId);
 
         if (!result.IsSuccess)
         {
@@ -310,10 +344,16 @@ public class ReservationsController : BaseController
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        if (statusId == 3 && result.Data is { IsPaid: false } r)
+        if (result.Data is { StatusName: "Completed" } r && (IsAdmin || IsReception))
         {
-            return RedirectToAction("Collect", "Payments", new { patientId = r.PatientId, reservationId = id });
+            var due = await _paymentService.GetDueAmountAsync(r.PatientId, id, null);
+            if (due.IsSuccess && due.Data > 0m)
+                return RedirectToAction("Collect", "Payments",
+                    new { patientId = r.PatientId, reservationId = id });
+            if (!due.IsSuccess)
+                Error("Reservation completed, but collection eligibility could not be confirmed. Check the payment summary.");
         }
+
 
         return RedirectToAction(nameof(Details), new { id });
     }

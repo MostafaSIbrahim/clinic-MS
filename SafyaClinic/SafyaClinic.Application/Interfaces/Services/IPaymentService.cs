@@ -9,14 +9,16 @@ public interface IPaymentService
     Task<ServiceResult<PaymentDto>> GetPaymentByIdAsync(int paymentId);
     Task<ServiceResult<IEnumerable<PaymentDto>>> GetPatientPaymentsAsync(int patientId);
     Task<ServiceResult<PatientFinancialSummaryDto>> GetPatientFinancialSummaryAsync(int patientId);
-    Task<ServiceResult<IEnumerable<PaymentDto>>> GetPaymentsByDateRangeAsync(DateTime from, DateTime to);
+    // Payment access: UTC bounds with an exclusive end; optional assigned-doctor scope.
+    Task<ServiceResult<IEnumerable<PaymentDto>>> GetPaymentsByDateRangeAsync(DateTime from, DateTime toExclusive, int? doctorId = null);
 
     // ── New payment operations ─────────────────────────────────
     Task<ServiceResult<PaymentDto>> CancelPaymentAsync(CancelPaymentRequest request, int currentUserId);
     Task<ServiceResult<PaymentDto>> ChangePaymentAmountAsync(ChangePaymentAmountRequest request, int currentUserId);
 
     // ── Dashboard ────────────────────────────────────────────────
-    Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null);
+    // Payment access: unpaidOnly skips all revenue and breakdown queries.
+    Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null, bool unpaidOnly = false);
 
     // ── Collect-form helper ─────────────────────────────────────
     /// <summary>

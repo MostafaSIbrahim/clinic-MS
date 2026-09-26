@@ -450,10 +450,16 @@ public class PaymentService : IPaymentService
     }
 
     public async Task<ServiceResult<IEnumerable<PaymentDto>>> GetPaymentsByDateRangeAsync(
-        DateTime from, DateTime to)
+        DateTime from, DateTime toExclusive, int? doctorId = null)
     {
-        var payments = await _uow.Payments.Query()
-            .Where(p => p.PaymentDate >=  from && p.PaymentDate <= to)
+        // Payment access: filter assigned doctor's transactions in SQL, before materialization.
+        var query = _uow.Payments.Query()
+            .Where(p => p.PaymentDate >= from && p.PaymentDate < toExclusive);
+        if (doctorId.HasValue)
+            query = query.Where(p =>
+                (p.Reservation != null && p.Reservation.DoctorId == doctorId.Value) ||
+                (p.Enrollment != null && p.Enrollment.DoctorId == doctorId.Value));
+        var payments = await query
             .OrderByDescending(p => p.PaymentDate)
             .Select( p => new PaymentDto
             {
@@ -649,11 +655,16 @@ public class PaymentService : IPaymentService
     }
     // ── Payment dashboard ─────────────────────────────────────────
 
-    public async Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null)
+    public async Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null, bool unpaidOnly = false)
     {
         var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
 
         var reservationsQuery = _uow.Reservations.Query();
+        // Payment access: reception only needs reservations whose queue can have a collectible balance.
+        if (unpaidOnly)
+            reservationsQuery = reservationsQuery.Where(r =>
+                r.Status.StatusName != "Cancelled" && r.Status.StatusName != "NoShow" &&
+                (r.QueueStatus == PatientQueueStatus.InConsultation || r.QueueStatus == PatientQueueStatus.Finished));
 
         var paymentsQuery = _uow.Payments.Query();
 
@@ -694,24 +705,6 @@ public class PaymentService : IPaymentService
             })
             .ToListAsync();
 
-        var payments = await paymentsQuery
-            .Select(p => new
-            {
-                p.Id,
-                p.ReservationId,
-                p.Amount,
-                p.ClinicId,
-                p.PatientSourceId,
-                p.SourceDeductionAmount,
-                p.ClinicNetAmount,
-                p.Status
-            })
-            .ToListAsync();
-
-        var activePayments = payments
-            .Where(p => p.Status == PaymentStatusEnum.Active)
-            .ToList();
-
         var unpaidCompleted = new List<UnpaidReservationDto>();
         var unpaidPending = new List<UnpaidReservationDto>();
 
@@ -748,6 +741,34 @@ public class PaymentService : IPaymentService
             else
                 unpaidPending.Add(dto);
         }
+
+        // Payment access: stop before querying payment totals, sources, or clinic breakdowns.
+        if (unpaidOnly)
+            return ServiceResult<PaymentDashboardDto>.Success(new PaymentDashboardDto
+            {
+                UnpaidCompletedReservations = unpaidCompleted,
+                UnpaidPendingReservations = unpaidPending,
+                TotalUnpaidCompleted = unpaidCompleted.Sum(r => r.Balance),
+                TotalUnpaidPending = unpaidPending.Sum(r => r.Balance)
+            });
+
+        var payments = await paymentsQuery
+            .Select(p => new
+            {
+                p.Id,
+                p.ReservationId,
+                p.Amount,
+                p.ClinicId,
+                p.PatientSourceId,
+                p.SourceDeductionAmount,
+                p.ClinicNetAmount,
+                p.Status
+            })
+            .ToListAsync();
+
+        var activePayments = payments
+            .Where(p => p.Status == PaymentStatusEnum.Active)
+            .ToList();
 
         var reservationsDict = reservations.ToDictionary(r => r.Id, r => r);
 

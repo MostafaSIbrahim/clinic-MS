@@ -36,6 +36,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorizationBuilder()
+    // Payment access: financial reporting and collection have separate permissions.
+    .AddPolicy("PaymentStaff", p => p.RequireRole("Admin", "Reception", "ReceptionAdmin"))
+    .AddPolicy("PaymentReports", p => p.RequireRole("Admin", "Reception", "ReceptionAdmin", "Doctor"))
     .AddPolicy("AdminOnly",        p => p.RequireRole("Admin"))
     .AddPolicy("DoctorOrAdmin",    p => p.RequireRole("Admin", "Doctor"))
     .AddPolicy("ReceptionOrAdmin", p => p.RequireRole("Admin", "Reception"))

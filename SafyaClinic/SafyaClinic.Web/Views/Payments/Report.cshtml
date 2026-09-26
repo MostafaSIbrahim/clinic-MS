@@ -3,106 +3,100 @@
     ViewData["Title"] = "Payment Report";
 }
 
+<div class="page-toolbar">
+    <h1 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Payment Report</h1>
+    @* Payment access: doctors have report access without collection dashboard access. *@
+    @if (User.IsInRole("Admin") || User.IsInRole("Reception") || User.IsInRole("ReceptionAdmin"))
+    {
+    <a asp-action="Dashboard" class="btn btn-sm btn-outline-primary"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+    }
+</div>
+
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-bar-chart me-2"></i>Payment Report</span>
-        <a asp-action="Dashboard" class="btn btn-sm btn-outline-primary"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
-    </div>
-    @* <div class="card-body">
-        <!--
-            One-time maintenance action: recomputes Reservation.IsPaid for every
-            reservation using the corrected coverage rule, fixing historical rows left
-            wrong by the pre-fix save-ordering bug. Idempotent — safe to click more than
-            once; it only touches rows whose computed status actually differs.
-        -->
-        <div class="alert alert-warning d-flex justify-content-between align-items-center">
-            <div>
-                <strong>Maintenance:</strong> recalculate paid status for all existing reservations
-                (one-time fix for historical data affected by the payment save-ordering bug).
-            </div>
-            <form asp-action="RecalculateAllPaidStatuses" method="post"
-                  onsubmit="return confirm('This will re-check the paid status of every reservation in the system. Continue?');">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-sm btn-warning text-nowrap">
-                    <i class="bi bi-arrow-repeat me-1"></i>Recalculate Now
-                </button>
-            </form>
-        </div> *@
-
     <div class="card-body pb-0">
-        <!--
-            One-time maintenance action: creates a $0 payment record for every existing
-            "free" reservation (e.g. nutrition "Follow-up") that doesn't already have one,
-            so it becomes visible in payment reports/dashboards. Safe to click more than
-            once — it only creates a payment for reservations that don't already have one.
-        -->
-        @* <div class="alert alert-info d-flex justify-content-between align-items-center">
-            <div>
-                <strong>Maintenance:</strong> record $0 payments for pre-existing free reservations
-                (one-time fix so nutrition "Follow-up" visits created before this feature show up here).
-            </div>
-            <form asp-action="BackfillZeroCostPayments" method="post"
-                  onsubmit="return confirm('This will create a $0 payment record for every free reservation that doesn\'t already have one. Continue?');">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-sm btn-info text-nowrap">
-                    <i class="bi bi-arrow-repeat me-1"></i>Backfill Now
-                </button>
+        <div class="filter-panel mb-3">
+            @* Search-first: leave dates empty initially and require an explicit report range. *@
+            <form asp-action="Report" method="get" class="row g-2 align-items-end">
+                @* Payment access: reception cannot choose a historical period. *@
+                <input type="hidden" name="run" value="true" />
+                @if (ViewBag.TodayOnly == true)
+                {
+                    <div class="col-auto"><span class="form-label">Today � @(((DateTime)ViewBag.From).ToString("dd MMM yyyy")) (Cairo)</span></div>
+                }
+                else
+                {
+                <div class="col-md-3">
+                    <label for="filterFrom" class="form-label small mb-1">From</label>
+                    <input type="date" id="filterFrom" name="from" value="@(((DateTime?)ViewBag.From)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" required />
+                </div>
+                <div class="col-md-3">
+                    <label for="filterTo" class="form-label small mb-1">To</label>
+                    <input type="date" id="filterTo" name="to" value="@(((DateTime?)ViewBag.To)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" required />
+                </div>
+                }
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+                    <a asp-action="Report" class="btn btn-outline-secondary">Clear</a>
+                </div>
             </form>
-        </div> *@
-
-        <form method="get" class="row g-2 mb-3">
-            <div class="col-md-3">
-                <input type="date" name="from" value="@(((DateTime)ViewBag.From).ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
-            </div>
-            <div class="col-md-3">
-                <input type="date" name="to" value="@(((DateTime)ViewBag.To).ToString("yyyy-MM-dd"))" class="form-control form-control-sm" />
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
-            </div>
-        </form>
-
-        <div class="alert alert-info d-flex justify-content-between">
-            <span>Total for period (active payments)</span>
-            <strong>@(((decimal)ViewBag.Total).ToString("C"))</strong>
         </div>
 
-        @if (!Model.Any())
+        @* Search-first: only show totals after a successful report request, never before searching. *@
+        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+        @if (ViewBag.HasSearch == true && ViewData.ModelState.IsValid)
         {
-            <div class="text-center text-muted py-5">No payments in this period.</div>
+            <div class="alert alert-info d-flex justify-content-between">
+                <span>Total for period (active payments)</span>
+                <strong>@(((decimal)ViewBag.Total).ToString("C"))</strong>
+            </div>
+        }
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <p class="text-muted py-3">Check the date range above and try again.</p>
+        }
+        else if (ViewBag.HasSearch != true)
+        {
+            <div class="empty-state" role="status">@(ViewBag.TodayOnly == true ? "Select Filter to load today�s payments." : "Choose a start and end date, then select Filter to load the payment report. Dates and times use Cairo time.")</div>
+        }
+        else if (!Model.Any())
+        {
+            <div class="text-center text-muted py-5">No payments found for the selected date range.</div>
         }
         else
         {
-            <table class="table table-hover align-middle">
-                <thead>
-                    <tr><th>Date</th><th>Patient</th><th>Amount</th><th>Method</th><th>Clinic</th><th>Source</th><th>Status</th><th>Collected By</th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var p in Model)
-                    {
-                        <tr class="@(p.Status == "Cancelled" ? "text-muted text-decoration-line-through" : "")">
-                            <td>@p.PaymentDate.ToString("dd MMM yyyy HH:mm")</td>
-                            <td>@p.PatientName</td>
-                            <td class="fw-semibold">@p.Amount.ToString("C")</td>
-                            <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
-                            <td>@(p.ClinicName ?? "—")</td>
-                            <td>@(p.PatientSourceName ?? "—")</td>
-                            <td>
-                                @if (p.Status == "Active")
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Cancelled</span>
-                                }
-                            </td>
-                            <td>@p.CollectorName</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            @* Review fix: make the horizontally scrolling results keyboard-accessible. *@
+            <div class="table-responsive" tabindex="0" role="region" aria-label="Payment report results">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr><th scope="col">Date</th><th scope="col">Patient</th><th scope="col">Amount</th><th scope="col">Method</th><th scope="col">Clinic</th><th scope="col">Source</th><th scope="col">Status</th><th scope="col">Collected By</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model)
+                        {
+                            <tr class="@(p.Status == "Cancelled" ? "text-muted text-decoration-line-through" : "")">
+                                <td>@TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(p.PaymentDate, DateTimeKind.Utc), (TimeZoneInfo)ViewBag.ReportTimeZone).ToString("dd MMM yyyy HH:mm")</td>
+                                <td>@p.PatientName</td>
+                                <td class="fw-semibold">@p.Amount.ToString("C")</td>
+                                <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
+                                <td>@(p.ClinicName ?? "—")</td>
+                                <td>@(p.PatientSourceName ?? "—")</td>
+                                <td>
+                                    @if (p.Status == "Active")
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Cancelled</span>
+                                    }
+                                </td>
+                                <td>@p.CollectorName</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 </div>
-

@@ -1,14 +1,9 @@
 @model PagedResult<UserDto>
 @{
     ViewData["Title"] = "Users";
-    var allRoles = new[]
-    {
-        (Id: 1, Name: "Admin"),
-        (Id: 2, Name: "Doctor"),
-        (Id: 3, Name: "Reception"),
-        (Id: 4, Name: "Patient"),
-        (Id: 5, Name: "Nutritionist")
-    };
+    // Role lookup: use database IDs for assigning and removing all roles, including custom ones.
+    var allRoles = (ViewBag.AllRoles as IEnumerable<SafyaClinic.Web.Models.RoleLookupItem>
+        ?? Enumerable.Empty<SafyaClinic.Web.Models.RoleLookupItem>()).ToList();
 }
 
 <div class="card">
@@ -55,13 +50,17 @@
                                     {
                                         <span class="badge bg-light text-dark border me-1 mb-1">
                                             @r
+                                            @* Role lookup: do not submit a default ID if the catalog changed. *@
+                                            @if (allRoles.FirstOrDefault(x => x.Name == r) is { } assignedRole)
+                                            {
                                             <form asp-action="RemoveRole" method="post" class="d-inline">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="userId" value="@u.Id" />
-                                                <input type="hidden" name="roleId" value="@allRoles.FirstOrDefault(x => x.Name == r).Id" />
+                                                <input type="hidden" name="roleId" value="@assignedRole.Id" />
                                                 <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1"
                                                         style="font-size:.75rem;" onclick="return confirm('Remove this role?')">×</button>
                                             </form>
+                                            }
                                         </span>
                                     }
                                     <div class="dropdown d-inline">

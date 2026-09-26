@@ -5,25 +5,30 @@
     var sources = ViewBag.Sources as IEnumerable<PatientSourceDto> ?? Enumerable.Empty<PatientSourceDto>();
     bool isPopup = ViewBag.Popup == true;
 }
+
+<div class="page-toolbar">
+    <h1 class="mb-0"><i class="bi bi-person-plus me-2"></i>Register New Patient</h1>
+</div>
+
 <div class="card">
-    <div class="card-header"><i class="bi bi-person-plus me-2"></i>Register New Patient</div>
     <div class="card-body">
         <form asp-action="Create" method="post">
             <input type="hidden" name="popup" value="@(isPopup ? "true" : "false")" />
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            @* Review fix: show field-binding errors as well as general registration errors. *@
+            <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
 
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <label asp-for="FirstName" class="form-label">First Name *</label>
                     <input asp-for="FirstName" class="form-control" required />
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <label asp-for="LastName" class="form-label">Last Name *</label>
                     <input asp-for="LastName" class="form-control" required />
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <label asp-for="PatientSourceId" class="form-label">Patient Source</label>
                     <select asp-for="PatientSourceId" class="form-select">
                         <option value="">— Select Source —</option>
@@ -35,11 +40,11 @@
                     <small class="text-muted">Where this patient came from (Vezeeta, Instagram, Marketing…). Used to calculate the first-visit deduction.</small>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label asp-for="DateOfBirth" class="form-label">Date of Birth</label>
                     <input asp-for="DateOfBirth" type="date" class="form-control" />
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label asp-for="Gender" class="form-label">Gender</label>
                     <select asp-for="Gender" class="form-select">
                         <option value="">— Select —</option>
@@ -47,7 +52,7 @@
                         <option value="Female">Female</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label asp-for="BloodType" class="form-label">Blood Type</label>
                     <select asp-for="BloodType" class="form-select">
                         <option value="">— Select —</option>
@@ -58,15 +63,15 @@
                     </select>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label asp-for="NationalId" class="form-label">National ID</label>
                     <input asp-for="NationalId" class="form-control" />
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label asp-for="HeightCm" class="form-label">Height (cm)</label>
                     <input asp-for="HeightCm" type="number" step="0.1" class="form-control" />
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label asp-for="Weight" class="form-label">Weight (KG)</label>
                     <input asp-for="Weight" type="number" step="0.1" class="form-control" />
                 </div>
@@ -89,33 +94,47 @@
 
             <h6 class="text-muted text-uppercase small mb-3">Phone Number</h6>
             <div class="row g-2 mb-4">
-                <div class="col-md-6">
-                    <input type="text" name="Phones[0].PhoneNumber" class="form-control" placeholder="Phone number" />
+                <div class="col-12 col-md-6">
+                    <label for="Phones_0_PhoneNumber" class="form-label">Phone Number</label>
+                    <input type="text" id="Phones_0_PhoneNumber" name="Phones[0].PhoneNumber" class="form-control" placeholder="e.g. 01xxxxxxxxx" />
                 </div>
-                <div class="col-md-4">
-                    <select name="Phones[0].PhoneType" class="form-select">
+                <div class="col-12 col-md-4">
+                    <label for="Phones_0_PhoneType" class="form-label">Phone Type</label>
+                    <select id="Phones_0_PhoneType" name="Phones[0].PhoneType" class="form-select">
                         <option value="Mobile">Mobile</option>
                         <option value="Home">Home</option>
                         <option value="Work">Work</option>
                     </select>
                 </div>
-                <div class="col-md-2 d-flex align-items-center">
+                <div class="col-12 col-md-2 d-flex align-items-center">
                     <div class="form-check">
-                        <input type="checkbox" name="Phones[0].IsPrimary" value="true" class="form-check-input" checked />
-                        <label class="form-check-label small">Primary</label>
+                        <input type="checkbox" id="Phones_0_IsPrimary" name="Phones[0].IsPrimary" value="true" class="form-check-input" checked />
+                        <label for="Phones_0_IsPrimary" class="form-check-label small">Primary</label>
                     </div>
                 </div>
             </div>
 
             <h6 class="text-muted text-uppercase small mb-3">Address</h6>
             <div class="row g-2 mb-4">
-                <div class="col-md-3"><input type="text" name="Addresses[0].Street" class="form-control" placeholder="Street" /></div>
-                <div class="col-md-3"><input type="text" name="Addresses[0].City" class="form-control" placeholder="City" /></div>
-                <div class="col-md-3"><input type="text" name="Addresses[0].Governorate" class="form-control" placeholder="Governorate" /></div>
-                <div class="col-md-3"><input type="text" name="Addresses[0].PostalCode" class="form-control" placeholder="Postal code" /></div>
+                <div class="col-12 col-md-3">
+                    <label for="Addresses_0_Street" class="form-label">Street</label>
+                    <input type="text" id="Addresses_0_Street" name="Addresses[0].Street" class="form-control" placeholder="Street" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="Addresses_0_City" class="form-label">City</label>
+                    <input type="text" id="Addresses_0_City" name="Addresses[0].City" class="form-control" placeholder="City" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="Addresses_0_Governorate" class="form-label">Governorate</label>
+                    <input type="text" id="Addresses_0_Governorate" name="Addresses[0].Governorate" class="form-control" placeholder="Governorate" />
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="Addresses_0_PostalCode" class="form-label">Postal Code</label>
+                    <input type="text" id="Addresses_0_PostalCode" name="Addresses[0].PostalCode" class="form-control" placeholder="Postal code" />
+                </div>
             </div>
 
-            <div class="d-flex gap-2">
+            <div class="form-actions d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Register Patient
                 </button>

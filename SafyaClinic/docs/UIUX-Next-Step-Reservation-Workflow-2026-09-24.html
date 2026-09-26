@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safya Clinic — UI/UX Implementation Guide</title>
+<style>
+:root{color-scheme:light;--purple:#5b21b6;--line:#ddd6ee}
+*{box-sizing:border-box}body{margin:0;background:#f6f5fb;color:#202332;font:16px/1.65 system-ui,Segoe UI,sans-serif}
+.shell{max-width:1460px;margin:auto;display:grid;grid-template-columns:275px minmax(0,1fr);gap:32px;padding:32px}
+aside{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:14px}
+aside strong{color:var(--purple)}aside ol{padding-left:20px}aside li{margin:10px 0}a{color:var(--purple);text-underline-offset:3px}
+main{min-width:0;background:white;border:1px solid var(--line);border-radius:16px;padding:42px}
+h1{font-size:2rem;line-height:1.2;color:#38156d}h2{font-size:1.55rem;border-top:2px solid var(--line);padding-top:30px;margin-top:42px;scroll-margin-top:20px}h3{font-size:1.15rem;color:#38156d;margin-top:28px}p,li{overflow-wrap:anywhere}li{margin-bottom:8px}
+pre{position:relative;background:#151a2a;color:#f3f4ff;border-radius:10px;padding:22px;overflow:auto;line-height:1.55;font-size:13px;tab-size:4}code{font-family:Consolas,monospace}p code,li code,td code{background:#f0ecf7;padding:2px 4px;border-radius:4px}
+.table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;margin:18px 0}th,td{text-align:left;padding:11px;border:1px solid var(--line);vertical-align:top}th{background:#eee8fa}tr:nth-child(even){background:#faf9fd}
+.tools{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}button,.tools a{border:1px solid var(--purple);background:white;color:var(--purple);border-radius:7px;padding:9px 13px;font:inherit;cursor:pointer;text-decoration:none}button:focus-visible,a:focus-visible{outline:3px solid #0e7490;outline-offset:3px}.copy{font-size:12px;margin-bottom:0;padding:5px 9px}
+@media(max-width:1000px){.shell{display:block;padding:16px}aside{position:static;max-height:none;margin-bottom:24px}aside ol{columns:2}main{padding:24px}}
+@media(max-width:600px){aside ol{columns:1}main{padding:18px}h1{font-size:1.6rem}pre{padding:14px}}
+@media print{body{background:white;font-size:10pt}.shell{display:block;padding:0}aside,.tools,.copy{display:none}main{border:0;padding:0}h2{break-before:page}h2,h3{break-after:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;color:#111;border:1px solid #ddd;font-size:8pt}table{font-size:9pt}.table-scroll{overflow:visible}a{color:#222}}
+</style></head><body><div class="shell"><aside><strong>Safya Clinic · Implementation guide</strong><ol><li><a href="#section-1">N1 — prepare and define acceptance</a></li><li><a href="#section-2">N2 — add the small shared form styles</a></li><li><a href="#section-3">N3 — replace the Create form&#39;s presentation</a></li><li><a href="#section-4">N4 — make Edit match without changing its request contract</a></li><li><a href="#section-5">N5 — give the reservation a correct clinical next action</a></li><li><a href="#section-6">N6 — verify errors without changing financial or scheduling rules</a></li><li><a href="#section-7">N7 — responsive, keyboard and role acceptance</a></li><li><a href="#section-8">N8 — checkpoint and request review</a></li></ol></aside><main>
+<div class="tools"><button onclick="window.print()">Print / Save as PDF</button><a href="UIUX-Next-Step-Reservation-Workflow-2026-09-24.md" download>Download Markdown</a></div>
+<h1>Next step — complete the reservation booking/editing workflow UI</h1>
+<p>Prepared 24 September 2026 for <code>D:\MyDevWork\clinic-MS\SafyaClinic</code>.</p>
+<p>This is the next <strong>UI/UX step</strong>, not a new feature. Reservation Create/Edit are still in their earlier form layout. Finish them after the fixes in <code>UIUX-Fixing-Guide-2026-09-24.md</code> pass. The outcome is a clear patient → service → appointment → save flow, with preserved validation and a predictable return path.</p>
+<p>No schema change, package installation or service rewrite is required. Keep the existing confirmed/waiting/in-consultation/completed/finished rules, payment eligibility, ownership checks and server transactions. These instructions have been checked against current source but have not been compiled or browser-tested.</p>
+<h2 id="section-1">N1 — prepare and define acceptance</h2>
+<ol>
+<li>Complete F1–F10 from the fixing guide. In particular, do not style the booking form while its patient ID can remain selected after changing the visible name.</li>
+<li>Create a source-control checkpoint with the passing fixes.</li>
+<li>Open Reservations/Create in two ways: from the main list and from a patient&#39;s Book Reservation action. Record current behavior of patient preselection, treatment amount/duration autofill, failed submission, and success redirect.</li>
+<li>Open Edit for a noncompleted reservation; confirm existing doctor/clinic/service/date/time/amount values. Completed must remain rejected by the controller/service.</li>
+<li>Work only on the files named below. Keep controller POST actions unchanged in this step.</li>
+</ol>
+<p>Files: <code>Views/Reservations/Create.cshtml</code>, <code>Views/Reservations/Edit.cshtml</code>, <code>Views/Reservations/Details.cshtml</code>, <code>wwwroot/css/site.css</code>, relative to <code>SafyaClinic.Web</code>.</p>
+<p><strong>Acceptance:</strong> one visible page title, clear form groups, labelled fields, visible validation, correct selected patient, no lost values after rejection, role-appropriate next action, and no mobile overlap.</p>
+<h2 id="section-2">N2 — add the small shared form styles</h2>
+<p>Append once to <code>wwwroot/css/site.css</code>:</p>
+<pre><code class="language-css">.reservation-form-card { max-width: 60rem; }
+.reservation-fieldset { min-width: 0; margin: 0 0 1.5rem; padding: 0; border: 0; }
+.reservation-fieldset &gt; legend { float: none; width: auto; margin-bottom: .75rem;
+    font-size: 1.1rem; font-weight: 600; color: var(--brand-ink); }
+.reservation-form-help { max-width: 70ch; color: #4b5563; }
+</code></pre>
+<p>Reuse existing page-toolbar, page-actions and form-actions. Do not add fixed heights or sticky action bars: they can cover validation and mobile keyboards. Hard-refresh and verify the existing patient/payment layouts did not change.</p>
+<h2 id="section-3">N3 — replace the Create form&#39;s presentation</h2>
+<p>File: <code>Views/Reservations/Create.cshtml</code>.</p>
+<p>Keep the existing @model, @using directives and initial Razor block defining doctors, clinics and treatmentTypes. Keep the <strong>complete Scripts section from F1</strong>, including the new patient-picker include and treatment autofill listener.</p>
+<p>Replace the markup starting at the first <code>&lt;div class=&quot;card&quot; style=&quot;max-width:700px;&quot;&gt;</code> through that card&#39;s final closing div <strong>immediately before <code>@section Scripts</code></strong>, with the following entire block. Do not replace the Scripts section, and do not leave the original form beneath the new form.</p>
+<pre><code class="language-cshtml">&lt;div class=&quot;page-toolbar&quot;&gt;
+    &lt;div&gt;
+        &lt;h1&gt;Book reservation&lt;/h1&gt;
+        &lt;p class=&quot;reservation-form-help mb-0&quot;&gt;Select the patient, service and appointment time.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;page-actions&quot;&gt;
+        @if (Model.PatientId &gt; 0)
+        {
+            &lt;a asp-controller=&quot;Patients&quot; asp-action=&quot;Details&quot; asp-route-id=&quot;@Model.PatientId&quot;
+               class=&quot;btn btn-outline-secondary&quot;&gt;Patient workspace&lt;/a&gt;
+        }
+        &lt;a asp-action=&quot;Index&quot; class=&quot;btn btn-outline-secondary&quot;&gt;Reservations&lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;card reservation-form-card&quot;&gt;
+    &lt;div class=&quot;card-body&quot;&gt;
+        &lt;form asp-action=&quot;Create&quot; method=&quot;post&quot; id=&quot;reservationCreateForm&quot;&gt;
+            @Html.AntiForgeryToken()
+            &lt;div asp-validation-summary=&quot;All&quot; class=&quot;alert alert-danger py-2&quot;
+                 role=&quot;alert&quot; tabindex=&quot;-1&quot;&gt;&lt;/div&gt;
+
+            &lt;fieldset class=&quot;reservation-fieldset&quot;&gt;
+                &lt;legend&gt;1. Patient&lt;/legend&gt;
+                &lt;div class=&quot;row g-3 align-items-end&quot;&gt;
+                    &lt;div class=&quot;col-12 col-lg-8&quot;&gt;
+                        &lt;label for=&quot;patientSearchInput&quot; class=&quot;form-label&quot;&gt;Patient (required)&lt;/label&gt;
+                        &lt;input type=&quot;hidden&quot; asp-for=&quot;PatientId&quot; id=&quot;patientIdHidden&quot; /&gt;
+                        &lt;div class=&quot;position-relative&quot;&gt;
+                            &lt;input type=&quot;text&quot; id=&quot;patientSearchInput&quot; class=&quot;form-control&quot;
+                                   placeholder=&quot;Search by name or mobile number&quot;
+                                   value=&quot;@(ViewBag.SelectedPatientName ?? &quot;&quot;)&quot;
+                                   autocomplete=&quot;off&quot; required
+                                   data-search-url=&quot;@Url.Content(&quot;~/api/patients/search&quot;)&quot;
+                                   aria-describedby=&quot;patientSearchHelp patientSearchStatus&quot; /&gt;
+                        &lt;/div&gt;
+                        &lt;small id=&quot;patientSearchHelp&quot; class=&quot;text-muted&quot;&gt;Type at least 2 characters, then select a patient.&lt;/small&gt;
+                        &lt;div id=&quot;patientSearchStatus&quot; class=&quot;small mt-1&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+                        &lt;span asp-validation-for=&quot;PatientId&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;col-12 col-lg-4&quot;&gt;
+                        &lt;button type=&quot;button&quot; id=&quot;registerPatientButton&quot;
+                                data-popup-url=&quot;@Url.Action(&quot;Create&quot;, &quot;Patients&quot;, new { popup = true })&quot;
+                                class=&quot;btn btn-outline-primary&quot;&gt;
+                            &lt;i class=&quot;bi bi-person-plus me-1&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Register new patient
+                        &lt;/button&gt;
+                        &lt;div class=&quot;small text-muted mt-1&quot;&gt;Opens a separate registration window.&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/fieldset&gt;
+
+            &lt;fieldset class=&quot;reservation-fieldset&quot;&gt;
+                &lt;legend&gt;2. Clinic and service&lt;/legend&gt;
+                &lt;div class=&quot;row g-3&quot;&gt;
+                    &lt;div class=&quot;col-12 col-md-6&quot;&gt;
+                        &lt;label asp-for=&quot;ClinicId&quot; class=&quot;form-label&quot;&gt;Clinic (required)&lt;/label&gt;
+                        &lt;select asp-for=&quot;ClinicId&quot; class=&quot;form-select&quot; required&gt;
+                            &lt;option value=&quot;&quot;&gt;— Select clinic —&lt;/option&gt;
+                            @foreach (var c in clinics) { &lt;option value=&quot;@c.Id&quot;&gt;@c.Name&lt;/option&gt; }
+                        &lt;/select&gt;
+                        &lt;span asp-validation-for=&quot;ClinicId&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;col-12 col-md-6&quot;&gt;
+                        &lt;label asp-for=&quot;DoctorId&quot; class=&quot;form-label&quot;&gt;Doctor (required)&lt;/label&gt;
+                        &lt;select asp-for=&quot;DoctorId&quot; class=&quot;form-select&quot; required&gt;
+                            &lt;option value=&quot;&quot;&gt;— Select doctor —&lt;/option&gt;
+                            @foreach (var d in doctors)
+                            {
+                                &lt;option value=&quot;@d.Id&quot;&gt;@d.FullName @(d.Specialization != null ? $&quot;({d.Specialization})&quot; : &quot;&quot;)&lt;/option&gt;
+                            }
+                        &lt;/select&gt;
+                        &lt;span asp-validation-for=&quot;DoctorId&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;col-12 col-md-6&quot;&gt;
+                        &lt;label for=&quot;treatmentTypeSelect&quot; class=&quot;form-label&quot;&gt;Treatment type (required)&lt;/label&gt;
+                        &lt;select asp-for=&quot;TreatmentTypeId&quot; id=&quot;treatmentTypeSelect&quot; class=&quot;form-select&quot; required&gt;
+                            &lt;option value=&quot;&quot;&gt;— Select treatment type —&lt;/option&gt;
+                            @foreach (var t in treatmentTypes)
+                            {
+                                &lt;option value=&quot;@t.Id&quot;
+                                        data-cost=&quot;@(t.DefaultCost?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? &quot;&quot;)&quot;
+                                        data-duration=&quot;@t.DurationMinutes&quot;&gt;
+                                    @t.TypeName @(t.DefaultCost != null ? $&quot;— {t.DefaultCost:C}&quot; : &quot;&quot;)
+                                &lt;/option&gt;
+                            }
+                        &lt;/select&gt;
+                        &lt;span asp-validation-for=&quot;TreatmentTypeId&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;col-12 col-md-6&quot;&gt;
+                        &lt;label asp-for=&quot;Category&quot; class=&quot;form-label&quot;&gt;Category&lt;/label&gt;
+                        &lt;select asp-for=&quot;Category&quot; class=&quot;form-select&quot;&gt;
+                            &lt;option value=&quot;InternalMedicine&quot;&gt;Internal Medicine&lt;/option&gt;
+                            &lt;option value=&quot;Nutritional&quot;&gt;Nutritional&lt;/option&gt;
+                        &lt;/select&gt;
+                        &lt;span asp-validation-for=&quot;Category&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/fieldset&gt;
+
+            &lt;fieldset class=&quot;reservation-fieldset&quot;&gt;
+                &lt;legend&gt;3. Appointment and amount&lt;/legend&gt;
+                &lt;div class=&quot;row g-3&quot;&gt;
+                    &lt;div class=&quot;col-12 col-md-6&quot;&gt;
+                        &lt;label asp-for=&quot;ReservationDate&quot; class=&quot;form-label&quot;&gt;Date (required)&lt;/label&gt;
+                        &lt;input asp-for=&quot;ReservationDate&quot; type=&quot;date&quot; class=&quot;form-control&quot; required /&gt;
+                        &lt;span asp-validation-for=&quot;ReservationDate&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;col-12 col-md-6&quot;&gt;
+                        &lt;label asp-for=&quot;ReservationTime&quot; class=&quot;form-label&quot;&gt;Time (required)&lt;/label&gt;
+                        &lt;input asp-for=&quot;ReservationTime&quot; type=&quot;time&quot; class=&quot;form-control&quot; required /&gt;
+                        &lt;span asp-validation-for=&quot;ReservationTime&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;col-12 col-md-6&quot;&gt;
+                        &lt;label for=&quot;durationInput&quot; class=&quot;form-label&quot;&gt;Duration (minutes)&lt;/label&gt;
+                        &lt;input asp-for=&quot;DurationMinutes&quot; id=&quot;durationInput&quot; type=&quot;number&quot; class=&quot;form-control&quot; /&gt;
+                        &lt;span asp-validation-for=&quot;DurationMinutes&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                    &lt;div class=&quot;col-12 col-md-6&quot;&gt;
+                        &lt;label for=&quot;totalAmountInput&quot; class=&quot;form-label&quot;&gt;Reservation amount&lt;/label&gt;
+                        &lt;input asp-for=&quot;TotalAmount&quot; id=&quot;totalAmountInput&quot; type=&quot;number&quot; step=&quot;0.01&quot; class=&quot;form-control&quot;
+                               aria-describedby=&quot;reservationAmountHelp&quot; /&gt;
+                        &lt;span asp-validation-for=&quot;TotalAmount&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+                &lt;p id=&quot;reservationAmountHelp&quot; class=&quot;small text-muted mt-2 mb-0&quot;&gt;
+                    Selecting a treatment fills its configured amount and duration when available.
+                    Review both before saving. Booking does not collect payment.
+                &lt;/p&gt;
+            &lt;/fieldset&gt;
+
+            &lt;fieldset class=&quot;reservation-fieldset&quot;&gt;
+                &lt;legend&gt;4. Additional information&lt;/legend&gt;
+                &lt;div class=&quot;mb-3&quot;&gt;
+                    &lt;label asp-for=&quot;Reason&quot; class=&quot;form-label&quot;&gt;Reason&lt;/label&gt;
+                    &lt;input asp-for=&quot;Reason&quot; class=&quot;form-control&quot; /&gt;
+                    &lt;span asp-validation-for=&quot;Reason&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;div&gt;
+                    &lt;label asp-for=&quot;Notes&quot; class=&quot;form-label&quot;&gt;Notes&lt;/label&gt;
+                    &lt;textarea asp-for=&quot;Notes&quot; class=&quot;form-control&quot; rows=&quot;4&quot;&gt;&lt;/textarea&gt;
+                    &lt;span asp-validation-for=&quot;Notes&quot; class=&quot;text-danger&quot;&gt;&lt;/span&gt;
+                &lt;/div&gt;
+            &lt;/fieldset&gt;
+            &lt;div class=&quot;form-actions&quot;&gt;
+                &lt;button type=&quot;submit&quot; class=&quot;btn btn-primary&quot;&gt;Book reservation&lt;/button&gt;
+                &lt;a asp-action=&quot;Index&quot; class=&quot;btn btn-outline-secondary&quot;&gt;Cancel&lt;/a&gt;
+            &lt;/div&gt;
+        &lt;/form&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<p>The displayed patient workspace link reflects the server-loaded patient. It is navigation, not a live client selection summary. The status text next to the picker is the live selected-patient indicator. No clinic-dependent doctor filtering is introduced here; preserve the current service validation.</p>
+<p><strong>Build and test now:</strong> exactly one form and one patient-picker handler; patient preselection; new patient popup; typing after selecting clears hidden ID; all three custom-ID labels focus their controls; treatment amount/duration updates on change; invalid POST retains values; successful booking opens Details. Check browser console. Do not proceed if this fails.</p>
+<h2 id="section-4">N4 — make Edit match without changing its request contract</h2>
+<p>File: <code>Views/Reservations/Edit.cshtml</code>.</p>
+<ol>
+<li>Keep @model UpdateReservationRequest and the existing doctors/clinics/treatmentTypes block.</li>
+<li>Immediately after that block, add:</li>
+</ol>
+<pre><code class="language-cshtml">&lt;div class=&quot;page-toolbar&quot;&gt;
+    &lt;div&gt;
+        &lt;h1&gt;Edit reservation #@ViewContext.RouteData.Values[&quot;id&quot;]&lt;/h1&gt;
+        &lt;p class=&quot;reservation-form-help mb-0&quot;&gt;Update the appointment details. Change status on the reservation details page.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;page-actions&quot;&gt;
+        &lt;a asp-action=&quot;Details&quot; asp-route-id=&quot;@ViewContext.RouteData.Values[&quot;id&quot;]&quot;
+           class=&quot;btn btn-outline-secondary&quot;&gt;Reservation details&lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<ol start="3">
+<li>Change the outer <code>&lt;div class=&quot;card&quot; style=&quot;max-width:700px;&quot;&gt;</code> to <code>&lt;div class=&quot;card reservation-form-card&quot;&gt;</code>. Delete only its redundant card-header line. Keep card-body and the existing form method=post.</li>
+<li>Change its single summary from ModelOnly to All; add role=alert and tabindex=-1 as in Create.</li>
+<li>Inside the form, regroup the existing fields by moving complete col-md-6/col-12 blocks. Replace the one outer <code>row g-3</code> wrapper with three fieldsets using the following structure. <strong>This is a structural map, not paste-ready markup with omitted fields</strong>:</li>
+</ol>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Fieldset legend</th>
+<th>Existing blocks to put in a <code>div class=&quot;row g-3&quot;</code> inside it</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Clinic and service</td>
+<td>ClinicId, DoctorId, TreatmentTypeId</td>
+</tr>
+<tr>
+<td>Appointment and amount</td>
+<td>ReservationDate, ReservationTime, DurationMinutes, TotalAmount</td>
+</tr>
+<tr>
+<td>Additional information</td>
+<td>Reason, Notes</td>
+</tr>
+</tbody></table></div>
+<p>For each fieldset use <code>&lt;fieldset class=&quot;reservation-fieldset&quot;&gt;&lt;legend&gt;Exact legend above&lt;/legend&gt;&lt;div class=&quot;row g-3&quot;&gt;</code> then the <strong>complete existing field blocks</strong>, then <code>&lt;/div&gt;&lt;/fieldset&gt;</code>. Each moved block keeps its loop, binding, selected expression, data-cost, data-duration and ID. Change short field column classes to col-12 col-md-6. Notes stays col-12 and becomes rows=4.</p>
+<ol start="6">
+<li>Move the informational alert about changing status from Details outside the row wrappers, just after the summary. Keep it inside the form. Remove its now-unneeded col-12 wrapper. Do not add a status input to Edit.</li>
+<li>Replace the three labels that use custom input IDs with explicit for labels: treatmentTypeSelect, durationInput, totalAmountInput. Use the same text as Create. Keep other asp-for labels.</li>
+<li>Add an <code>asp-validation-for</code> span with text-danger after each select/input/textarea. Field list: DoctorId, ClinicId, TreatmentTypeId, ReservationDate, ReservationTime, DurationMinutes, TotalAmount, Reason, Notes. These property names already exist; do not introduce PatientId or Category on UpdateReservationRequest.</li>
+<li>Change the final <code>div class=&quot;mt-3&quot;</code> to <code>div class=&quot;form-actions&quot;</code>. Keep Save Changes and the existing Cancel Details route.</li>
+<li>Keep the Scripts section and treatment change listener unchanged. Do not trigger a synthetic change on initial page load: it would overwrite an existing custom amount/duration with treatment defaults.</li>
+</ol>
+<p><strong>Build and test:</strong> opening Edit retains saved custom amount/duration; changing treatment updates defaults as before; service rejection keeps entered fields and option lists; status still edited only from Details; completed reservation Edit rejected; Cancel does not POST; inspect that each field appears exactly once inside the single form.</p>
+<h2 id="section-5">N5 — give the reservation a correct clinical next action</h2>
+<p>The current Clinical card always offers Create Medical Record, even when a linked consultation should be resumed. The existing <code>MedicalRecords/Consultation(reservationId)</code> endpoint already resolves the consultation context. Use it for active consultation, preserving its ownership checks.</p>
+<p>File: <code>Views/Reservations/Details.cshtml</code>. F5 must already be applied.</p>
+<p>Within the existing Doctor/Admin conditional, replace the entire Clinical card only with:</p>
+<pre><code class="language-cshtml">&lt;div class=&quot;card&quot;&gt;
+    &lt;div class=&quot;card-header&quot;&gt;Clinical&lt;/div&gt;
+    &lt;div class=&quot;card-body&quot;&gt;
+        @if (hasUserId &amp;&amp;
+            (User.IsInRole(&quot;Admin&quot;) || Model.DoctorId == currentUserId) &amp;&amp;
+            Model.StatusName == &quot;Confirmed&quot; &amp;&amp;
+            Model.QueueStatus == PatientQueueStatus.InConsultation)
+        {
+            &lt;a asp-controller=&quot;MedicalRecords&quot; asp-action=&quot;Consultation&quot;
+               asp-route-reservationId=&quot;@Model.Id&quot;
+               class=&quot;btn btn-primary w-100&quot;&gt;Open consultation&lt;/a&gt;
+        }
+        else
+        {
+            &lt;p class=&quot;small text-muted&quot;&gt;Use the queue actions to start an eligible consultation.
+                Existing records are available in the patient history.&lt;/p&gt;
+        }
+        &lt;a asp-controller=&quot;MedicalRecords&quot; asp-action=&quot;PatientRecords&quot;
+           asp-route-patientId=&quot;@Model.PatientId&quot;
+           class=&quot;btn btn-outline-secondary w-100 mt-2&quot;&gt;Patient medical records&lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<p><code>hasUserId</code> and <code>currentUserId</code> already exist at the top of this view. Keep its using for PatientQueueStatus. Keep the existing Check In and Start Consultation POST forms, their conditions, tokens and controller calls. Do not implement consultation creation in JavaScript.</p>
+<p>This changes the reservation-specific entry point. It does not remove standalone New Record from the patient-record screen. Keep server-side permission checks; hiding a link does not grant or revoke authorization.</p>
+<p><strong>Test:</strong> assigned doctor in InConsultation opens the current consultation; existing record is reused; Waiting shows Start Consultation only through existing eligible action; completed reservation offers medical-record history; other doctor cannot resume by manipulating the URL; reception sees no clinical card; no automatic completion/payment occurs.</p>
+<h2 id="section-6">N6 — verify errors without changing financial or scheduling rules</h2>
+<p>Use demo data and test these rejected submissions independently. Correct the fields and retry after each rejection:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Expected UI</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Typed name without selecting patient</td>
+<td>Picker explains selection requirement; no booking</td>
+</tr>
+<tr>
+<td>Invalid/missing doctor, clinic or treatment</td>
+<td>Required/field/summary feedback; no lost patient selection</td>
+</tr>
+<tr>
+<td>A server-rejected appointment</td>
+<td>Summary shows existing service message; all fields repopulated</td>
+</tr>
+<tr>
+<td>Invalid numeric/date input</td>
+<td>Browser or server message identifies the affected field</td>
+</tr>
+<tr>
+<td>Expired login while searching</td>
+<td>Search unavailable/sign-in message, not “No patients”</td>
+</tr>
+<tr>
+<td>Existing custom amount on Edit</td>
+<td>Retained until user intentionally changes treatment/amount</td>
+</tr>
+<tr>
+<td>Completed reservation Edit request</td>
+<td>Existing server protection, no mutation</td>
+</tr>
+</tbody></table></div>
+<p>Do not weaken validation to make a test pass. Do not introduce date/time conversions; preserve the application&#39;s current reservation time convention. Do not label the amount as currently payable: collectible eligibility still depends on queue state and existing balance rules.</p>
+<h2 id="section-7">N7 — responsive, keyboard and role acceptance</h2>
+<p>At 360px, 768px and 1280px, test Create and Edit. Also test 200% zoom. Fieldsets should stack naturally, dropdown results stay within the form width and action buttons remain visible. Use Tab, Shift+Tab, arrows, Enter and Escape to select a patient and submit. Click every label. Test a long patient name and Arabic name.</p>
+<p>Run as Reception, assigned Doctor and Admin. Use Nutritionist only on existing authorized routes; do not add queue/payment access to make navigation look consistent. Verify URLs opened directly still obey existing policies.</p>
+<p>Run a short end-to-end journey: Book → Check In (Confirmed/Waiting) → Start Consultation (Confirmed/InConsultation) → record → complete (Completed/Finished) → permitted collection for remaining balance. Also verify partial payment remains collectible after finishing. These transitions are regressions to test, not logic to reimplement.</p>
+<h2 id="section-8">N8 — checkpoint and request review</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Build</th>
+<th>Tests / notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>N1 Baseline</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>N2 Styles</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>N3 Create</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>N4 Edit</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>N5 Clinical entry</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>N6 Error paths</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>N7 End-to-end/roles/mobile</td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table></div>
+<p>When all pass, save a checkpoint and request review. Send the changed files or diff, test log, and any remaining browser/build error. If a step fails, send its number, exact error, role and starting reservation/queue state. Do not include real patient data or connection strings.</p>
+<p>Stop after this bounded step. A new feature batch is a separate decision; completing the reservation workflow and review is the next milestone.</p>
+
+</main></div><script>
+document.querySelectorAll('pre').forEach(pre=>{const b=document.createElement('button');b.className='copy';b.textContent='Copy code';b.onclick=async()=>{try{await navigator.clipboard.writeText(pre.querySelector('code').textContent);b.textContent='Copied';setTimeout(()=>b.textContent='Copy code',1500)}catch{b.textContent='Select code and copy manually'}};pre.before(b)});
+</script></body></html>
