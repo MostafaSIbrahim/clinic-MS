@@ -24,4 +24,16 @@
 	<ItemGroup>
 		<Content Remove="wwwroot\uploads\desktop.ini" />
 	</ItemGroup>
+  <!-- Deployment protection: server-owned settings and patient uploads are never published. Local builds still use local settings. -->
+  <ItemGroup>
+    <Content Update="appsettings*.json;wwwroot/uploads/**/*" CopyToPublishDirectory="Never" />
+    <MsDeploySkipRules Include="PreserveServerSettings">
+      <ObjectName>filePath</ObjectName>
+      <AbsolutePath>(?i)(^|[\\/])appsettings([^\\/]*)\.json$</AbsolutePath>
+    </MsDeploySkipRules>
+    <MsDeploySkipRules Include="PreservePatientUploads">
+      <ObjectName>dirPath</ObjectName>
+      <AbsolutePath>(?i)(^|[\\/])wwwroot[\\/]uploads($|[\\/])</AbsolutePath>
+    </MsDeploySkipRules>
+  </ItemGroup>
 </Project>
