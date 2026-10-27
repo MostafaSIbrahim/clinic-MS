@@ -16,5 +16,6 @@ Read-only assessment of `MostafaSIbrahim/clinic-MS` (ASP.NET Core 8 MVC + EF Cor
 | 10 | [Evaluation findings](10-evaluation-findings.md) | 3 Evaluate | 32 findings with evidence, impact, recommendation, priority and confidence; runtime + accessibility results |
 | 11 | [Target-state proposal](11-target-state-proposal.md) | 4 Propose | Architecture changes, permission-group model, frontend options, shell, IA, design-system structure, accessibility, responsive, localisation, migration stages, decisions D1–D12, success criteria |
 | 12 | [Prioritised roadmap](12-prioritized-roadmap.md) | 5 Prioritize | 33 planned items in 4 groups plus 6 deferred opportunities, each with value, risk, dependencies, effort band and acceptance criteria; sequence, exit gates, finding traceability |
+| 13 | [Design-system specification](13-design-system-spec.md) | 6 Design | UI rule, tokens (`../design/tokens.css`), interaction states, components, accessibility, responsive and RTL rules |
 
 Evidence: raw build/test/DB outputs were collected locally into `.assessment/out/` (git-ignored, not committed).
