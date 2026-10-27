@@ -246,30 +246,30 @@ flowchart LR
 |---|---|---|
 | 0 Safety | F01 uploads, F02 secrets, F03/F04 auth hardening, F07 package, F08 errors, interim restriction of F05 actions to Admin | No Critical findings open; auth/access tests pass |
 | 1 Foundations | Tokens + bridge, local assets, shell (top bar, sidebar from catalogue, page header, toasts, confirm dialog), patient header, clinic clock + money, localisation plumbing (English only first), permission tables + policy provider (mirroring today), test project + CI with axe | Existing screens still work inside the new shell; access matrix unchanged |
-| 2 Pilot | **Front-desk visit flow**: find/register patient → book (one appointments screen) → check in → doctor queue → consultation workspace with patient header and allergies → complete → collect payment. Includes F09, F11, F12, F32 and the permission-gated actions of F05 | §13 metrics met on the pilot; owner acceptance |
-| 3 Migration | Workspaces in order: Patient workspace → Billing → Clinical lab (with new lab rule F10) → Nutrition → Settings → print documents. Each screen meets the *screen done* definition below. Arabic resources added per workspace | All screens migrated; legacy CSS removed |
+| 2 Pilot | **Front-desk visit flow**: find/register patient → book (one appointments screen) → check in → doctor queue → consultation workspace with patient header and allergies → complete → collect payment. Includes F09, F11, F12, F32, the permission-gated actions of F05, write-off payments (D5) and **doctor availability calendars with slot booking (D7, §15)** | §13 metrics met on the pilot; owner acceptance |
+| 3 Migration | Workspaces in order: Patient workspace → Billing → Clinical (records, prescriptions; lab screens restyled only, rules unchanged per D9) → Nutrition → Settings → print documents. Each screen meets the *screen done* definition below. Arabic resources added per workspace | All screens migrated; legacy CSS removed |
 | 4 Enhancements | E1 lab services, E2 management role, E3 demo access, E4–E6 mobile + notifications, E8 Arabic completion | Separately scoped |
 
 **Screen "done" definition:** uses shell + components only (no inline styles, no hex values) · one `h1` · axe zero serious/critical · keyboard path checked · strings localised · works at 375/768/1366 · permissions via catalogue · server-side validation messages visible · automated smoke test.
 
 **Coexistence:** old and new screens share the same layout and tokens, so there is no visual "two apps" period; old Bootstrap classes keep working because tokens feed Bootstrap's variables.
 
-## 12. Decisions needed from the owner
+## 12. Owner decisions (2026-10-27)
 
-| # | Decision | Options (recommended first) |
+| # | Decision | Outcome |
 |---|---|---|
-| D1 | Authorization model | **A. Permission groups on existing auth** · B. Full ASP.NET Core Identity |
-| D2 | Frontend approach | **F-A. Evolve Razor + Bootstrap design system (optional htmx)** · F-B. Blazor · F-C. SPA |
-| D3 | Pilot workflow | **Front-desk visit flow** · Patient workspace · Billing |
-| D4 | Interim restriction (Stage 0) of `MarkPaid`, price override and *Completed*-by-status to Admin until permission groups ship | **Yes** · No (leave open) |
-| D5 | `MarkPaid` without a payment — keep as a permission or remove entirely | **Remove; use a zero-amount or write-off payment instead** · Keep as permission |
-| D6 | Status changes on another doctor's visit (F32) | **Permission `ChangeStatusForOtherDoctors`, granted to Reception/Admin groups only** · Allow all doctors |
-| D7 | Doctor double-booking | **Block overlaps; Admin override permission** · Warn only |
-| D8 | Existing duplicate patients when the unique phone rule arrives | **Merge tool + block new duplicates** · Block new only |
-| D9 | Existing lab analyses in InProgress/Cancelled | **Map InProgress → Requested; keep Cancelled as historical, hidden from new UI** · Other |
-| D10 | Arabic numerals | **Western digits (0–9) in both languages** · Arabic-Indic digits in Arabic UI |
-| D11 | Devices per role (U5) | Please confirm screen sizes used at reception and in consultation rooms |
-| D12 | Brand | Keep the current violet/teal palette and logo as the basis of tokens · Refresh |
+| D1 | Authorization model | **Accepted:** permission groups on the existing auth (§3) |
+| D2 | Frontend approach | **Accepted:** evolve Razor + Bootstrap with a design-system layer (§4) |
+| D3 | Pilot workflow | **Accepted:** front-desk visit flow (§11) |
+| D4 | Interim restriction (Stage 0) | **Accepted:** price override and *Completed*-by-status limited to Admin until permission groups ship |
+| D5 | Mark paid without payment | **Remove `MarkPaid` entirely.** Uncollected amounts are settled by a **zero-amount payment or a write-off payment**, recorded and audited. New permission `Payments.WriteOff`, granted to the **Reception Admin** and **Clinic Admin** groups |
+| D6 | Status changes on another doctor's work | **Medical records:** any doctor may change/edit another doctor's unlocked record (consistent with 2026-10-26). **Reservations:** a doctor may **never** change the status of another doctor's reservation — enforced as a service rule for any user with a clinician type, not only as a grantable permission. Front-desk and admin groups keep `Reservations.ChangeStatus` |
+| D7 | Scheduling | **No double booking.** Booking calendar shows only the current and future dates/times, and only free slots. Each doctor has a **calendar mode**: *Open* (bookable all day within clinic hours) or *Specific slots* (doctor selects one or more time slots per day; bookings only into those slots). This is a new capability — see §15 |
+| D8 | Duplicate patients | **Primary phone is unique; no duplicates.** No production data, so existing duplicates in dev/test data can be cleaned directly (no merge tool) |
+| D9 | Lab analyses | **Leave the lab module as it is** until the lab revamp (E1). F10 moves to the enhancement phase |
+| D10 | Digits | **Western digits (0–9) everywhere**, both languages |
+| D11 | Screen sizes | **Accepted recommendation:** design and test at 1366 × 768 (reception/admin), 1024 × 768 (consultation), 390 × 844 (phone) (§16) |
+| D12 | Brand and layout | **Direction A — Violet & Teal (logo colours) with a light labelled sidebar**, borrowing **Direction C's plainer tables** (neutral borders, light header, outlined status pills). Canvas: *Safya Clinic — Brand & Layout Options* (§16) |
 
 ## 13. Measurable success criteria
 
@@ -301,9 +301,49 @@ flowchart LR
 | F07 vulnerable packages | A8, Stage 0 |
 | F08 raw errors | A5, Stage 0 |
 | F09 allergies not visible | Patient header (§5), Stage 1–2 |
-| F10 lab lifecycle | A7, D9, Stage 3 |
+| F10 lab lifecycle | Deferred to lab revamp (E1) by D9 |
 | F11 duplicates / double booking | A6, D7, D8, Stage 2 |
 | F12 coverage contradictions | A7, Stage 2 |
 | F25 accessibility | §7–§8, screen-done definition |
 
 Medium/Low findings map to A4–A8, §6–§10 and Stage 3; full mapping will be in the Phase 5 roadmap.
+
+## 15. New capability from D7: doctor availability and slot booking
+
+| Item | Proposal |
+|---|---|
+| Doctor calendar mode | Per doctor (and per clinic if a doctor works in several): `Open` or `SpecificSlots` |
+| Open mode | Bookable between the clinic's opening hours; slot length = treatment type duration (default 30 min) or a doctor default |
+| Specific-slots mode | Doctor (or delegated front desk) defines availability per date: one or more time ranges or single slots; optional weekly template copied forward |
+| Booking rules | Only current/future slots; a slot is offered only if free; server enforces no overlap for the doctor (and optionally the room) inside the existing reservation lock; past dates disabled in the date picker and rejected server-side |
+| Data (sketch) | `DoctorSchedules` (DoctorId, ClinicId, Mode, DefaultSlotMinutes), `DoctorAvailability` (DoctorId, ClinicId, Date, StartTime, EndTime), optional `ClinicOpeningHours`; reservations keep date + time + duration |
+| UI | Appointments screen: day/week view per doctor with free slots clickable; reception books in two clicks for a known patient |
+| Permissions | `Schedule.ManageOwn` (doctors), `Schedule.ManageAll` (front desk admin), `Reservations.Create` |
+| Clinic hours | **Each clinic sets its opening hours** (per weekday); open-mode slots are generated only inside them |
+| Breaks | **Doctors define break times** inside an open calendar; no slots offered during breaks |
+| Removing booked slots | Removing or shrinking availability that already has bookings **must prompt a reschedule** of each affected reservation before the change is saved |
+| Multiple clinics | A doctor **may work in several clinics on the same day, in non-overlapping time ranges**; the overlap check spans all clinics for that doctor |
+
+## 16. Screen sizes and brand — recommendation (D11, D12)
+
+**Screen sizes.** Design and test at three reference widths, matching Bootstrap breakpoints so no custom grid is needed:
+
+| Reference | Size | Represents | Design priority |
+|---|---|---|---|
+| Desktop | **1366 × 768** (also checked at 1920 × 1080) | Reception and admin PCs — the most common office resolution | Primary for front desk, billing, settings |
+| Tablet / small laptop | **1024 × 768** (portrait 768 × 1024 checked) | Consultation room, nutrition follow-ups | Primary for queue and consultation workspace |
+| Phone | **390 × 844** (360 × 800 checked) | Doctors and owner checking today's queue and patients | Read-mostly: today, my queue, patient overview |
+
+**Brand (chosen 2026-10-27): Direction A with C's tables.**
+
+| Token role | Value | Contrast |
+|---|---|---|
+| Primary (buttons, links, selection) | `#5B21B6` violet | 8.98:1 on white |
+| Primary subtle (selected nav, in-consultation) | `#EDE9FE` | violet text 7.57:1 |
+| Accent teal (secondary actions, info) | `#0E7490` | 5.36:1 on white |
+| Text / muted text | `#1C1530` / `#5B5670` | muted 6.49:1 on page |
+| Page / surface / border | `#F7F6FB` / `#FFFFFF` / `#E4E1EE` | — |
+| Status tokens | Booked `#92400E`/`#FEF3C7`, Waiting `#155E75`/`#CFFAFE`, In consultation `#5B21B6`/`#EDE9FE`, Completed `#166534`/`#DCFCE7`, Cancelled/Allergy `#991B1B`/`#FEE2E2` | all ≥ 6.3:1 |
+| Type | Inter (English), IBM Plex Sans Arabic (Arabic), Western digits, tabular numbers for money/time | — |
+
+Tables follow C: white surface, light header row, 1 px neutral row dividers, outlined status pills, no zebra fills. Final token set, component specs and states are Phase 6.

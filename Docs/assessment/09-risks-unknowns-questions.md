@@ -111,6 +111,8 @@ Still open: U1 (hosted time zone), U3 (volumes), U5 (devices), U6 (DwaPrices ter
 | 2026-10-27 | Patient primary phone number is unique |
 | 2026-10-27 | UI is bilingual: English default, Arabic switchable (labels only); data in English, notes fields in Arabic or English |
 | 2026-10-27 | Runtime review against the local dev database approved |
+| 2026-10-27 | Phase 4 decisions D1–D10 (see `11-…` §12): permission groups on existing auth; evolve Razor + Bootstrap; pilot = front-desk visit flow; interim Admin-only restriction; `MarkPaid` removed in favour of zero/write-off payments (Reception Admin, Clinic Admin); doctors never change another doctor's reservation status; no double booking + doctor availability calendars (open or specific slots), no past slots; unique patient phone with no duplicates; lab module unchanged until revamp; Western digits |
+| 2026-10-27 | D11 screen sizes 1366 / 1024 / 390 accepted; D12 brand = Direction A (violet & teal, light sidebar) with C's plainer tables; scheduling: clinic opening hours per clinic, doctor breaks, reschedule prompt when removing booked slots, one doctor in several clinics in non-overlapping times |
 
 ## 5. Enhancement backlog (captured, not yet prioritised)
 
@@ -124,3 +126,5 @@ Still open: U1 (hosted time zone), U3 (volumes), U5 (devices), U6 (DwaPrices ter
 | E6 | Doctor-facing mobile interface | Owner, 2026-10-27 (implied by E5) |
 | E7 | Dynamic permission groups (also a prerequisite for R21–R23 decisions) | Owner, 2026-10-27 |
 | E8 | Arabic UI localisation with RTL layout | Owner, 2026-10-27 |
+| E9 | Doctor availability calendars and slot booking (moved into the pilot scope) | Owner, 2026-10-27 (D7) |
+| E10 | Lab module revamp incl. Requested → Completed only with a result file (F10) | Owner, 2026-10-27 (D9) |
