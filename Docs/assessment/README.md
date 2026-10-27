@@ -14,5 +14,6 @@ Read-only assessment of `MostafaSIbrahim/clinic-MS` (ASP.NET Core 8 MVC + EF Cor
 | 08 | [External integration inventory](08-external-integrations.md) | 2 | SQL Server, DwaPrices, file storage, CDNs, hosting, printing |
 | 09 | [Risks, unknowns and questions](09-risks-unknowns-questions.md) | 2 | Consolidated risk register (input to Phase 3), unknowns, owner questions, decisions |
 | 10 | [Evaluation findings](10-evaluation-findings.md) | 3 Evaluate | 32 findings with evidence, impact, recommendation, priority and confidence; runtime + accessibility results |
+| 11 | [Target-state proposal](11-target-state-proposal.md) | 4 Propose | Architecture changes, permission-group model, frontend options, shell, IA, design-system structure, accessibility, responsive, localisation, migration stages, decisions D1–D12, success criteria |
 
 Evidence: raw build/test/DB outputs were collected locally into `.assessment/out/` (git-ignored, not committed).
