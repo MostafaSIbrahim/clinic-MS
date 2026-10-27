@@ -1,6 +1,6 @@
 # SafyaClinic — Assessment Set
 
-Read-only assessment of `MostafaSIbrahim/clinic-MS` (ASP.NET Core 8 MVC + EF Core 8 + SQL Server). No source code was changed to produce these documents.
+Read-only assessment of `MostafaSIbrahim/clinic-MS` (ASP.NET Core 8 MVC + EF Core 8 + SQL Server). No source code was changed to produce these documents. Phase 3 created clearly labelled test data in the local dev database (see `10-…`, *Clean-up*).
 
 | # | Document | Phase | Contents |
 |---|---|---|---|
@@ -13,5 +13,6 @@ Read-only assessment of `MostafaSIbrahim/clinic-MS` (ASP.NET Core 8 MVC + EF Cor
 | 07 | [Authentication and authorization summary](07-authn-authz-summary.md) | 2 | Cookie auth, password handling, roles, policies, data-level rules, gaps |
 | 08 | [External integration inventory](08-external-integrations.md) | 2 | SQL Server, DwaPrices, file storage, CDNs, hosting, printing |
 | 09 | [Risks, unknowns and questions](09-risks-unknowns-questions.md) | 2 | Consolidated risk register (input to Phase 3), unknowns, owner questions, decisions |
+| 10 | [Evaluation findings](10-evaluation-findings.md) | 3 Evaluate | 32 findings with evidence, impact, recommendation, priority and confidence; runtime + accessibility results |
 
 Evidence: raw build/test/DB outputs were collected locally into `.assessment/out/` (git-ignored, not committed).
