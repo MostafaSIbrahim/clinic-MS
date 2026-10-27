@@ -85,15 +85,17 @@ Confidence: **Verified** (read in code/DB), **Likely** (strong evidence, not exe
 | U7 | Behaviour of pages in the browser (no runtime UI session yet) | Phase 3 UX/accessibility evidence | Run the app locally and review key workflows with screenshots |
 | U8 | Whether the GitHub repository is or was public | Urgency of O1/O2 rotation | Owner |
 
-## 3. Questions for the owner (non-blocking for Phase 3)
+## 3. Questions for the owner — answered 2026-10-27
 
-1. **R21 MarkPaid** — should marking a reservation paid without a payment record be possible at all? If yes, for whom?
-2. **R22 Completion** — should Reception be able to mark a consultation *Completed* (e.g., when a doctor forgets), or only doctors/admin?
-3. **R23 Price override** — who may change a reservation's price at booking: Reception, Admin only, or nobody (use the treatment type price)?
-4. **R30 Status transitions** — what are the allowed transitions for lab analyses (Requested → InProgress → Completed/Cancelled?) and enrollments (Active ↔ OnHold → Completed/Cancelled?)
-5. **R32 Duplicates** — should the primary phone number identify a patient uniquely, or only warn on duplicates?
-6. **U4/U5** — which language and devices does each role use day to day?
-7. **Phase 3 runtime review** — may I run the app locally (`dotnet run`) against `SafyaClinicDb` and click through workflows in the browser? This *writes* test data (reservations, payments) to the dev database, so it needs your explicit approval; alternatively I can use a copy of the database.
+| # | Question | Answer (owner, 2026-10-27) |
+|---|---|---|
+| 1–3 | R21 MarkPaid, R22 completion by Reception, R23 price override — who may do these? | Not fixed to roles. Introduce **dynamic permissions**: the Admin defines user groups, assigns permissions (e.g. *Mark reservation paid without payment*, *Complete consultation on behalf of doctor*, *Override reservation price*) to groups, and adds users to groups. Only the Admin can manage groups and permissions |
+| 4 | R30 status transitions | **Lab analyses:** two states only, *Requested → Completed*. Completion requires the results file to be uploaded to the patient record. **Enrollments:** Active, On hold, Completed, Cancelled |
+| 5 | R32 duplicate patients | The primary phone number must identify a patient **uniquely** |
+| 6 | U4/U5 language and devices | Full **English** UI by default, switchable to **Arabic** on demand (labels only). Data entered in English, except comment/notes fields, which accept Arabic or English. Devices: not specified |
+| 7 | Phase 3 runtime review | **Approved**: run locally against `SafyaClinicDb` and exercise workflows in the browser (writes test data) |
+
+Still open: U1 (hosted time zone), U3 (volumes), U5 (devices), U6 (DwaPrices terms), U8 (repository visibility).
 
 ## 4. Decisions recorded
 
@@ -103,3 +105,22 @@ Confidence: **Verified** (read in code/DB), **Likely** (strong evidence, not exe
 | 2026-10-26 | Lab and management roles deferred to the enhancements phase |
 | 2026-10-26 | Any doctor may edit another doctor's unlocked medical record |
 | 2026-10-26 | Public demo intentionally publishes the seeded admin login; a safer demo-access model is a future enhancement |
+| 2026-10-27 | Sensitive actions (R21, R22, R23 and future ones) are governed by **admin-managed permission groups**, not hard-coded roles |
+| 2026-10-27 | Lab analysis lifecycle = Requested → Completed; completion only with an uploaded result file |
+| 2026-10-27 | Enrollment statuses = Active, OnHold, Completed, Cancelled (transition rules to be proposed in Phase 4) |
+| 2026-10-27 | Patient primary phone number is unique |
+| 2026-10-27 | UI is bilingual: English default, Arabic switchable (labels only); data in English, notes fields in Arabic or English |
+| 2026-10-27 | Runtime review against the local dev database approved |
+
+## 5. Enhancement backlog (captured, not yet prioritised)
+
+| # | Enhancement | Source |
+|---|---|---|
+| E1 | Laboratory services: Lab Doctor, Lab Tech, Lab Reception roles and workflow | Owner, 2026-10-26 |
+| E2 | Clinic Management role (management reporting) | Stated user groups |
+| E3 | Safer public demo access that still showcases admin features | Owner, 2026-10-26 |
+| E4 | Patient mobile app: patient sign-in and upload of lab result files | Owner, 2026-10-27 |
+| E5 | Doctor notifications (web and mobile) when a patient uploads lab results | Owner, 2026-10-27 |
+| E6 | Doctor-facing mobile interface | Owner, 2026-10-27 (implied by E5) |
+| E7 | Dynamic permission groups (also a prerequisite for R21–R23 decisions) | Owner, 2026-10-27 |
+| E8 | Arabic UI localisation with RTL layout | Owner, 2026-10-27 |
