@@ -1,0 +1,227 @@
+/* ==========================================================================
+   Safya Clinic — design tokens (Phase 6 specification, v1, 2026-10-27)
+   Direction A (violet & teal, light sidebar) with Direction C tables.
+   SPECIFICATION FILE: copied into SafyaClinic.Web/wwwroot/css/tokens.css
+   during roadmap item F6. Do not reference from views directly; components
+   and the Bootstrap bridge consume these variables.
+   Contrast values are WCAG 2.1 ratios against the stated background.
+   ========================================================================== */
+
+:root {
+  /* ---- 1. Primitive colours (never used directly in views) ------------- */
+  --violet-50:  #F5F3FF;
+  --violet-100: #EDE9FE;
+  --violet-200: #DDD6FE;
+  --violet-300: #C4B5FD;
+  --violet-600: #6D28D9;
+  --violet-700: #5B21B6;  /* brand primary — 8.98:1 on white */
+  --violet-800: #4C1D95;
+  --violet-900: #3B0F7A;
+
+  --teal-50:  #ECFEFF;
+  --teal-100: #CFFAFE;
+  --teal-200: #A5F3FC;
+  --teal-700: #0E7490;    /* brand accent — 5.36:1 on white */
+  --teal-800: #155E75;
+  --teal-900: #164E63;
+
+  --neutral-0:   #FFFFFF;
+  --neutral-25:  #FBFAFE;
+  --neutral-50:  #F7F6FB;
+  --neutral-100: #EEECF4;
+  --neutral-200: #E4E1EE;
+  --neutral-300: #D6D2E3;
+  --neutral-400: #8A84A0; /* 3.57:1 on white — minimum for control borders */
+  --neutral-500: #7A7490;
+  --neutral-600: #5B5670; /* 6.98:1 on white */
+  --neutral-700: #3B3550;
+  --neutral-900: #1C1530; /* 17.51:1 on white */
+
+  --amber-50:  #FFFBEB;
+  --amber-100: #FEF3C7;
+  --amber-200: #FDE68A;
+  --amber-700: #B45309;
+  --amber-800: #92400E;
+
+  --green-50:  #F0FDF4;
+  --green-100: #DCFCE7;
+  --green-200: #BBF7D0;
+  --green-700: #15803D;
+  --green-800: #166534;
+
+  --red-50:  #FEF2F2;
+  --red-100: #FEE2E2;
+  --red-200: #FECACA;
+  --red-700: #B91C1C;
+  --red-800: #991B1B;
+  --red-900: #7F1D1D;
+
+  /* ---- 2. Semantic colours (what components use) ---------------------- */
+  --color-bg-page:          var(--neutral-50);
+  --color-surface:          var(--neutral-0);
+  --color-surface-subtle:   var(--neutral-25);   /* table header, inset areas */
+  --color-surface-sunken:   var(--neutral-100);
+  --color-border:           var(--neutral-200);  /* cards, dividers (decorative) */
+  --color-border-strong:    var(--neutral-300);
+  --color-border-control:   var(--neutral-400);  /* inputs, selects, checkboxes: ≥3:1 */
+
+  --color-text:             var(--neutral-900);
+  --color-text-muted:       var(--neutral-600);
+  --color-text-subtle:      var(--neutral-700);
+  --color-text-disabled:    var(--neutral-500);  /* disabled only; exempt from 4.5:1 */
+  --color-text-inverse:     var(--neutral-0);
+
+  --color-primary:          var(--violet-700);
+  --color-primary-hover:    var(--violet-800);
+  --color-primary-active:   var(--violet-900);
+  --color-primary-subtle:   var(--violet-100);   /* selected nav, selected row */
+  --color-primary-border:   var(--violet-200);
+  --color-on-primary:       var(--neutral-0);
+
+  --color-accent:           var(--teal-700);
+  --color-accent-hover:     var(--teal-800);
+  --color-accent-subtle:    var(--teal-50);
+  --color-on-accent:        var(--neutral-0);
+
+  --color-link:             var(--violet-700);
+  --color-link-hover:       var(--violet-800);
+
+  --color-success-fg:       var(--green-800);
+  --color-success-bg:       var(--green-100);
+  --color-success-border:   var(--green-200);
+  --color-success-icon:     var(--green-700);
+
+  --color-warning-fg:       var(--amber-800);
+  --color-warning-bg:       var(--amber-100);
+  --color-warning-border:   var(--amber-200);
+  --color-warning-icon:     var(--amber-700);
+
+  --color-danger:           var(--red-700);      /* destructive buttons, 6.47:1 with white */
+  --color-danger-hover:     var(--red-800);
+  --color-danger-active:    var(--red-900);
+  --color-danger-fg:        var(--red-800);
+  --color-danger-bg:        var(--red-100);
+  --color-danger-border:    var(--red-200);
+
+  --color-info-fg:          var(--teal-800);
+  --color-info-bg:          var(--teal-100);
+  --color-info-border:      var(--teal-200);
+
+  --color-focus-ring:       var(--violet-700);
+  --color-backdrop:         rgba(28, 21, 48, 0.48);
+
+  /* Domain status tokens: always text + colour, never colour alone */
+  --status-booked-fg:          var(--amber-800);   --status-booked-bg:          var(--amber-100);   --status-booked-border:          var(--amber-200);   /* 6.37:1 */
+  --status-waiting-fg:         var(--teal-800);    --status-waiting-bg:         var(--teal-100);    --status-waiting-border:         var(--teal-200);    /* 6.49:1 */
+  --status-in-consultation-fg: var(--violet-700);  --status-in-consultation-bg: var(--violet-100);  --status-in-consultation-border: var(--violet-200);  /* 7.57:1 */
+  --status-completed-fg:       var(--green-800);   --status-completed-bg:       var(--green-100);   --status-completed-border:       var(--green-200);   /* 6.49:1 */
+  --status-cancelled-fg:       var(--red-800);     --status-cancelled-bg:       var(--red-100);     --status-cancelled-border:       var(--red-200);     /* 6.80:1 */
+  --status-no-show-fg:         var(--neutral-700); --status-no-show-bg:         var(--neutral-100); --status-no-show-border:         var(--neutral-300); /* 9.91:1 */
+  --status-paid-fg:            var(--green-800);   --status-paid-bg:            var(--green-50);    --status-paid-border:            var(--green-200);
+  --status-due-fg:             var(--neutral-900); --status-due-bg:             var(--neutral-100); --status-due-border:             var(--neutral-300);
+  --status-write-off-fg:       var(--neutral-700); --status-write-off-bg:       var(--neutral-50);  --status-write-off-border:       var(--neutral-300);
+  --status-allergy-fg:         var(--red-800);     --status-allergy-bg:         var(--red-100);     --status-allergy-border:         var(--red-200);
+
+  /* ---- 3. Typography -------------------------------------------------- */
+  --font-sans:    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-arabic:  "IBM Plex Sans Arabic", "Inter", "Segoe UI", Tahoma, sans-serif;
+  --font-mono:    ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --font-size-xs:   0.75rem;    /* 12px — meta, table header caps */
+  --font-size-sm:   0.8125rem;  /* 13px — labels, secondary text */
+  --font-size-md:   0.875rem;   /* 14px — body, controls (desktop) */
+  --font-size-lg:   1rem;       /* 16px — card titles, phone body, inputs on touch */
+  --font-size-xl:   1.125rem;   /* 18px — patient name, h3 */
+  --font-size-2xl:  1.375rem;   /* 22px — h2 / phone h1 */
+  --font-size-3xl:  1.5rem;     /* 24px — page h1 */
+  --font-size-4xl:  1.75rem;    /* 28px — dashboard KPI values */
+
+  --line-height-tight: 1.25;
+  --line-height-base:  1.5;
+
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  --letter-spacing-caps: 0.04em;
+  --numeric-tabular: tabular-nums;   /* money, times, counts */
+
+  /* ---- 4. Spacing (4 px base) ----------------------------------------- */
+  --space-0: 0;
+  --space-1: 0.25rem;  /* 4 */
+  --space-2: 0.5rem;   /* 8 */
+  --space-3: 0.75rem;  /* 12 */
+  --space-4: 1rem;     /* 16 */
+  --space-5: 1.25rem;  /* 20 */
+  --space-6: 1.5rem;   /* 24 */
+  --space-7: 1.75rem;  /* 28 */
+  --space-8: 2rem;     /* 32 */
+  --space-10: 2.5rem;  /* 40 */
+  --space-12: 3rem;    /* 48 */
+  --space-16: 4rem;    /* 64 */
+
+  /* ---- 5. Radius ------------------------------------------------------ */
+  --radius-sm:   6px;    /* checkboxes, small chips */
+  --radius-md:   10px;   /* buttons, inputs, alerts */
+  --radius-lg:   14px;   /* cards, panels, patient header */
+  --radius-xl:   20px;   /* modals */
+  --radius-pill: 999px;  /* status pills, avatars */
+
+  /* ---- 6. Elevation --------------------------------------------------- */
+  --shadow-none: none;
+  --shadow-sm:   0 1px 2px rgba(28, 21, 48, 0.06);
+  --shadow-md:   0 4px 12px rgba(28, 21, 48, 0.08);
+  --shadow-lg:   0 12px 32px rgba(28, 21, 48, 0.16);   /* modals, menus */
+  --focus-ring:  0 0 0 2px var(--neutral-0), 0 0 0 4px var(--color-focus-ring);
+
+  /* ---- 7. Motion ------------------------------------------------------ */
+  --duration-instant: 0ms;
+  --duration-fast:    120ms;   /* hover, press */
+  --duration-base:    180ms;   /* menus, toasts */
+  --duration-slow:    240ms;   /* modals, off-canvas */
+  --easing-standard:  cubic-bezier(0.2, 0, 0, 1);
+  --easing-exit:      cubic-bezier(0.4, 0, 1, 1);
+
+  /* ---- 8. Breakpoints (reference only; CSS media queries use literals) - */
+  --bp-sm: 576px;  --bp-md: 768px;  --bp-lg: 992px;  --bp-xl: 1200px;  --bp-xxl: 1400px;
+
+  /* ---- 9. Layout ------------------------------------------------------ */
+  --header-height:          56px;
+  --sidebar-width:          232px;
+  --sidebar-width-collapsed: 64px;
+  --page-gutter:            28px;   /* ≥ 1200 */
+  --content-max-width:      1440px;
+  --form-max-width:         760px;
+  --grid-columns:           12;
+  --grid-gap:               16px;
+  --control-height:         40px;   /* desktop buttons/inputs */
+  --control-height-touch:   44px;   /* < 992 px and touch */
+  --icon-size-sm: 16px;  --icon-size-md: 18px;  --icon-size-lg: 20px;  --icon-size-xl: 24px;
+  --icon-stroke: 2;
+
+  /* ---- 10. Grid / table lines (Direction C tables) -------------------- */
+  --grid-line:          var(--neutral-100);   /* row dividers */
+  --grid-line-strong:   var(--neutral-200);   /* header bottom, card edge */
+  --grid-header-bg:     var(--neutral-25);
+  --grid-row-hover-bg:  var(--neutral-50);
+  --grid-row-selected-bg: var(--violet-50);
+  --table-cell-padding-y: 10px;
+  --table-cell-padding-x: 16px;
+
+  /* ---- 11. Z-index scale --------------------------------------------- */
+  --z-base: 0;  --z-sticky: 100;  --z-sidebar: 200;  --z-header: 300;
+  --z-dropdown: 400;  --z-modal-backdrop: 500;  --z-modal: 510;  --z-toast: 600;
+}
+
+@media (max-width: 1199.98px) { :root { --page-gutter: 20px; } }
+@media (max-width: 767.98px)  { :root { --page-gutter: 16px; --header-height: 56px; } }
+@media (max-width: 991.98px), (pointer: coarse) { :root { --control-height: var(--control-height-touch); } }
+
+/* Arabic: same tokens, different family; Western digits are kept by the
+   number formatters (D10), not by CSS. */
+:root:lang(ar) { --font-sans: var(--font-arabic); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --duration-fast: 0ms; --duration-base: 0ms; --duration-slow: 0ms; }
+}
