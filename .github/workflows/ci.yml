@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET (8 runtime for tests, 10 SDK for build)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Restore
+        run: dotnet restore SafyaClinic/SafyaClinic.sln
+
+      - name: Build
+        run: dotnet build SafyaClinic/SafyaClinic.sln --no-restore --configuration Release
+
+      - name: Test (.NET)
+        run: >
+          dotnet test SafyaClinic/SafyaClinic.sln --no-build --configuration Release
+          --logger "trx;LogFileName=dotnet-tests.trx" --results-directory TestResults
+
+      - name: Test (JavaScript)
+        run: node --test "SafyaClinic/tests/**/*.test.cjs"
+
+      - name: Vulnerable packages (report only until slice S2)
+        continue-on-error: true
+        run: |
+          dotnet list SafyaClinic/SafyaClinic.sln package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -q "has the following vulnerable packages" vulnerable.txt; then exit 1; fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
