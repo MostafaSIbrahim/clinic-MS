@@ -30,19 +30,8 @@ The project intentionally excludes appsettings*.json from publishing and protect
 1. Copy docs/demo-appsettings.template.json to a private directory outside the repository.
 2. Rename the private copy to appsettings.json.
 3. Replace ConnectionStrings:SafyaClinicDb with the connection string from step 1. It must name the DEMO database and demo user.
-4. Replace Jwt:Key with a NEW demo-only random secret. To generate one locally in PowerShell:
-
-```powershell
-$demoKeyBytes = New-Object byte[] 48
-$demoKeyGenerator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-$demoKeyGenerator.GetBytes($demoKeyBytes)
-[Convert]::ToBase64String($demoKeyBytes)
-$demoKeyGenerator.Dispose()
-```
-
-Copy the generated value privately into the demo JSON. Do not reuse the production key or publish the filled JSON in source control.
-
-5. Keep Jwt:Issuer and Jwt:Audience as SafyaClinicDemo, and AllowedHosts as safyaclinic-demo.runasp.net.
+4. No JWT settings are needed: the application no longer issues JWTs (slice S2). If an older server appsettings.json still has a Jwt section, it is ignored and can be removed.
+5. Keep AllowedHosts as safyaclinic-demo.runasp.net.
 6. Keep ClinicInfo:Name as Safya Clinic - DEMO so views that use this setting identify the environment. The shared logo will still say Safya Clinic; this setting does not add a global demo banner.
 7. Keep FileStorage:BasePath as wwwroot/uploads. This is separate from production because the demo uses its own physical website directory.
 8. Keep the JSON valid: no comments or trailing commas. If manually entering a password containing a backslash or quotation mark, JSON-escape it correctly. The template contains placeholders and cannot connect until filled in.

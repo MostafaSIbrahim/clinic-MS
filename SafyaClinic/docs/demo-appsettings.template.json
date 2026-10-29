@@ -35,10 +35,5 @@
       "Microsoft.EntityFrameworkCore.Database.Command": "Warning"
     }
   },
-  "Jwt": {
-    "Key": "REPLACE_WITH_A_NEW_RANDOM_DEMO_ONLY_SECRET",
-    "Issuer": "SafyaClinicDemo",
-    "Audience": "SafyaClinicDemo"
-  },
   "AllowedHosts": "safyaclinic-demo.runasp.net"
 }
