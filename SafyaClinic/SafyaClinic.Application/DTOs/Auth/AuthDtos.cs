@@ -12,10 +12,12 @@ public class LoginResponse
     public string FullName { get; init; } = string.Empty;
     public DateTime ExpiresAt { get; init; }
     public IEnumerable<string> Roles { get; init; } = Enumerable.Empty<string>();
+    public bool MustChangePassword { get; init; }
 }
 
 public class ChangePasswordRequest
 {
     public string CurrentPassword { get; init; } = string.Empty;
     public string NewPassword { get; init; } = string.Empty;
+    public string ConfirmPassword { get; init; } = string.Empty;
 }

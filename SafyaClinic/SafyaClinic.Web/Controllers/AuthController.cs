@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Auth;
 using SafyaClinic.Application.Interfaces.Services;
 using System.Security.Claims;
+using SafyaClinic.Web.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -50,6 +51,8 @@ public class AuthController : BaseController
             new(ClaimTypes.Name, data.FullName)
         };
         claims.AddRange(data.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
+        if (data.MustChangePassword)
+            claims.Add(new Claim(AuthClaims.MustChangePassword, "true"));
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
@@ -62,6 +65,9 @@ public class AuthController : BaseController
                 IsPersistent = true,
                 ExpiresUtc = data.ExpiresAt
             });
+
+        if (data.MustChangePassword)
+            return RedirectToAction(nameof(ChangePassword));
 
         if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
             return Redirect(returnUrl);
@@ -99,6 +105,32 @@ public class AuthController : BaseController
         {
             ApplyErrors(result);
             return View(model);
+        }
+
+        // Re-issue the sign-in cookie without the "must change password" marker.
+        if (User.HasClaim(AuthClaims.MustChangePassword, "true"))
+        {
+            var identity = new ClaimsIdentity(
+                User.Claims.Where(c => c.Type != AuthClaims.MustChangePassword),
+                CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity),
+                new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8) });
+        }
+
+        // Re-issue the sign-in cookie without the "must change password" marker.
+        if (User.HasClaim(AuthClaims.MustChangePassword, "true"))
+        {
+            var identity = new ClaimsIdentity(
+                User.Claims.Where(c => c.Type != AuthClaims.MustChangePassword),
+                CookieAuthenticationDefaults.AuthenticationScheme);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity),
+                new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8) });
         }
 
         return RedirectWithSuccess("Password changed successfully.", "Index", "Dashboard");

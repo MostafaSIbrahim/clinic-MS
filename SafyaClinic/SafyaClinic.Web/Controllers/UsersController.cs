@@ -69,6 +69,32 @@ public class UsersController : BaseController
         return RedirectWithSuccess("User created successfully.", nameof(Index));
     }
 
+
+    [HttpGet]
+    public async Task<IActionResult> ResetPassword(int id)
+    {
+        var user = await _userService.GetUserByIdAsync(id);
+        if (!user.IsSuccess) return NotFound();
+
+        ViewBag.UserName = user.Data!.FullName;
+        return View(new ResetPasswordRequest { UserId = id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest model)
+    {
+        var result = await _userService.ResetPasswordAsync(model);
+        if (!result.IsSuccess)
+        {
+            ViewBag.UserName = (await _userService.GetUserByIdAsync(model.UserId)).Data?.FullName;
+            ApplyErrors(result);
+            return View(model);
+        }
+
+        return RedirectWithSuccess(result.Message, nameof(Index));
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleActive(int id, bool isActive)

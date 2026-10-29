@@ -28,12 +28,18 @@
                     <input asp-for="Email" type="email" class="form-control" />
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="Password" class="form-label">Password *</label>
-                    <input asp-for="Password" type="password" class="form-control" required />
-                </div>
-                <div class="col-md-6">
                     <label asp-for="Specialization" class="form-label">Specialization</label>
                     <input asp-for="Specialization" class="form-control" placeholder="e.g. Internal Medicine, Nutrition" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Password" class="form-label">Password *</label>
+                    <input asp-for="Password" type="password" class="form-control" autocomplete="new-password"
+                           minlength="10" required aria-describedby="passwordHelp" />
+                    <div id="passwordHelp" class="form-text">At least 10 characters.</div>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ConfirmPassword" class="form-label">Confirm password *</label>
+                    <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" required />
                 </div>
                 <div class="col-md-6">
                     <label asp-for="LicenseNumber" class="form-label">License Number</label>
