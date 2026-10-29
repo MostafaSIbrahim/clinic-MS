@@ -6,6 +6,8 @@ using SafyaClinic.Infrastructure.DependencyInjection;
 using SafyaClinic.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using SafyaClinic.Web.Services.Files;
+using SafyaClinic.Application.Security;
+using SafyaClinic.Web.Security;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,6 +55,9 @@ var storageRoot = Path.Combine(
 var maxUploadBytes = builder.Configuration.GetValue<long?>("FileStorage:MaxFileSizeBytes") ?? 10 * 1024 * 1024;
 builder.Services.AddSingleton<IFileStorage>(new LocalFileStorage(storageRoot, maxUploadBytes));
 
+// ── Sign-in lockout (S5) ─────────────────────────────────────
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection(LockoutSettings.SectionName).Get<LockoutSettings>() ?? new LockoutSettings());
 
 // ── Pipeline ─────────────────────────────────────────────────
 var app = builder.Build();
@@ -90,6 +95,19 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// A user whose password was reset must choose a new one before using the app (S5).
+app.Use(async (context, next) =>
+{
+    if (context.User.HasClaim(AuthClaims.MustChangePassword, "true")
+        && !context.Request.Path.StartsWithSegments("/Auth")
+        && !context.Request.Path.StartsWithSegments("/Home/Error"))
+    {
+        context.Response.Redirect("/Auth/ChangePassword");
+        return;
+    }
+    await next();
+});
 // Default route: Home/Index redirects authenticated → Dashboard, guests → Login
 app.MapControllerRoute(
     name: "default",

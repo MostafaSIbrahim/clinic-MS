@@ -4,6 +4,7 @@ using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Interfaces.Repositories;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Application.Services;
 
@@ -16,6 +17,9 @@ public class UserService : IUserService
     public async Task<ServiceResult<UserDto>> CreateUserAsync(
         CreateUserRequest request, int createdByUserId)
     {
+        var passwordProblem = PasswordHashing.Validate(request.Password, request.ConfirmPassword);
+        if (passwordProblem is not null)
+            return ServiceResult<UserDto>.Failure(passwordProblem);
         // Phone uniqueness check
         if (await _uow.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber) is not null)
             return ServiceResult<UserDto>.Failure("A user with this phone number already exists.");
@@ -42,7 +46,7 @@ public class UserService : IUserService
             FullName = request.FullName,
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
-            PasswordHash = AuthService.HashPassword(request.Password),
+            PasswordHash = PasswordHashing.Hash(request.Password),
             Specialization = request.Specialization,
             LicenseNumber = request.LicenseNumber,
             IsActive = true,
@@ -69,6 +73,26 @@ public class UserService : IUserService
         return ServiceResult<UserDto>.Success(await MapUserDtoAsync(user));
     }
 
+
+    public async Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var problem = PasswordHashing.Validate(request.NewPassword, request.ConfirmPassword);
+        if (problem is not null)
+            return ServiceResult.Failure(problem);
+
+        var user = await _uow.Users.GetByIdAsync(request.UserId);
+        if (user is null)
+            return ServiceResult.Failure("User not found.");
+
+        user.PasswordHash = PasswordHashing.Hash(request.NewPassword);
+        user.MustChangePassword = true;   // the user picks their own password at next sign-in
+        user.FailedLoginCount = 0;
+        user.LockoutEndUtc = null;        // a reset also unlocks the account
+        _uow.Users.Update(user);
+        await _uow.SaveChangesAsync();
+
+        return ServiceResult.Success("Password reset. The user must choose a new password at next sign-in.");
+    }
     public async Task<ServiceResult<UserDto>> GetUserByIdAsync(int userId)
     {
         var user = await _uow.Users
