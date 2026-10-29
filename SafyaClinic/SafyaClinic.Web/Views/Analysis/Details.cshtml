@@ -74,7 +74,7 @@
                 <form asp-action="UploadAttachment" method="post" enctype="multipart/form-data" class="d-flex gap-2">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="analysisId" value="@Model.Id" />
-                    <input type="file" name="file" class="form-control form-control-sm" />
+                    <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" aria-label="Attachment (PDF, JPG or PNG)" />
                     <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-upload"></i> Upload</button>
                 </form>
             </div>

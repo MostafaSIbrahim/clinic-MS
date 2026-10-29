@@ -5,6 +5,7 @@ using SafyaClinic.Infrastructure.Data;
 using SafyaClinic.Infrastructure.DependencyInjection;
 using SafyaClinic.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using SafyaClinic.Web.Services.Files;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +46,13 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("NutritionTeam",    p => p.RequireRole("Admin", "Nutritionist"))
     .AddPolicy("ClinicalStaff",    p => p.RequireRole("Admin", "Doctor", "Nutritionist", "Reception"));
 
+// ── Attachment storage (S3): outside wwwroot, never served statically ──
+var storageRoot = Path.Combine(
+    builder.Environment.ContentRootPath,
+    builder.Configuration["FileStorage:BasePath"] ?? "App_Data/uploads");
+var maxUploadBytes = builder.Configuration.GetValue<long?>("FileStorage:MaxFileSizeBytes") ?? 10 * 1024 * 1024;
+builder.Services.AddSingleton<IFileStorage>(new LocalFileStorage(storageRoot, maxUploadBytes));
+
 
 // ── Pipeline ─────────────────────────────────────────────────
 var app = builder.Build();
@@ -66,6 +74,18 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// The old upload folder must never be served, even if files are left behind (S3).
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/uploads"))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+    await next();
+});
+
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();

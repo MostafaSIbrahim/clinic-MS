@@ -8,3 +8,6 @@ TestResults/
 # Deployment credentials and publish output (S1)
 *.publishSettings
 SafyaClinicPublish/
+# Attachment files are runtime data, never committed (S3)
+App_Data/
+**/wwwroot/uploads/

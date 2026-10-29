@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Common;
 using System.Security.Claims;
+using SafyaClinic.Web.Services.Files;
+
 namespace SafyaClinic.Web.Controllers
 {
     public abstract class BaseController : Controller
@@ -25,7 +27,19 @@ namespace SafyaClinic.Web.Controllers
 
         protected void Warning(string message) =>
             TempData["Warning"] = message;
+        // ── Attachments (S3) ────────────────────────────────────
 
+        // Streams a stored attachment. Only PDF/JPG/PNG are shown inline;
+        // anything else is downloaded. nosniff stops browsers guessing a type.
+        protected IActionResult AttachmentResult(FileToServe? file, bool download)
+        {
+            if (file is null) return NotFound();
+
+            Response.Headers["X-Content-Type-Options"] = "nosniff";
+            return download || !file.Inline
+                ? PhysicalFile(file.FullPath, file.ContentType, file.DownloadName)
+                : PhysicalFile(file.FullPath, file.ContentType);
+        }
         // ── ServiceResult → redirect helpers ────────────────────
 
         protected IActionResult RedirectWithSuccess(string message, string action,
