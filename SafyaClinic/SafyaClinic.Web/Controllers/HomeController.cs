@@ -2,6 +2,7 @@ namespace SafyaClinic.Web.Controllers;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SafyaClinic.Web.Models;
 
 public class HomeController : BaseController
 {
@@ -14,10 +15,12 @@ public class HomeController : BaseController
 
         return View();
     }
+    // Shown by UseExceptionHandler. Never displays exception details; the
+    // reference matches the RequestId in the server log for this request.
+    [AllowAnonymous]
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
-        var msg = HttpContext.Session.GetString("GlobalError") ?? "An unexpected error occurred.";
-        ViewBag.ErrorMessage = msg;
-        return View();
+        return View(new ErrorViewModel { RequestId = HttpContext.TraceIdentifier });
     }
 }
