@@ -43,8 +43,7 @@ jobs:
       - name: Test (JavaScript)
         run: node --test "SafyaClinic/tests/**/*.test.cjs"
 
-      - name: Vulnerable packages (report only until slice S2)
-        continue-on-error: true
+      - name: Vulnerable packages
         run: |
           dotnet list SafyaClinic/SafyaClinic.sln package --vulnerable --include-transitive | tee vulnerable.txt
           if grep -q "has the following vulnerable packages" vulnerable.txt; then exit 1; fi
