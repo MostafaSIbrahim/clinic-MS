@@ -7,15 +7,16 @@ using SafyaClinic.Domain.Entities.Reservation;
 using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Identity;
+using Microsoft.Extensions.Configuration;
 
 namespace SafyaClinic.Infrastructure.Data;
 
 public static class DbSeeder
 {
-    public static async Task SeedAsync(SafyaDbContext context)
+    public static async Task SeedAsync(SafyaDbContext context, IConfiguration configuration)
     {
         await SeedRolesAsync(context);
-        await SeedAdminAsync(context);
+        await SeedAdminAsync(context, configuration);
         await SeedAnalysisTypesAsync(context);
         await SeedTreatmentTypesAsync(context);
         await SeedInjectionTypesAsync(context);
@@ -44,16 +45,27 @@ public static class DbSeeder
         await context.SaveChangesAsync();
     }
 
-    private static async Task SeedAdminAsync(SafyaDbContext context)
+    public const string AdminPasswordSettingKey = "Seed:AdminPassword";
+
+    private static async Task SeedAdminAsync(SafyaDbContext context, IConfiguration configuration)
     {
         if (await context.Users.AnyAsync()) return;
+
+        var initialPassword = configuration[AdminPasswordSettingKey];
+        if (string.IsNullOrWhiteSpace(initialPassword))
+        {
+            throw new InvalidOperationException(
+                $"The database has no users and '{AdminPasswordSettingKey}' is not configured. " +
+                "Set it (user-secrets locally, application settings on the server) to create " +
+                "the initial administrator, then remove it after the first sign-in.");
+        }
 
         var admin = new User
         {
             FullName = "System Administrator",
             Email = "admin@safya.com",
             PhoneNumber = "0100",
-            PasswordHash = AuthService.HashPassword("Admin@123"),
+            PasswordHash = AuthService.HashPassword(initialPassword),
             IsActive = true,
             CreatedAt = new DateTime(2026, 1, 1)
         };

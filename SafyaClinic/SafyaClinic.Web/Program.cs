@@ -61,9 +61,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SafyaDbContext>();
     db.Database.Migrate();
-   await DbSeeder.SeedAsync(db);
+    await DbSeeder.SeedAsync(db, app.Configuration);
 
-   
+
 }
 
 // FIX: ExceptionHandlingMiddleware must come BEFORE routing/auth
