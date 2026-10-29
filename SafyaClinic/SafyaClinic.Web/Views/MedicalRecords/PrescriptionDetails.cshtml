@@ -134,7 +134,7 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="prescriptionId" value="@Model.Id" />
                     <input type="hidden" name="recordId" value="@Model.RecordId" />
-                    <input type="file" name="file" class="form-control form-control-sm" />
+                    <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" aria-label="Attachment (PDF, JPG or PNG)" />
                     <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-upload"></i></button>
                 </form>
             </div>
