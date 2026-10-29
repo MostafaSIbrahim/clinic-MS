@@ -5,7 +5,7 @@ using SafyaClinic.Infrastructure.Data;
 using SafyaClinic.Infrastructure.DependencyInjection;
 using SafyaClinic.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using SafyaClinic.Web.Middleware;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,13 +45,6 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("NutritionTeam",    p => p.RequireRole("Admin", "Nutritionist"))
     .AddPolicy("ClinicalStaff",    p => p.RequireRole("Admin", "Doctor", "Nutritionist", "Reception"));
 
-// ── Session (for flash messages / TempData) ──────────────────
-builder.Services.AddSession(o =>
-{
-    o.IdleTimeout        = TimeSpan.FromMinutes(30);
-    o.Cookie.HttpOnly    = true;
-    o.Cookie.IsEssential = true;
-});
 
 // ── Pipeline ─────────────────────────────────────────────────
 var app = builder.Build();
@@ -66,10 +59,6 @@ using (var scope = app.Services.CreateScope())
 
 }
 
-// FIX: ExceptionHandlingMiddleware must come BEFORE routing/auth
-// so it catches exceptions from the entire pipeline
-
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -79,10 +68,8 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<ExceptionHandlingMiddleware>();
 // Default route: Home/Index redirects authenticated → Dashboard, guests → Login
 app.MapControllerRoute(
     name: "default",
