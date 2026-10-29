@@ -148,6 +148,16 @@ A second path: `LookupsController.cs:194, 240, 289, 321` put `ex.Message` into `
 - **Problem:** inconsistent with the doctor-scoped queue and consultation actions. Cross-doctor *record editing* is intended (decision 2026-10-26); whether cross-doctor *status changes* are intended is not decided.
 - **Recommendation:** treat it as a permission (e.g. `Reservations.ChangeStatusForOtherDoctors`) in the Phase 4 model; until then restrict to the assigned doctor, Reception and Admin.
 
+### F33 — Lookup delete checks the wrong table · Medium · Verified (code, found 2026-10-29)
+- **Evidence:** `LookupsController.DeleteTreatmentType` checks `Treatments.Id == id`, `DeleteInjectionType` checks `TreatmentTypes.Id == id`, `DeleteVitaminType` checks `Treatments.Id == id`. None of these is the real reference (`Reservations.TreatmentTypeId`, `PackageItems.InjectionId`, `PackageItems.VitaminId`).
+- **Problem:** deleting a type that is in use usually fails with a raw foreign-key error; an unused type can be wrongly refused and deactivated instead of deleted.
+- **Recommendation:** check the real references; in-use types are deactivated (as the screen already says). Fixed in slice S4.
+
+### F34 — Analysis Types form never saves the name · Medium · Verified (runtime, found 2026-10-29)
+- **Evidence:** `Views/Lookups/AnalysisTypes.cshtml` posts the field as `name="Name"`, but `AnalysisType` has `TypeName`; `CreateAnalysisType` binds the entity directly, so `TypeName` stays `""` and the row is saved with an empty name, whatever is typed. (F08's runtime repro posted `TypeName` directly, which is why it reached the database limit.)
+- **Problem:** every analysis type added from the screen is nameless; doctors pick from an unlabeled list.
+- **Recommendation:** send `TypeName` (one attribute); validate on a DTO in M5. The lab module is frozen until its revamp (decision D9), so the owner decides whether this one-line fix goes in earlier.
+
 ### Upload policy attribute is misleading (note, part of F06)
 `[Authorize(Policy = "ClinicalStaff")]` on `AnalysisController.UploadAttachment` and `MedicalRecordsController.UploadPrescriptionAttachment` suggests Reception and Nutritionists can upload, but the class-level `DoctorOrAdmin` also applies, so they cannot. Decide who should upload results (the agreed lab rule makes this important) and express it as a permission.
 

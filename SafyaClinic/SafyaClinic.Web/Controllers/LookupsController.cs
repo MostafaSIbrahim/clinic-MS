@@ -7,6 +7,7 @@ using SafyaClinic.Domain.Entities.Nutrition;
 using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
 
 namespace SafyaClinic.Web.Controllers
 {
@@ -14,10 +15,19 @@ namespace SafyaClinic.Web.Controllers
     public class LookupsController : BaseController
     {
         private readonly SafyaDbContext _context;
+        private readonly ILogger<LookupsController> _logger;
 
-        public LookupsController(SafyaDbContext context)
+        public LookupsController(SafyaDbContext context, ILogger<LookupsController> logger)
         {
             _context = context;
+            _logger = logger;
+        }
+
+        // Logs the full exception; shows the user only a generic message with a reference.
+        private string LogFailure(Exception ex, string action)
+        {
+            _logger.LogError(ex, "Lookups: could not {Action}", action);
+            return $"Could not {action}. If this keeps happening, give the administrator this reference: {HttpContext.TraceIdentifier}";
         }
 
         // --- Index Dashboard for Lookups ---
@@ -191,7 +201,7 @@ namespace SafyaClinic.Web.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"An error occurred while saving: {ex.Message}";
+                TempData["Error"] = LogFailure(ex, "save the treatment type");
             }
 
             return RedirectToAction(nameof(TreatmentTypes));
@@ -220,7 +230,7 @@ namespace SafyaClinic.Web.Controllers
                     return RedirectToAction(nameof(TreatmentTypes));
                 }
 
-                bool isUsed = await _context.Treatments.AnyAsync(t => t.Id == id);
+                bool isUsed = await _context.Reservations.AnyAsync(r => r.TreatmentTypeId == id);
                 if (isUsed)
                 {
                     treatmentType.IsActive = false;
@@ -237,7 +247,7 @@ namespace SafyaClinic.Web.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Error deleting treatment type: {ex.Message}";
+                TempData["Error"] = LogFailure(ex, "delete the treatment type");
             }
 
             return RedirectToAction(nameof(TreatmentTypes));
@@ -286,7 +296,7 @@ namespace SafyaClinic.Web.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"An error occurred while saving: {ex.Message}";
+                TempData["Error"] = LogFailure(ex, "save the injection type");
             }
             return RedirectToAction(nameof(InjectionTypes));
         }
@@ -302,7 +312,7 @@ namespace SafyaClinic.Web.Controllers
                     TempData["Error"] = "Injection type not found.";
                     return RedirectToAction(nameof(InjectionTypes));
                 }
-                bool isUsed = await _context.TreatmentTypes.AnyAsync(i => i.Id == id);
+                bool isUsed = await _context.PackageItems.AnyAsync(p => p.InjectionId == id);
                 if (isUsed)
                 {
                     injectionType.IsActive = false;
@@ -318,7 +328,7 @@ namespace SafyaClinic.Web.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Error deleting injection type: {ex.Message}";
+                TempData["Error"] = LogFailure(ex, "delete the injection type");
             }
             return RedirectToAction(nameof(InjectionTypes));
         }
@@ -365,7 +375,7 @@ namespace SafyaClinic.Web.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"An error occurred while saving: {ex.Message}";
+                TempData["Error"] = LogFailure(ex, "save the vitamin type");
             }
             return RedirectToAction(nameof(VitaminTypes));
         }
@@ -381,7 +391,7 @@ namespace SafyaClinic.Web.Controllers
                     TempData["Error"] = "Vitamin type not found.";
                     return RedirectToAction(nameof(VitaminTypes));
                 }
-                bool isUsed = await _context.Treatments.AnyAsync(v => v.Id == id);
+                bool isUsed = await _context.PackageItems.AnyAsync(p => p.VitaminId == id);
                 if (isUsed)
                 {
                     vitaminType.IsActive = false;
@@ -397,7 +407,7 @@ namespace SafyaClinic.Web.Controllers
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Error deleting vitamin type: {ex.Message}";
+                TempData["Error"] = LogFailure(ex, "delete the vitamin type");
             }
             return RedirectToAction(nameof(VitaminTypes));
         }

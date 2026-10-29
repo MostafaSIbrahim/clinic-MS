@@ -113,6 +113,8 @@ Still open: U1 (hosted time zone), U3 (volumes), U5 (devices), U6 (DwaPrices ter
 | 2026-10-27 | Runtime review against the local dev database approved |
 | 2026-10-27 | Phase 4 decisions D1–D10 (see `11-…` §12): permission groups on existing auth; evolve Razor + Bootstrap; pilot = front-desk visit flow; interim Admin-only restriction; `MarkPaid` removed in favour of zero/write-off payments (Reception Admin, Clinic Admin); doctors never change another doctor's reservation status; no double booking + doctor availability calendars (open or specific slots), no past slots; unique patient phone with no duplicates; lab module unchanged until revamp; Western digits |
 | 2026-10-27 | D11 screen sizes 1366 / 1024 / 390 accepted; D12 brand = Direction A (violet & teal, light sidebar) with C's plainer tables; scheduling: clinic opening hours per clinic, doctor breaks, reschedule prompt when removing booked slots, one doctor in several clinics in non-overlapping times |
+| 2026-10-29 | U8 answered: the GitHub repository is **public**. The Web Deploy password for site83728 was publicly readable in history from 2026-08-15 (commit 2646764) until removal in S1 (PR #4); rotation is required, making the repository private is recommended. No other credential files found in history (`FolderProfile.pubxml.user` contains no password) |
+| 2026-10-29 | Owner confirmed the Web Deploy password for site83728 was rotated; S1 complete (PR #4) |
 
 ## 5. Enhancement backlog (captured, not yet prioritised)
 
