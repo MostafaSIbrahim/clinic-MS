@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.StaticFiles;
 using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Services.Files;
 
 namespace SafyaClinic.Web.Controllers
 {
@@ -12,7 +12,7 @@ namespace SafyaClinic.Web.Controllers
         private readonly IPatientRecordService _recordService;
         private readonly IAnalysisService _analysisService;
         private readonly IConfiguration _config;
-        private readonly IWebHostEnvironment _env;
+        private readonly IFileStorage _files;
         private readonly IReservationService _reservationService;
         private readonly IPaymentService _paymentService;
 
@@ -20,14 +20,14 @@ namespace SafyaClinic.Web.Controllers
             IPatientRecordService recordService,
             IAnalysisService analysisService,
             IConfiguration config,
-            IWebHostEnvironment env,
+            IFileStorage files,
             IReservationService reservationService,
             IPaymentService paymentService)
         {
             _recordService = recordService;
             _analysisService = analysisService;
             _config = config;
-            _env = env;
+            _files = files;
             _reservationService = reservationService;
             _paymentService = paymentService;
         }
@@ -238,18 +238,32 @@ namespace SafyaClinic.Web.Controllers
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "ClinicalStaff")]
         public async Task<IActionResult> UploadPrescriptionAttachment(
-            int prescriptionId, int recordId, IFormFile file)
+     int prescriptionId, int recordId, IFormFile? file)
         {
-            if (file is null || file.Length == 0)
+            var (stored, error) = await _files.SaveAsync(file, LocalFileStorage.Prescriptions);
+            if (stored is null)
             {
-                Error("No file selected.");
+                Error(error!);
                 return RedirectToAction(nameof(Details), new { id = recordId });
             }
 
-            var (filePath, savedName) = await SaveFileAsync(file, "prescriptions");
-            await _recordService.AddPrescriptionAttachmentAsync(
-                prescriptionId, filePath, savedName,
-                file.ContentType, file.Length, CurrentUserId);
+            try
+            {
+                var result = await _recordService.AddPrescriptionAttachmentAsync(
+                    prescriptionId, stored.Key, stored.FileName,
+                    stored.ContentType, stored.Length, CurrentUserId);
+
+                if (!result.IsSuccess)
+                {
+                    _files.Delete(stored.Key);
+                    Error(result.Errors.FirstOrDefault() ?? "The file could not be attached.");
+                }
+            }
+            catch
+            {
+                _files.Delete(stored.Key);   // no orphan file if the database insert fails
+                throw;
+            }
 
             return RedirectToAction(nameof(Details), new { id = recordId });
         }
@@ -259,52 +273,28 @@ namespace SafyaClinic.Web.Controllers
         [Authorize(Policy = "AdminOnly")]
         public async Task<IActionResult> DeleteAttachment(int attachmentId, int recordId)
         {
-            await _recordService.DeleteAttachmentAsync(attachmentId);
+            var attachment = await _recordService.GetAttachmentAsync(attachmentId);
+            var result = await _recordService.DeleteAttachmentAsync(attachmentId);
+            if (result.IsSuccess && attachment.IsSuccess)
+                _files.Delete(attachment.Data!.FilePath);
+
             return RedirectToAction(nameof(Details), new { id = recordId });
         }
 
         // ── View (inline, for the pop-up preview) vs Download (forced) ────
         [HttpGet]
-        public async Task<IActionResult> ViewAttachment(int attachmentId)
-        {
-            var (bytes, contentType, _) = await LoadAttachmentBytesAsync(attachmentId);
-            if (bytes is null) return NotFound();
-            return File(bytes, contentType!);
-        }
+        public Task<IActionResult> ViewAttachment(int attachmentId) => ServeAttachmentAsync(attachmentId, download: false);
 
         [HttpGet]
-        public async Task<IActionResult> DownloadAttachment(int attachmentId)
-        {
-            var (bytes, contentType, fileName) = await LoadAttachmentBytesAsync(attachmentId);
-            if (bytes is null) return NotFound();
-            return File(bytes, contentType!, fileName);
-        }
+        public Task<IActionResult> DownloadAttachment(int attachmentId) => ServeAttachmentAsync(attachmentId, download: true);
 
-        private async Task<(byte[]? bytes, string? contentType, string fileName)> LoadAttachmentBytesAsync(
-            int attachmentId)
+        private async Task<IActionResult> ServeAttachmentAsync(int attachmentId, bool download)
         {
             var result = await _recordService.GetAttachmentAsync(attachmentId);
-            if (!result.IsSuccess) return (null, null, string.Empty);
+            if (!result.IsSuccess) return NotFound();
 
-            var attachment = result.Data!;
-            var fullPath = Path.IsPathRooted(attachment.FilePath)
-                ? attachment.FilePath
-                : Path.Combine(_env.ContentRootPath, attachment.FilePath);
-
-            if (!System.IO.File.Exists(fullPath)) return (null, null, string.Empty);
-
-            var contentType = attachment.ContentType;
-            if (string.IsNullOrWhiteSpace(contentType))
-            {
-                var provider = new FileExtensionContentTypeProvider();
-                if (!provider.TryGetContentType(fullPath, out contentType))
-                    contentType = "application/octet-stream";
-            }
-
-            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            return (bytes, contentType, attachment.FileName);
+            return AttachmentResult(_files.Find(result.Data!.FilePath), download);
         }
-
         // ── Printable prescription (dynamic paper size / design) ──────────
         [HttpGet]
         public async Task<IActionResult> PrintPrescription(
@@ -326,20 +316,6 @@ namespace SafyaClinic.Web.Controllers
             ViewBag.ClinicEmail = _config["ClinicInfo:Email"];
 
             return View(result.Data);
-        }
-
-        private async Task<(string filePath, string savedName)> SaveFileAsync(
-            IFormFile file, string subFolder)
-        {
-            var basePath = _config["FileStorage:BasePath"] ?? "wwwroot/uploads";
-            var folder = Path.Combine(basePath, subFolder);
-            Directory.CreateDirectory(folder);
-            var ext = Path.GetExtension(file.FileName);
-            var savedName = $"{Guid.NewGuid()}{ext}";
-            var fullPath = Path.Combine(folder, savedName);
-            await using var stream = new FileStream(fullPath, FileMode.Create);
-            await file.CopyToAsync(stream);
-            return (fullPath, savedName);
         }
         //---Consultation Context for Doctor Queue and Consultation Pages--//
         [HttpGet]
