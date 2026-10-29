@@ -8,6 +8,7 @@ using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Identity;
 using Microsoft.Extensions.Configuration;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Infrastructure.Data;
 
@@ -65,7 +66,7 @@ public static class DbSeeder
             FullName = "System Administrator",
             Email = "admin@safya.com",
             PhoneNumber = "0100",
-            PasswordHash = AuthService.HashPassword(initialPassword),
+            PasswordHash = PasswordHashing.Hash(initialPassword),
             IsActive = true,
             CreatedAt = new DateTime(2026, 1, 1)
         };

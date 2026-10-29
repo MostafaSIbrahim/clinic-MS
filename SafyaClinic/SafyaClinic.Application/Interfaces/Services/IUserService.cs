@@ -6,6 +6,7 @@ namespace SafyaClinic.Application.Interfaces.Services;
 public interface IUserService
 {
     Task<ServiceResult<UserDto>> CreateUserAsync(CreateUserRequest request, int createdByUserId);
+    Task<ServiceResult> ResetPasswordAsync(ResetPasswordRequest request);
     Task<ServiceResult<UserDto>> GetUserByIdAsync(int userId);
     Task<ServiceResult<PagedResult<UserDto>>> GetAllUsersAsync( 
             PaginationRequest request);
