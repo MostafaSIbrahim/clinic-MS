@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.StaticFiles;
 using SafyaClinic.Application.DTOs.Analysis;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Services.Files;
+
 namespace SafyaClinic.Web.Controllers
 {
     [Authorize(Policy = "DoctorOrAdmin")]
@@ -11,19 +12,16 @@ namespace SafyaClinic.Web.Controllers
     {
         private readonly IAnalysisService _analysisService;
         private readonly IPatientService _patientService;
-        private readonly IConfiguration _config;
-        private readonly IWebHostEnvironment _env;
+        private readonly IFileStorage _files;
 
         public AnalysisController(
             IAnalysisService analysisService,
             IPatientService patientService,
-            IConfiguration config,
-            IWebHostEnvironment env)
+            IFileStorage files)
         {
             _analysisService = analysisService;
             _patientService = patientService;
-            _config = config;
-            _env = env;
+            _files = files;
         }
 
         // ── Global list (fixes the broken "/Analysis" sidebar link and gives
@@ -169,78 +167,61 @@ namespace SafyaClinic.Web.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "ClinicalStaff")]
-        public async Task<IActionResult> UploadAttachment(int analysisId, IFormFile file)
+        public async Task<IActionResult> UploadAttachment(int analysisId, IFormFile? file)
         {
-            if (file is null || file.Length == 0)
+            var (stored, error) = await _files.SaveAsync(file, LocalFileStorage.Analysis);
+            if (stored is null)
             {
-                Error("No file selected.");
+                Error(error!);
                 return RedirectToAction(nameof(Details), new { id = analysisId });
             }
 
-            var basePath = _config["FileStorage:BasePath"] ?? "wwwroot/uploads";
-            var folder = Path.Combine(basePath, "analysis");
-            Directory.CreateDirectory(folder);
-            var savedName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-            var fullPath = Path.Combine(folder, savedName);
-            await using var stream = new FileStream(fullPath, FileMode.Create);
-            await file.CopyToAsync(stream);
+            try
+            {
+                var result = await _analysisService.AddAttachmentAsync(
+                    analysisId, stored.Key, stored.FileName, stored.ContentType, stored.Length, CurrentUserId);
 
-            await _analysisService.AddAttachmentAsync(
-                analysisId, fullPath, savedName, file.ContentType, file.Length, CurrentUserId);
+                if (!result.IsSuccess)
+                {
+                    _files.Delete(stored.Key);
+                    Error(result.Errors.FirstOrDefault() ?? "The file could not be attached.");
+                }
+            }
+            catch
+            {
+                _files.Delete(stored.Key);   // no orphan file if the database insert fails
+                throw;
+            }
 
             return RedirectToAction(nameof(Details), new { id = analysisId });
         }
 
         // ── View (inline, for the pop-up preview) vs Download (forced) ────
         [HttpGet]
-        public async Task<IActionResult> ViewAttachment(int attachmentId)
-        {
-            var (bytes, contentType, _) = await LoadAttachmentBytesAsync(attachmentId);
-            if (bytes is null) return NotFound();
-            // No fileDownloadName here → no Content-Disposition: attachment header,
-            // so the browser renders it inline inside the modal's <img>/<iframe>.
-            return File(bytes, contentType!);
-        }
+        public Task<IActionResult> ViewAttachment(int attachmentId) => ServeAttachmentAsync(attachmentId, download: false);
 
         [HttpGet]
-        public async Task<IActionResult> DownloadAttachment(int attachmentId)
-        {
-            var (bytes, contentType, fileName) = await LoadAttachmentBytesAsync(attachmentId);
-            if (bytes is null) return NotFound();
-            return File(bytes, contentType!, fileName);
-        }
+        public Task<IActionResult> DownloadAttachment(int attachmentId) => ServeAttachmentAsync(attachmentId, download: true);
 
-        private async Task<(byte[]? bytes, string? contentType, string fileName)> LoadAttachmentBytesAsync(
-            int attachmentId)
+        private async Task<IActionResult> ServeAttachmentAsync(int attachmentId, bool download)
         {
             var result = await _analysisService.GetAttachmentAsync(attachmentId);
-            if (!result.IsSuccess) return (null, null, string.Empty);
+            if (!result.IsSuccess) return NotFound();
 
-            var attachment = result.Data!;
-            var fullPath = Path.IsPathRooted(attachment.FilePath)
-                ? attachment.FilePath
-                : Path.Combine(_env.ContentRootPath, attachment.FilePath);
-
-            if (!System.IO.File.Exists(fullPath)) return (null, null, string.Empty);
-
-            var contentType = attachment.ContentType;
-            if (string.IsNullOrWhiteSpace(contentType))
-            {
-                var provider = new FileExtensionContentTypeProvider();
-                if (!provider.TryGetContentType(fullPath, out contentType))
-                    contentType = "application/octet-stream";
-            }
-
-            var bytes = await System.IO.File.ReadAllBytesAsync(fullPath);
-            return (bytes, contentType, attachment.FileName);
+            return AttachmentResult(_files.Find(result.Data!.FilePath), download);
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = "AdminOnly")]
         public async Task<IActionResult> DeleteAttachment(int attachmentId, int analysisId)
         {
-            await _analysisService.DeleteAttachmentAsync(attachmentId);
+            var attachment = await _analysisService.GetAttachmentAsync(attachmentId);
+            var result = await _analysisService.DeleteAttachmentAsync(attachmentId);
+            if (result.IsSuccess && attachment.IsSuccess)
+                _files.Delete(attachment.Data!.FilePath);
+
             return RedirectToAction(nameof(Details), new { id = analysisId });
         }
     }
