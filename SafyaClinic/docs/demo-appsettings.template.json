@@ -2,6 +2,9 @@
   "ConnectionStrings": {
     "SafyaClinicDb": "REPLACE_WITH_CONNECTION_STRING_FROM_THE_NEW_DEMO_DATABASE"
   },
+    "Seed": {
+    "AdminPassword": "Admin@123"
+  },
   "ClinicInfo": {
     "Name": "Safya Clinic - DEMO",
     "Tagline": "Demonstration environment - fictional data only",

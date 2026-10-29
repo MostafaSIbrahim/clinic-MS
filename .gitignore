@@ -5,3 +5,6 @@ obj/
 *.doc
 *.docx
 TestResults/
+# Deployment credentials and publish output (S1)
+*.publishSettings
+SafyaClinicPublish/

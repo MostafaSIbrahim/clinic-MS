@@ -115,10 +115,10 @@ ORDER BY [MigrationId];
 
 For the code checked when this guide was created, expect 13 migration records, ending with 20260919210058_AddPatientFollowUpTracking. If new migrations are added later, the expected latest ID changes.
 
-On a fresh empty database, the current DbSeeder creates this initial account:
+On a fresh empty database, DbSeeder creates the initial administrator from the server setting `Seed:AdminPassword` (see demo-appsettings.template.json). Startup stops with a clear message if the database is empty and the setting is missing.
 
-- Email: admin@safya.com
-- Initial password: Admin@123
+- Sign-in phone: 0100
+- Initial password: Admin@123 (set as Seed:AdminPassword on the demo server; published intentionally for the public demo)
 
 Sign in immediately, then change the password at https://safyaclinic-demo.runasp.net/Auth/ChangePassword before sharing the demo URL. This is a bootstrap account, not a password to keep for a public demo. If the host offers access restrictions, keep them enabled during initialization until the password is changed. If Users already contains records, the seeder does not recreate this account.
 
