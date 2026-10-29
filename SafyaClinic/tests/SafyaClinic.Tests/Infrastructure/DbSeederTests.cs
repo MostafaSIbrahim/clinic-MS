@@ -4,6 +4,7 @@ using SafyaClinic.Application.Services;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Infrastructure.Data;
 using Xunit;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Tests.Infrastructure;
 
@@ -44,7 +45,7 @@ public class DbSeederTests
         await DbSeeder.SeedAsync(context, Config(TestPassword));
 
         var admin = await context.Users.SingleAsync();
-        Assert.True(AuthService.VerifyPassword(TestPassword, admin.PasswordHash));
+        Assert.Equal(PasswordCheck.Success, PasswordHashing.Verify(TestPassword, admin.PasswordHash));
         var adminRoleId = await context.Roles.Where(r => r.RoleName == "Admin").Select(r => r.Id).SingleAsync();
         Assert.True(await context.UserRoles.AnyAsync(ur => ur.UserId == admin.Id && ur.RoleId == adminRoleId));
     }

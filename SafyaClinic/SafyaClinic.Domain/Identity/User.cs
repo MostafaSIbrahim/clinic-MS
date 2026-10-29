@@ -17,6 +17,9 @@ namespace SafyaClinic.Domain.Identity
         public string? LicenseNumber { get; set; }          // Medical license number
         public bool IsActive { get; set; } = true;
         public DateTime? LastLoginAt { get; set; }
+        public int FailedLoginCount { get; set; }            // consecutive failures since the last success or lockout
+        public DateTime? LockoutEndUtc { get; set; }         // sign-in refused until this time
+        public bool MustChangePassword { get; set; }         // set by an admin reset
 
         // Navigation properties
         public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();

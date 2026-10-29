@@ -127,9 +127,18 @@ public class CreateUserRequest
     public string? Email { get; init; }
     public string PhoneNumber { get; init; } = string.Empty;
     public string Password { get; init; } = string.Empty;
+    public string ConfirmPassword { get; init; } = string.Empty;
     public string? Specialization { get; init; }
     public string? LicenseNumber { get; init; }
     public List<int> RoleIds { get; init; } = new();
+}
+
+
+public class ResetPasswordRequest
+{
+    public int UserId { get; init; }
+    public string NewPassword { get; init; } = string.Empty;
+    public string ConfirmPassword { get; init; } = string.Empty;
 }
 
 public class UserDto
