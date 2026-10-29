@@ -1,14 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Tokens;
 using SafyaClinic.Application.DTOs.Auth;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Domain.Interfaces.Repositories;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text;
 
 namespace SafyaClinic.Application.Services;
@@ -16,14 +12,11 @@ namespace SafyaClinic.Application.Services;
 public class AuthService : IAuthService
 {
     private readonly IUnitOfWork _uow;
-    private readonly IConfiguration _config;
 
-    public AuthService(IUnitOfWork uow, IConfiguration config)
+    public AuthService(IUnitOfWork uow)
     {
         _uow = uow;
-        _config = config;
     }
-
     public async Task<ServiceResult<LoginResponse>> LoginAsync(LoginRequest request)
     {
         // Find user by phone number
@@ -50,13 +43,12 @@ public class AuthService : IAuthService
         await _uow.SaveChangesAsync();
 
         var expiry = DateTime.UtcNow.AddHours(8);
-        var token = GenerateJwtToken(user.Id, user.FullName, roleNames, expiry);
+        
 
         return ServiceResult<LoginResponse>.Success(new LoginResponse
         {
             UserId = user.Id,
             FullName = user.FullName,
-            Token = token,
             ExpiresAt = expiry,
             Roles = roleNames
         });
@@ -106,30 +98,7 @@ public class AuthService : IAuthService
 
     // ── Helpers ──────────────────────────────────────────────
 
-    private string GenerateJwtToken(
-        int userId, string fullName, IEnumerable<string> roles, DateTime expiry)
-    {
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not configured")));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new List<Claim>
-        {
-            new(Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames.Sub, userId.ToString()),
-            new(Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames.Name, fullName),
-            new(Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
-        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
-
-        var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
-            claims: claims,
-            expires: expiry,
-            signingCredentials: creds);
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
+    
 
     // Simple PBKDF2 password helpers compatible with ASP.NET Identity v3 format.
     // In production replace with Microsoft.AspNetCore.Identity.PasswordHasher<T>.
