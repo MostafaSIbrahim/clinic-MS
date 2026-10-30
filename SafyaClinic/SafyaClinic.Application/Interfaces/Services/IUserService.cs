@@ -11,7 +11,7 @@ public interface IUserService
     Task<ServiceResult<PagedResult<UserDto>>> GetAllUsersAsync( 
             PaginationRequest request);
     Task<ServiceResult<IEnumerable<UserDto>>> GetDoctorsAsync();
-    Task<ServiceResult> SetUserActiveAsync(int userId, bool isActive);
+    Task<ServiceResult> SetUserActiveAsync(int userId, bool isActive, int actingUserId);
     Task<ServiceResult> AssignRoleAsync(int userId, int roleId, int assignedBy);
     Task<ServiceResult> RemoveRoleAsync(int userId, int roleId);
 }

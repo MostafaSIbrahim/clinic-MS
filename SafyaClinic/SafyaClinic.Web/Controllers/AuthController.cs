@@ -48,8 +48,10 @@ public class AuthController : BaseController
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, data.UserId.ToString()),
-            new(ClaimTypes.Name, data.FullName)
+            new(ClaimTypes.Name, data.FullName),
+            new(AuthClaims.SecurityStamp, data.SecurityStamp)
         };
+    
         claims.AddRange(data.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
         if (data.MustChangePassword)
             claims.Add(new Claim(AuthClaims.MustChangePassword, "true"));
@@ -107,32 +109,9 @@ public class AuthController : BaseController
             return View(model);
         }
 
-        // Re-issue the sign-in cookie without the "must change password" marker.
-        if (User.HasClaim(AuthClaims.MustChangePassword, "true"))
-        {
-            var identity = new ClaimsIdentity(
-                User.Claims.Where(c => c.Type != AuthClaims.MustChangePassword),
-                CookieAuthenticationDefaults.AuthenticationScheme);
-
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(identity),
-                new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8) });
-        }
-
-        // Re-issue the sign-in cookie without the "must change password" marker.
-        if (User.HasClaim(AuthClaims.MustChangePassword, "true"))
-        {
-            var identity = new ClaimsIdentity(
-                User.Claims.Where(c => c.Type != AuthClaims.MustChangePassword),
-                CookieAuthenticationDefaults.AuthenticationScheme);
-
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                new ClaimsPrincipal(identity),
-                new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8) });
-        }
-
-        return RedirectWithSuccess("Password changed successfully.", "Index", "Dashboard");
+        // The change renewed the security stamp, which ends this session too (S6).
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        TempData["Success"] = "Password changed. Sign in with your new password.";
+        return RedirectToAction(nameof(Login));
     }
 }

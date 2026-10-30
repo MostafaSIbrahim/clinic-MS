@@ -1552,6 +1552,11 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Specialization")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");

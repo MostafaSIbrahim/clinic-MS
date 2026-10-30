@@ -47,6 +47,7 @@ public class UserService : IUserService
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
             PasswordHash = PasswordHashing.Hash(request.Password),
+            SecurityStamp = SecurityStamps.New(),
             Specialization = request.Specialization,
             LicenseNumber = request.LicenseNumber,
             IsActive = true,
@@ -88,6 +89,7 @@ public class UserService : IUserService
         user.MustChangePassword = true;   // the user picks their own password at next sign-in
         user.FailedLoginCount = 0;
         user.LockoutEndUtc = null;        // a reset also unlocks the account
+        user.SecurityStamp = SecurityStamps.New();   // ends every session, including this one
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
 
@@ -180,17 +182,33 @@ public class UserService : IUserService
         return ServiceResult<IEnumerable<UserDto>>.Success(doctors);
     }
 
-    public async Task<ServiceResult> SetUserActiveAsync(int userId, bool isActive)
-    {
-        var affectedRows = await _uow.Users
-            .Query()
-            .Where(u => u.Id == userId)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(u => u.IsActive, isActive));
+    private const string AdminRoleName = "Admin";
+    private const string LastAdminMessage =
+        "This is the last active administrator. Give another active user the Admin role first.";
 
-        return affectedRows == 0
-            ? ServiceResult.Failure("User not found.")
-            : ServiceResult.Success();
+    public async Task<ServiceResult> SetUserActiveAsync(int userId, bool isActive, int actingUserId)
+    {
+        var user = await _uow.Users.GetByIdAsync(userId);
+        if (user is null)
+            return ServiceResult.Failure("User not found.");
+
+        if (!isActive)
+        {
+            if (userId == actingUserId)
+                return ServiceResult.Failure("You cannot deactivate your own account.");
+            if (await IsLastActiveAdminAsync(userId))
+                return ServiceResult.Failure(LastAdminMessage);
+        }
+
+        if (user.IsActive == isActive)
+            return ServiceResult.Success(isActive ? "User is already active." : "User is already inactive.");
+
+        user.IsActive = isActive;
+        user.SecurityStamp = SecurityStamps.New();   // a deactivated user's open sessions end
+        _uow.Users.Update(user);
+        await _uow.SaveChangesAsync();
+
+        return ServiceResult.Success(isActive ? "User activated." : "User deactivated and signed out.");
     }
 
     public async Task<ServiceResult> AssignRoleAsync(int userId, int roleId, int assignedBy)
@@ -226,20 +244,49 @@ public class UserService : IUserService
             AssignedAt = DateTime.UtcNow,
             AssignedBy = assignedBy
         });
+        await RenewStampAsync(userId);   // the user signs in again and gets the new role
         await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Role assigned.");
+        return ServiceResult.Success("Role assigned. The user will be asked to sign in again.");
     }
 
     public async Task<ServiceResult> RemoveRoleAsync(int userId, int roleId)
     {
-        var affectedRows = await _uow.UserRoles
-            .Query()
-            .Where(userRole => userRole.UserId == userId && userRole.RoleId == roleId)
-            .ExecuteDeleteAsync();
+        var userRole = await _uow.UserRoles
+            .Query(asNoTracking: false)
+            .Include(ur => ur.Role)
+            .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
 
-        return affectedRows == 0
-            ? ServiceResult.Failure("User does not have this role.")
-            : ServiceResult.Success("Role removed.");
+        if (userRole is null)
+            return ServiceResult.Failure("User does not have this role.");
+
+        if (userRole.Role.RoleName == AdminRoleName && await IsLastActiveAdminAsync(userId))
+            return ServiceResult.Failure(LastAdminMessage);
+
+        _uow.UserRoles.Delete(userRole);
+        await RenewStampAsync(userId);   // the removed role stops working at once
+        await _uow.SaveChangesAsync();
+        return ServiceResult.Success("Role removed. The user will be asked to sign in again.");
+    }
+
+    private async Task<bool> IsLastActiveAdminAsync(int userId)
+    {
+        var activeAdminIds = await _uow.UserRoles
+            .Query()
+            .Where(ur => ur.Role.RoleName == AdminRoleName && ur.User.IsActive)
+            .Select(ur => ur.UserId)
+            .Distinct()
+            .ToListAsync();
+
+        return activeAdminIds.Count == 1 && activeAdminIds[0] == userId;
+    }
+
+    private async Task RenewStampAsync(int userId)
+    {
+        var user = await _uow.Users.GetByIdAsync(userId);
+        if (user is null) return;
+
+        user.SecurityStamp = SecurityStamps.New();
+        _uow.Users.Update(user);
     }
 
     // ── Mapper ────────────────────────────────────────────────
