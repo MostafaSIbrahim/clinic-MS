@@ -18,6 +18,28 @@ public class ReservationService : IReservationService
 
     public ReservationService(IUnitOfWork uow) => _uow = uow;
 
+    // ── S7 rule helpers ──────────────────────────────────────
+    private Task<List<string>> RoleNamesAsync(int userId) =>
+        _uow.UserRoles
+            .Query()
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role.RoleName)
+            .ToListAsync();
+
+    private async Task<string?> StatusChangeProblemAsync(int reservationId, int actingUserId, string targetStatus)
+    {
+        var doctorId = await _uow.Reservations
+            .Query()
+            .Where(r => r.Id == reservationId)
+            .Select(r => (int?)r.DoctorId)
+            .FirstOrDefaultAsync();
+
+        if (doctorId is null)
+            return "Reservation not found.";
+
+        return ReservationRules.CheckStatusChange(
+            await RoleNamesAsync(actingUserId), actingUserId, doctorId.Value, targetStatus);
+    }
     public async Task<ServiceResult<ReservationDto>> CreateReservationAsync(
         CreateReservationRequest request, int createdBy)
     {
@@ -59,7 +81,10 @@ public class ReservationService : IReservationService
 
         // The treatment type carries the price for this reservation; use the
         // caller-supplied amount only if they explicitly overrode it.
-        var totalAmount = request.TotalAmount ?? treatmentType.DefaultCost;
+        var requestedAmount = ReservationRules.CanOverridePrice(await RoleNamesAsync(createdBy))
+    ? request.TotalAmount
+    : null;   // D4: only an Admin may change the price
+        var totalAmount = requestedAmount ?? treatmentType.DefaultCost;
 
         // Default status = Pending (ID 1)
         var reservation = new Reservation
@@ -641,7 +666,7 @@ public class ReservationService : IReservationService
         return ServiceResult.Success("Consultation started.");
     }
     public async Task<ServiceResult> UpdateReservationAsync(
-        int reservationId, UpdateReservationRequest request)
+    int reservationId, UpdateReservationRequest request, int updatedBy)
     {
         var r = await _uow.Reservations
                 .Query()
@@ -659,7 +684,10 @@ public class ReservationService : IReservationService
 
         // If the treatment type changed and the caller didn't explicitly supply a new
         // amount, re-derive the price from the new type instead of keeping the old one.
-        var totalAmount = request.TotalAmount
+        var requestedAmount = ReservationRules.CanOverridePrice(await RoleNamesAsync(updatedBy))
+    ? request.TotalAmount
+    : null;   // D4: only an Admin may change the price
+        var totalAmount = requestedAmount
             ?? (request.TreatmentTypeId != r.TreatmentTypeId ? treatmentType.DefaultCost : r.TotalAmount);
 
         var updatedAtUtc = DateTime.UtcNow;
@@ -762,6 +790,18 @@ public class ReservationService : IReservationService
             return ServiceResult<ReservationDto>.Failure(
                 "Invalid reservation or user.");
         }
+
+        var targetStatus = await _uow.ReservationStatuses
+            .Query()
+            .Where(s => s.Id == statusId)
+            .Select(s => s.StatusName)
+            .FirstOrDefaultAsync();
+        if (targetStatus is null)
+            return ServiceResult<ReservationDto>.Failure("Invalid status.");
+
+        var problem = await StatusChangeProblemAsync(reservationId, currentUserId, targetStatus);
+        if (problem is not null)
+            return ServiceResult<ReservationDto>.Failure(problem);
 
         try
         {
@@ -871,22 +911,7 @@ public class ReservationService : IReservationService
         return ServiceResult<ReservationDto>.Success(reservation);
     }
 
-    public async Task<ServiceResult> MarkAsPaidAsync(int reservationId)
-    {
-        var updatedAt = DateTime.UtcNow;
-
-        var affectedRows = await _uow.Reservations
-            .Query()
-            .Where(r => r.Id == reservationId)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(r => r.IsPaid, true)
-                .SetProperty(r => r.UpdatedAt, updatedAt));
-
-        return affectedRows == 0
-            ? ServiceResult.Failure("Reservation not found.")
-            : ServiceResult.Success();
-    }
-
+   
     public async Task<ServiceResult> CancelReservationAsync(
     int reservationId,
     int currentUserId,
@@ -894,6 +919,10 @@ public class ReservationService : IReservationService
     {
         if (reservationId <= 0 || currentUserId <= 0)
             return ServiceResult.Failure("Invalid reservation or user.");
+
+        var problem = await StatusChangeProblemAsync(reservationId, currentUserId, "Cancelled");
+        if (problem is not null)
+            return ServiceResult.Failure(problem);
 
         try
         {

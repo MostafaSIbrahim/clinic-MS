@@ -173,15 +173,15 @@
                     <select id="reservationStatus" name="statusId" class="form-select form-select-sm" disabled="@isCompleted">
                         <option value="1" selected="@(Model.StatusName == "Pending")">Pending</option>
                         <option value="2" selected="@(Model.StatusName == "Confirmed")">Confirmed</option>
-                        <option value="3" selected="@(Model.StatusName == "Completed")" disabled="@(!canCompleteFromQueue)">Completed</option>
+                        <option value="3" selected="@(Model.StatusName == "Completed")" disabled="@(!canCompleteFromQueue || !User.IsInRole("Admin"))">Completed</option>
                         <option value="4" selected="@(Model.StatusName == "Cancelled")">Cancelled</option>
                         <option value="5" selected="@(Model.StatusName == "NoShow")">NoShow</option>
                     </select>
                     <button type="submit" class="btn btn-sm btn-primary" disabled="@isCompleted">Update</button>
                 </form>
                 <p class="small text-muted mt-2 mb-0">
-                    Completion is available after consultation starts
-                </p> 
+                    Doctors complete the visit from the consultation screen. Only an administrator can set Completed here, after the consultation starts.
+                </p>
                 @if (isCompleted)
                 {
                     <small class="text-muted d-block mt-2">This reservation is completed and its status can no longer be changed.</small>

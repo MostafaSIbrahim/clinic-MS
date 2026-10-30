@@ -160,7 +160,9 @@ namespace SafyaClinic.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateStatus(int id, UpdateAnalysisStatusRequest model)
         {
-            await _analysisService.UpdateStatusAsync(id, model);
+            var result = await _analysisService.UpdateStatusAsync(id, model);
+            if (result.IsSuccess) Success(string.IsNullOrEmpty(result.Message) ? "Status updated." : result.Message);
+            else Error(result.Errors.FirstOrDefault() ?? "Could not update the analysis status.");
             return RedirectToAction(nameof(Details), new { id });
         }
 
@@ -222,6 +224,8 @@ namespace SafyaClinic.Web.Controllers
             if (result.IsSuccess && attachment.IsSuccess)
                 _files.Delete(attachment.Data!.FilePath);
 
+            if (result.IsSuccess) Success("Attachment deleted.");
+            else Error(result.Errors.FirstOrDefault() ?? "Could not delete the attachment.");
             return RedirectToAction(nameof(Details), new { id = analysisId });
         }
     }

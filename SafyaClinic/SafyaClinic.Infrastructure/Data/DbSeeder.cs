@@ -17,6 +17,7 @@ public static class DbSeeder
     public static async Task SeedAsync(SafyaDbContext context, IConfiguration configuration)
     {
         await SeedRolesAsync(context);
+        await EnsureReceptionAdminRoleAsync(context);
         await SeedAdminAsync(context, configuration);
         await SeedAnalysisTypesAsync(context);
         await SeedTreatmentTypesAsync(context);
@@ -46,6 +47,27 @@ public static class DbSeeder
         await context.SaveChangesAsync();
     }
 
+    /// <summary>Must match the role name used by the payment policies in Program.cs.</summary>
+    public const string ReceptionAdminRoleName = "ReceptionAdmin";
+
+    // F06 interim (S7): a role created as "Reception Admin" (with a space) matched no policy,
+    // so its users could not reach payment pages. Rename it once, or create the role.
+    private static async Task EnsureReceptionAdminRoleAsync(SafyaDbContext context)
+    {
+        if (await context.Roles.AnyAsync(r => r.RoleName == ReceptionAdminRoleName)) return;
+
+        var misnamed = await context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Reception Admin");
+        if (misnamed is not null)
+            misnamed.RoleName = ReceptionAdminRoleName;
+        else
+            await context.Roles.AddAsync(new Role
+            {
+                RoleName = ReceptionAdminRoleName,
+                Description = "Front-desk supervisor: payments and payment reports"
+            });
+
+        await context.SaveChangesAsync();
+    }
     public const string AdminPasswordSettingKey = "Seed:AdminPassword";
 
     private static async Task SeedAdminAsync(SafyaDbContext context, IConfiguration configuration)
