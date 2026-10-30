@@ -74,8 +74,13 @@
                 <div class="col-md-6">
                     @* Review fix: associate the amount label with its control. *@
                     <label for="totalAmountInput" class="form-label">Amount</label>
-                    <input asp-for="TotalAmount" id="totalAmountInput" type="number" step="0.01" class="form-control" />
-                    <small class="text-muted">Auto-filled from the treatment type's price — adjust if needed.</small>
+                    <input asp-for="TotalAmount" id="totalAmountInput" type="number" step="0.01" class="form-control"
+                           readonly="@(!User.IsInRole("Admin"))" aria-describedby="totalAmountHelp" />
+                    <small id="totalAmountHelp" class="text-muted">
+                        @(User.IsInRole("Admin")
+                            ? "Auto-filled from the treatment type's price — adjust if needed."
+                            : "Set by the treatment type. Only an administrator can change the price.")
+                    </small>
                 </div>
                 <div class="col-12">
                     <label asp-for="Reason" class="form-label">Reason</label>
