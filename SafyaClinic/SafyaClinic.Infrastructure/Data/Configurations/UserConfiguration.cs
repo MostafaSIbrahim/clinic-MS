@@ -15,6 +15,7 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.Property(u => u.Email).HasMaxLength(100);
             builder.Property(u => u.PhoneNumber).IsRequired().HasMaxLength(20);
             builder.Property(u => u.PasswordHash).IsRequired().HasMaxLength(500);
+            builder.Property(u => u.SecurityStamp).IsRequired().HasMaxLength(64);
             builder.Property(u => u.Specialization).HasMaxLength(100);
             builder.Property(u => u.LicenseNumber).HasMaxLength(50);
             builder.HasIndex(u => u.Email).IsUnique();

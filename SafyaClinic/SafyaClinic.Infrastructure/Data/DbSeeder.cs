@@ -67,6 +67,7 @@ public static class DbSeeder
             Email = "admin@safya.com",
             PhoneNumber = "0100",
             PasswordHash = PasswordHashing.Hash(initialPassword),
+            SecurityStamp = SecurityStamps.New(),
             IsActive = true,
             CreatedAt = new DateTime(2026, 1, 1)
         };

@@ -97,7 +97,7 @@
                                     <form asp-action="ToggleActive" method="post" class="d-inline">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@u.Id" />
-                                        <input type="hidden" name="isActive" value="@(!u.IsActive)" />
+                                        <input type="hidden" name="isActive" value="@(u.IsActive ? "false" : "true")" />
                                         <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-outline-danger" : "btn-outline-success")">
                                             @if (u.IsActive)
                                             {
