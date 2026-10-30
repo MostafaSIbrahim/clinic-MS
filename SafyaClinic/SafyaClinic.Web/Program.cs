@@ -36,6 +36,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.Name      = "SafyaClinic.Auth";
         options.Cookie.HttpOnly  = true;
         options.Cookie.SameSite  = SameSiteMode.Strict;
+        options.Events.OnValidatePrincipal = SessionValidator.ValidateAsync;   // S6
     });
 
 builder.Services.AddAuthorizationBuilder()

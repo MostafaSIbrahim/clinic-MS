@@ -168,4 +168,29 @@ public class AuthServiceLoginTests
 
         Assert.False(change.IsSuccess);
     }
+
+    [Fact]
+    public async Task Sign_in_returns_the_users_security_stamp()
+    {
+        await using var context = await SeededContextAsync();
+
+        var result = await SignIn(context, AdminPassword);
+
+        Assert.False(string.IsNullOrEmpty(result.Data!.SecurityStamp));
+        Assert.Equal((await Admin(context)).SecurityStamp, result.Data.SecurityStamp);
+    }
+
+    [Fact]
+    public async Task Password_change_renews_the_stamp()
+    {
+        await using var context = await SeededContextAsync();
+        var before = await Admin(context);
+
+        context.ChangeTracker.Clear();
+        var change = await Auth(context).ChangePasswordAsync(before.Id,
+            new ChangePasswordRequest { CurrentPassword = AdminPassword, NewPassword = "Brand-new-pass-1", ConfirmPassword = "Brand-new-pass-1" });
+
+        Assert.True(change.IsSuccess);
+        Assert.NotEqual(before.SecurityStamp, (await Admin(context)).SecurityStamp);
+    }
 }

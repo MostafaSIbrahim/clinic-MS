@@ -59,6 +59,8 @@ public class AuthService : IAuthService
         user.FailedLoginCount = 0;
         user.LockoutEndUtc = null;
         user.LastLoginAt = now;
+        if (string.IsNullOrEmpty(user.SecurityStamp))
+            user.SecurityStamp = SecurityStamps.New();   // users created before S6
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
 
@@ -75,6 +77,7 @@ public class AuthService : IAuthService
             FullName = user.FullName,
             ExpiresAt = now.AddHours(8),
             Roles = roleNames,
+            SecurityStamp = user.SecurityStamp,
             MustChangePassword = user.MustChangePassword
         });
     }
@@ -97,6 +100,7 @@ public class AuthService : IAuthService
 
         user.PasswordHash = PasswordHashing.Hash(request.NewPassword);
         user.MustChangePassword = false;
+        user.SecurityStamp = SecurityStamps.New();   // ends every session, including this one
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
 
@@ -130,6 +134,12 @@ public class AuthService : IAuthService
         return ServiceResult<UserDto>.Success(user);
     }
 
+    public Task<string?> GetActiveSecurityStampAsync(int userId) =>
+        _uow.Users
+            .Query()
+            .Where(u => u.Id == userId && u.IsActive)
+            .Select(u => (string?)u.SecurityStamp)
+            .FirstOrDefaultAsync();
     private async Task RecordFailedAttemptAsync(User user, DateTime now)
     {
         user.FailedLoginCount++;

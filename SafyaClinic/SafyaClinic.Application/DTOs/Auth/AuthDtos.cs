@@ -13,6 +13,7 @@ public class LoginResponse
     public DateTime ExpiresAt { get; init; }
     public IEnumerable<string> Roles { get; init; } = Enumerable.Empty<string>();
     public bool MustChangePassword { get; init; }
+    public string SecurityStamp { get; init; } = string.Empty;
 }
 
 public class ChangePasswordRequest
