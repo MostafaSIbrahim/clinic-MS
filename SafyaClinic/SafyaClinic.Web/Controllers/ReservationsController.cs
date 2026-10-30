@@ -314,7 +314,7 @@ public class ReservationsController : BaseController
             ViewBag.TreatmentTypes = (await _reservationService.GetTreatmentTypesAsync()).Data;
             return View(model);
         }
-        var result = await _reservationService.UpdateReservationAsync(id, model);
+        var result = await _reservationService.UpdateReservationAsync(id, model, CurrentUserId);
         if (!result.IsSuccess)
         {
             ApplyErrors(result);
@@ -358,13 +358,6 @@ public class ReservationsController : BaseController
         return RedirectToAction(nameof(Details), new { id });
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> MarkPaid(int id)
-    {
-        await _reservationService.MarkAsPaidAsync(id);
-        return RedirectToAction(nameof(Details), new { id });
-    }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -377,7 +370,7 @@ public class ReservationsController : BaseController
             Error(result.Errors.FirstOrDefault()
                 ?? "Could not cancel the reservation.");
 
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Details), new { id });
         }
 
         return RedirectWithSuccess(

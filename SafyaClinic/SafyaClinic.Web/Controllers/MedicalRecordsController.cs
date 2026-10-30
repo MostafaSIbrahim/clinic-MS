@@ -44,7 +44,10 @@ namespace SafyaClinic.Web.Controllers
             var result = await _recordService.GetRecordByIdAsync(id);
 
             if (!result.IsSuccess || result.Data is null)
+            {
+                Error("Medical record not found.");
                 return RedirectToAction("Index", "Patients");
+            }
 
             var record = result.Data;
 
@@ -278,6 +281,8 @@ namespace SafyaClinic.Web.Controllers
             if (result.IsSuccess && attachment.IsSuccess)
                 _files.Delete(attachment.Data!.FilePath);
 
+            if (result.IsSuccess) Success("Attachment deleted.");
+            else Error(result.Errors.FirstOrDefault() ?? "Could not delete the attachment.");
             return RedirectToAction(nameof(Details), new { id = recordId });
         }
 

@@ -62,4 +62,39 @@ public class DbSeederTests
         var user = await context.Users.SingleAsync();
         Assert.Equal("Existing", user.FullName);
     }
+
+    [Fact]
+    public async Task Misnamed_reception_admin_role_is_renamed()
+    {
+        await using var context = NewContext();
+        // Roles already exist, so the seeder skips its role list; the admin seed still needs "Admin".
+        context.Roles.AddRange(new Role { RoleName = "Admin" }, new Role { RoleName = "Reception Admin" });
+        await context.SaveChangesAsync();
+
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+
+        Assert.False(await context.Roles.AnyAsync(r => r.RoleName == "Reception Admin"));
+        Assert.Equal(1, await context.Roles.CountAsync(r => r.RoleName == DbSeeder.ReceptionAdminRoleName));
+    }
+
+    [Fact]
+    public async Task Reception_admin_role_is_created_when_missing()
+    {
+        await using var context = NewContext();
+
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+
+        Assert.True(await context.Roles.AnyAsync(r => r.RoleName == DbSeeder.ReceptionAdminRoleName));
+    }
+
+    [Fact]
+    public async Task Seeding_twice_keeps_a_single_reception_admin_role()
+    {
+        await using var context = NewContext();
+
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+
+        Assert.Equal(1, await context.Roles.CountAsync(r => r.RoleName == DbSeeder.ReceptionAdminRoleName));
+    }
 }
