@@ -20,7 +20,7 @@ namespace SafyaClinic.Domain.Identity
         public int FailedLoginCount { get; set; }            // consecutive failures since the last success or lockout
         public DateTime? LockoutEndUtc { get; set; }         // sign-in refused until this time
         public bool MustChangePassword { get; set; }         // set by an admin reset
-
+        public string SecurityStamp { get; set; } = string.Empty;   // changes end all sessions of this user
         // Navigation properties
         public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public virtual ICollection<Patient> CreatedPatients { get; set; } = new List<Patient>();

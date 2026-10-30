@@ -16,7 +16,10 @@
                 <h1 class="visually-hidden">Safya Clinic sign in</h1>
                 <small class="text-muted">Sign in to your account</small>
             </div>
-
+            @if (TempData["Success"] is string signInMessage)
+            {
+                <div class="alert alert-success py-2" role="status">@signInMessage</div>
+            }
             <form asp-controller="Auth" asp-action="Login" asp-route-returnUrl="@ViewBag.ReturnUrl" method="post">
                 @Html.AntiForgeryToken()
                 <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" style="display:none"></div>

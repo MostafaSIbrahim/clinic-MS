@@ -99,7 +99,9 @@ public class UsersController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ToggleActive(int id, bool isActive)
     {
-        await _userService.SetUserActiveAsync(id, isActive);
+        var result = await _userService.SetUserActiveAsync(id, isActive, CurrentUserId);
+        if (result.IsSuccess) Success(result.Message);
+        else Error(result.Errors.FirstOrDefault() ?? "Could not change the user's status.");
         return RedirectToAction(nameof(Index));
     }
 
