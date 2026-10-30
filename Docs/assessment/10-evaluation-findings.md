@@ -158,6 +158,11 @@ A second path: `LookupsController.cs:194, 240, 289, 321` put `ex.Message` into `
 - **Problem:** every analysis type added from the screen is nameless; doctors pick from an unlabeled list.
 - **Recommendation:** send `TypeName` (one attribute); validate on a DTO in M5. The lab module is frozen until its revamp (decision D9), so the owner decides whether this one-line fix goes in earlier.
 
+### F35 — "Activate" user never worked · Medium · Verified (runtime, found 2026-10-30)
+- **Evidence:** `Views/Users/Index.cshtml` posts `<input type="hidden" name="isActive" value="@(!u.IsActive)" />`. Razor omits a boolean attribute when it is `false` and renders `value="value"` when it is `true`; `"value"` does not bind to `bool`, so `isActive` is always `false`.
+- **Problem:** a deactivated user could never be reactivated from the screen (the old code failed silently).
+- **Recommendation:** post a string (`"true"` / `"false"`). Fixed in slice S6.
+
 ### Upload policy attribute is misleading (note, part of F06)
 `[Authorize(Policy = "ClinicalStaff")]` on `AnalysisController.UploadAttachment` and `MedicalRecordsController.UploadPrescriptionAttachment` suggests Reception and Nutritionists can upload, but the class-level `DoctorOrAdmin` also applies, so they cannot. Decide who should upload results (the agreed lab rule makes this important) and express it as a permission.
 
