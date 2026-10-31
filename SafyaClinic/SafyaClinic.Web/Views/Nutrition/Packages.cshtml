@@ -34,7 +34,7 @@
                                 <h6 class="fw-bold">@p.PackageName</h6>
                                 <p class="small text-muted">@(p.Description ?? "")</p>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fs-5 fw-bold text-primary">@p.BasePrice.ToString("C")</span>
+                                    <span class="fs-5 fw-bold text-primary">@p.BasePrice.ToMoney()</span>
                                     <span class="badge bg-light text-dark border">Max @p.MaxDiscountPercent% off</span>
                                 </div>
                                 <div class="small text-muted mt-1">@p.DurationWeeks weeks • @p.SessionsPerWeek session/week</div>

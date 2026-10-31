@@ -9,8 +9,8 @@
 @if (ViewData.ModelState.IsValid)
 {
     <div class="row g-3 mb-4">
-        <div class="col-md-6"><div class="stat-card bg-rose-soft"><div>Unpaid — Finished Visits</div><strong class="fs-3">@Model.TotalUnpaidCompleted.ToString("C")</strong></div></div>
-        <div class="col-md-6"><div class="stat-card bg-primary-soft"><div>Unpaid — In Consultation</div><strong class="fs-3">@Model.TotalUnpaidPending.ToString("C")</strong></div></div>
+        <div class="col-md-6"><div class="stat-card bg-rose-soft"><div>Unpaid ï¿½ Finished Visits</div><strong class="fs-3">@Model.TotalUnpaidCompleted.ToMoney()</strong></div></div>
+        <div class="col-md-6"><div class="stat-card bg-primary-soft"><div>Unpaid ï¿½ In Consultation</div><strong class="fs-3">@Model.TotalUnpaidPending.ToMoney()</strong></div></div>
     </div>
     <partial name="_UnpaidSections" model="Model" />
 }

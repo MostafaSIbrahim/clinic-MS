@@ -147,6 +147,7 @@ Scoped separately when scheduled; listed so nothing is lost.
 |  |  |  |  |  |  | F33 | S4 |
 |  |  |  |  |  |  | F34 | owner decision (quick fix) or E1 |
 |  |  |  |  |  |  | F35 | S6 |
+|  |  |  |  |  |  | F36 | F10, H1 |
 
 F24 (layering, large services) is handled opportunistically: each slice that touches a large service extracts the part it changes; no separate refactoring project.
 

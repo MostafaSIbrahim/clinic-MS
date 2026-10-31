@@ -23,8 +23,8 @@
                                         <td>@r.PatientName</td>
                                         <td>@r.ClinicName</td>
                                         <td>@r.ReservationDate.ToString("dd MMM yyyy")</td>
-                                        <td class="text-muted">@(r.WrittenOff > 0 ? r.WrittenOff.ToString("C") : "—")</td>
-                                        <td class="fw-semibold text-danger">@r.Balance.ToString("C")</td>
+                                        <td class="text-muted">@(r.WrittenOff > 0 ? r.WrittenOff.ToMoney() : "—")</td>
+                                        <td class="fw-semibold text-danger">@r.Balance.ToMoney()</td>
                                         <td>
                                             <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@r.PatientId"
                                                asp-route-reservationId="@r.ReservationId" class="btn btn-sm btn-success" aria-label="Collect payment from @r.PatientName">
@@ -64,8 +64,8 @@
                                         <td>@r.ClinicName</td>
                                         <td>@r.ReservationDate.ToString("dd MMM yyyy")</td>
                                         <td><span class="badge bg-light text-dark border">@r.StatusName</span></td>
-                                        <td class="text-muted">@(r.WrittenOff > 0 ? r.WrittenOff.ToString("C") : "—")</td>
-                                        <td class="fw-semibold text-warning">@r.Balance.ToString("C")</td>
+                                        <td class="text-muted">@(r.WrittenOff > 0 ? r.WrittenOff.ToMoney() : "—")</td>
+                                        <td class="fw-semibold text-warning">@r.Balance.ToMoney()</td>
                                         <td>
                                             <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@r.PatientId"
                                                asp-route-reservationId="@r.ReservationId" class="btn btn-sm btn-success" aria-label="Collect payment from @r.PatientName">

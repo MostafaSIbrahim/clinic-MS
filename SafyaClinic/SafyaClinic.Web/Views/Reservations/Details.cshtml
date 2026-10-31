@@ -5,7 +5,7 @@
     ViewData["Title"] = "Reservation Details";
     var canCheckIn =
     (User.IsInRole("Reception") || User.IsInRole("Admin")) &&
-    Model.ReservationDate.Date == DateTime.Today &&
+    Model.ReservationDate.Date == Clock.Today &&
    (Model.StatusName == "Pending" || Model.StatusName == "Confirmed") &&
     Model.QueueStatus == PatientQueueStatus.NotCheckedIn &&
     Model.CheckedInAtUtc is null;
@@ -84,7 +84,7 @@
             {
                 <div class="small text-muted mt-1">
                     Checked in:
-                    @Model.CheckedInAtUtc.Value.ToString("dd MMM yyyy HH:mm") UTC
+                    @Clock.ToClinicTime(Model.CheckedInAtUtc.Value).ToString("dd MMM yyyy HH:mm")
                 </div>
             }
         </div>
@@ -115,7 +115,7 @@
         {
             <div class="small text-muted mt-1">
                 Consultation started:
-                @Model.ConsultationStartedAtUtc.Value.ToString("dd MMM yyyy HH:mm") UTC
+                @Clock.ToClinicTime(Model.ConsultationStartedAtUtc.Value).ToString("dd MMM yyyy HH:mm")
             </div>
         }
     </div>
@@ -139,7 +139,7 @@
                     <dt class="col-4 text-muted">Treatment Type</dt>
                     <dd class="col-8">@Model.TreatmentTypeName</dd>
                     <dt class="col-4 text-muted">Category</dt>
-                    <dd class="col-8"><span class="badge bg-secondary">@Model.Category</span></dd>
+                    <dd class="col-8"><span class="badge bg-secondary">@Labels.Humanize(Model.Category)</span></dd>
                     <dt class="col-4 text-muted">Status</dt>
                     <dd class="col-8"><span class="badge" style="background-color:@Model.StatusColor;color:#fff;">@Model.StatusName</span></dd>
                     <dt class="col-4 text-muted">Duration</dt>
@@ -149,7 +149,7 @@
                     <dt class="col-4 text-muted">Notes</dt>
                     <dd class="col-8">@(Model.Notes ?? "—")</dd>
                     <dt class="col-4 text-muted">Amount</dt>
-                    <dd class="col-8">@(Model.TotalAmount?.ToString("C") ?? "—")</dd>
+                    <dd class="col-8">@(Model.TotalAmount?.ToMoney() ?? "—")</dd>
                     <dt class="col-4 text-muted">Payment coverage</dt>
                     <dd class="col-8">@await Html.PartialAsync("_PaymentStatusToggle", (Model.Id, Model.PatientId, Model.IsPaid))</dd>
                 </dl>

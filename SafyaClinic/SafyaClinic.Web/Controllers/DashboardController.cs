@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Models;
+using SafyaClinic.Application.Common;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -10,13 +11,16 @@ public class DashboardController : BaseController
 {
     private readonly IReservationService _reservationService;
     private readonly IPaymentService _paymentService;
+    private readonly IClinicClock _clock;
 
     public DashboardController(
         IReservationService reservationService,
-        IPaymentService paymentService)
+        IPaymentService paymentService,
+        IClinicClock clock)
     {
-        _reservationService = reservationService;  
+        _reservationService = reservationService;
         _paymentService = paymentService;
+        _clock = clock;
     }
 
     public async Task<IActionResult> Index()
@@ -30,12 +34,11 @@ public class DashboardController : BaseController
         var reservations = todayResult.IsSuccess
             ? todayResult.Data?.ToList() ?? []
             : [];
-        var today = DateTime.Today;
-        var endOfToday = today.AddDays(1).AddSeconds(-1);
-
-        var todayPayments = await _paymentService.GetRevenueByDateRangeAsync(
-            today,
-            endOfToday);
+        // F2: the clinic's day, as an exact UTC range (payments are stored in UTC).
+        var today = _clock.Today;
+        var todayPayments = await _paymentService.GetRevenueBetweenAsync(
+            _clock.DayStartUtc(today),
+            _clock.DayStartUtc(today.AddDays(1)));
 
         var model = new DashboardViewModel
         {

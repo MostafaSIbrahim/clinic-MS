@@ -65,9 +65,8 @@ public interface IPaymentService
     /// </summary>
     Task<ServiceResult<PaymentLineDetailReportDto>> GetDashboardLineDetailsAsync(
         string groupType, int? groupId, DateTime? from, DateTime? to);
-    Task<ServiceResult<decimal>> GetRevenueByDateRangeAsync(
-                    DateTime from,
-                    DateTime to);
+    /// <summary>Total of active payments with fromUtc &lt;= PaymentDate &lt; toUtcExclusive (UTC instants).</summary>
+    Task<ServiceResult<decimal>> GetRevenueBetweenAsync(DateTime fromUtc, DateTime toUtcExclusive);
     // ── Payment audit trail ───────────────────────────────────────
     Task<ServiceResult<PaymentAuditDto>> GetPaymentAuditAsync(
     int paymentId,

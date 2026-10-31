@@ -7,7 +7,7 @@
     <div class="card-header"><i class="bi bi-pencil-square me-2"></i>Change Payment Amount</div>
     <div class="card-body">
         <div class="alert alert-info">
-            Current amount: <strong>@(((decimal)ViewBag.CurrentAmount).ToString("C"))</strong>.
+            Current amount: <strong>@(((decimal)ViewBag.CurrentAmount).ToMoney())</strong>.
             If a first-visit source/clinic deduction was applied, it will be recalculated proportionally
             against the new amount.
         </div>

@@ -38,21 +38,21 @@
     <div class="col-md-4">
         <div class="stat-card bg-rose-soft">
             <div class="small opacity-75">Unpaid — Finished Visits</div>
-            <div class="fs-3 fw-bold">@Model.TotalUnpaidCompleted.ToString("C")</div>
+            <div class="fs-3 fw-bold">@Model.TotalUnpaidCompleted.ToMoney()</div>
             <div class="small">@Model.UnpaidCompletedReservations.Count() reservation(s)</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="stat-card bg-primary-soft">
             <div class="small opacity-75">Unpaid — In Consultation</div>
-            <div class="fs-3 fw-bold">@Model.TotalUnpaidPending.ToString("C")</div>
+            <div class="fs-3 fw-bold">@Model.TotalUnpaidPending.ToMoney()</div>
             <div class="small">@Model.UnpaidPendingReservations.Count() reservation(s)</div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="stat-card bg-teal-soft">
             <div class="small opacity-75">Fully Paid</div>
-            <div class="fs-3 fw-bold">@Model.TotalFullyPaid.ToString("C")</div>
+            <div class="fs-3 fw-bold">@Model.TotalFullyPaid.ToMoney()</div>
             <div class="small">@Model.FullyPaidPaymentCount payment(s)</div>
         </div>
     </div>
@@ -85,8 +85,8 @@
                                         data-group-label="@s.PatientSourceName">
                                         <td>@s.PatientSourceName</td>
                                         <td>@s.PaymentCount</td>
-                                        <td class="fw-semibold">@s.TotalCollected.ToString("C")</td>
-                                        <td class="text-warning">@s.TotalSourceDeduction.ToString("C")</td>
+                                        <td class="fw-semibold">@s.TotalCollected.ToMoney()</td>
+                                        <td class="text-warning">@s.TotalSourceDeduction.ToMoney()</td>
                                     </tr>
                                 }
                             </tbody>
@@ -121,8 +121,8 @@
                                         data-group-label="@c.ClinicName">
                                         <td>@c.ClinicName</td>
                                         <td>@c.PaymentCount</td>
-                                        <td class="fw-semibold">@c.TotalCollected.ToString("C")</td>
-                                        <td class="text-success">@c.TotalClinicNet.ToString("C")</td>
+                                        <td class="fw-semibold">@c.TotalCollected.ToMoney()</td>
+                                        <td class="text-success">@c.TotalClinicNet.ToMoney()</td>
                                     </tr>
                                 }
                             </tbody>

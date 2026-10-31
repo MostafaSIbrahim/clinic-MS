@@ -33,7 +33,7 @@
                             <td>@e.DoctorName</td>
                             <td>@e.StartDate.ToString("dd MMM yyyy")</td>
                             <td>@e.EndDate.ToString("dd MMM yyyy")</td>
-                            <td>@e.FinalPrice.ToString("C")</td>
+                            <td>@e.FinalPrice.ToMoney()</td>
                             <td>
                                 @{
                                     var cls = e.Status switch

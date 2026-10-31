@@ -47,7 +47,7 @@
                                     data-cost="@(t.DefaultCost?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
                                     data-duration="@t.DurationMinutes"
                                     selected="@(t.Id == Model.TreatmentTypeId)">
-                                @t.TypeName @(t.DefaultCost != null ? $"— {t.DefaultCost:C}" : "")
+                                @t.TypeName @(t.DefaultCost != null ? $"— {t.DefaultCost.Value.ToMoney()}" : "")
                             </option>
                         }
                     </select>

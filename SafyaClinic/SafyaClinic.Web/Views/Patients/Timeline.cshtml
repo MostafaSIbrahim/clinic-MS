@@ -28,7 +28,7 @@
             <span class="text-muted ms-2">Reservations and medical records</span>
         </span>
         <span class="small text-muted">
-            Newest first · Event timestamps in UTC
+            Newest first
         </span>
     </div>
 </div>
@@ -65,7 +65,7 @@ else
                         <div class="d-flex flex-wrap justify-content-between gap-2">
                             <div>
                                 <div class="small text-muted mb-1">
-                                    @item.OccurredAt.ToString("dd MMM yyyy · HH:mm") UTC
+                                    @Clock.ToClinicTime(item.OccurredAt).ToString("dd MMM yyyy · HH:mm")
                                 </div>
                                 <h6 class="mb-2">@item.Title</h6>
                             </div>

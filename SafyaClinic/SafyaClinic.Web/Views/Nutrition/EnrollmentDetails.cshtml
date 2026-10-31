@@ -56,7 +56,7 @@
     <div class="col-md-3">
         <div class="stat-card bg-primary-soft">
             <div class="small opacity-75">Base Price</div>
-            <div class="fs-5 fw-bold">@Model.BasePrice.ToString("C")</div>
+            <div class="fs-5 fw-bold">@Model.BasePrice.ToMoney()</div>
         </div>
     </div>
     <div class="col-md-3">
@@ -68,13 +68,13 @@
     <div class="col-md-3">
         <div class="stat-card bg-teal-soft">
             <div class="small opacity-75">Final Price</div>
-            <div class="fs-5 fw-bold">@Model.FinalPrice.ToString("C")</div>
+            <div class="fs-5 fw-bold">@Model.FinalPrice.ToMoney()</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="stat-card @(Model.FinalPrice - Model.TotalPaid > 0 ? "bg-rose-soft" : "bg-teal-soft")">
             <div class="small opacity-75">Balance</div>
-            <div class="fs-5 fw-bold">@((Model.FinalPrice - Model.TotalPaid).ToString("C"))</div>
+            <div class="fs-5 fw-bold">@((Model.FinalPrice - Model.TotalPaid).ToMoney())</div>
         </div>
     </div>
 </div>
@@ -99,7 +99,7 @@
             <dt class="col-3 text-muted">Period</dt>
             <dd class="col-9">@Model.StartDate.ToString("dd MMM yyyy") — @Model.EndDate.ToString("dd MMM yyyy")</dd>
             <dt class="col-3 text-muted">Total Paid</dt>
-            <dd class="col-9">@Model.TotalPaid.ToString("C")</dd>
+            <dd class="col-9">@Model.TotalPaid.ToMoney()</dd>
         </dl>
         @if (Model.FinalPrice - Model.TotalPaid > 0)
         {

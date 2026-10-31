@@ -163,6 +163,11 @@ A second path: `LookupsController.cs:194, 240, 289, 321` put `ex.Message` into `
 - **Problem:** a deactivated user could never be reactivated from the screen (the old code failed silently).
 - **Recommendation:** post a string (`"true"` / `"false"`). Fixed in slice S6.
 
+### F36 — Patient lab image in the public repository's history · High · Verified (2026-10-31)
+- **Evidence:** one lab-result image (git object `f981a039…`) is committed as `P-Analysis/Hala/…-Lipid.jpeg` since the first commit, and the same image as three `wwwroot/uploads` / `SafyaClinicPublish` copies; the repository is public. Deploy credentials, publish output and Word documents are also still in history (removed from the tree in S1).
+- **Impact:** personal health data readable by anyone via git history, old commit links and pull-request refs.
+- **Recommendation / decision:** untrack and ignore (F10); owner chose to **rewrite history** with git-filter-repo, force-push, and ask GitHub Support to purge cached views and PR refs (guide H1). Hosted sites still on pre-S3 code serve `wwwroot/uploads` anonymously — remove the file there or deploy S3.
+
 ### Upload policy attribute is misleading (note, part of F06)
 `[Authorize(Policy = "ClinicalStaff")]` on `AnalysisController.UploadAttachment` and `MedicalRecordsController.UploadPrescriptionAttachment` suggests Reception and Nutritionists can upload, but the class-level `DoctorOrAdmin` also applies, so they cannot. Decide who should upload results (the agreed lab rule makes this important) and express it as a permission.
 

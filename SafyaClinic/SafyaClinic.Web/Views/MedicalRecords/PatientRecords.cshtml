@@ -33,7 +33,7 @@
                             <tr>
                                 <td>@r.CreatedAt.ToString("dd MMM yyyy")</td>
                                 <td>@r.DoctorName</td>
-                                <td><span class="badge bg-secondary">@r.Category</span></td>
+                                <td><span class="badge bg-secondary">@Labels.Humanize(r.Category)</span></td>
                                 <td>@(r.Diagnosis ?? "—")</td>
                                 <td>@(r.IsLocked ? "🔒" : "—")</td>
                                 <td class="text-end">

@@ -22,6 +22,8 @@ public class PaymentServiceSpy : DispatchProxy
                 Task.FromResult(ServiceResult<IEnumerable<PaymentDto>>.Success(Array.Empty<PaymentDto>())),
             "GetPaymentDashboardAsync" =>
                 Task.FromResult(ServiceResult<PaymentDashboardDto>.Success(new PaymentDashboardDto())),
+            "GetRevenueBetweenAsync" =>
+                Task.FromResult(ServiceResult<decimal>.Success(0m)),
             _ => throw new NotSupportedException(targetMethod.Name)
         };
     }

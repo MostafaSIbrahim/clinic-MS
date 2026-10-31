@@ -67,7 +67,7 @@
                             <option value="@t.Id"
                                     data-cost="@(t.DefaultCost?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
                                     data-duration="@t.DurationMinutes">
-                                @t.TypeName @(t.DefaultCost != null ? $"— {t.DefaultCost:C}" : "")
+                                @t.TypeName @(t.DefaultCost != null ? $"— {t.DefaultCost.Value.ToMoney()}" : "")
                             </option>
                         }
                     </select>

@@ -8,16 +8,20 @@ using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Entities.Reservation;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
-using System.Linq.Expressions;
+using SafyaClinic.Application.Common;
 
 namespace SafyaClinic.Application.Services;
 
 public class ReservationService : IReservationService
 {
     private readonly IUnitOfWork _uow;
+    private readonly IClinicClock _clock;
 
-    public ReservationService(IUnitOfWork uow) => _uow = uow;
-
+    public ReservationService(IUnitOfWork uow, IClinicClock? clock = null)
+    {
+        _uow = uow;
+        _clock = clock ?? ClinicClock.Cairo;
+    }
     // ── S7 rule helpers ──────────────────────────────────────
     private Task<List<string>> RoleNamesAsync(int userId) =>
         _uow.UserRoles
@@ -201,7 +205,7 @@ public class ReservationService : IReservationService
                 "The patient and doctor must match the follow-up record.");
         }
 
-        if (request.ReservationDate.Date < DateTime.Today)
+        if (request.ReservationDate.Date < _clock.Today)
         {
             return ServiceResult<ReservationDto>.Failure(
                 "A follow-up reservation cannot be booked for a past date.");
@@ -374,7 +378,7 @@ public class ReservationService : IReservationService
     public async Task<ServiceResult<IEnumerable<ReservationSummaryDto>>> GetTodayReservationsAsync(
         int? doctorId = null)
     {
-        var today = DateTime.Today;
+        var today = _clock.Today;
         var query = _uow.Reservations.Query()
             .Where(r => r.ReservationDate == today);
         if (doctorId.HasValue)
@@ -480,7 +484,7 @@ public class ReservationService : IReservationService
     public async Task<List<QueueDoctorOptionDto>> GetQueueDoctorOptionsAsync(
     int? clinicId = null)
     {
-        var today = DateTime.Today;
+        var today = _clock.Today;
         var tomorrow = today.AddDays(1);
 
         var query = _uow.Reservations
@@ -524,7 +528,7 @@ public class ReservationService : IReservationService
                 "Invalid doctor.");
         }
 
-        var today = DateTime.Today;
+        var today = _clock.Today;
         var tomorrow = today.AddDays(1);
 
         var query = _uow.Reservations
@@ -586,7 +590,7 @@ public class ReservationService : IReservationService
         if (!confirmedStatusId.HasValue)
             return ServiceResult.Failure("Confirmed reservation status is not configured.");
 
-        var today = DateTime.Today;
+        var today = _clock.Today;
         var tomorrow = today.AddDays(1);
         var checkedInAtUtc = DateTime.UtcNow;
 
