@@ -10,9 +10,31 @@ using SafyaClinic.Application.Security;
 using SafyaClinic.Web.Security;
 using SafyaClinic.Web.Startup;
 using SafyaClinic.Application.Common;
-
+using System.Security.Claims;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+// ── Logging (F3a): readable console + daily JSON files in App_Data/logs ──
+// Set in code because hosted sites keep their own appsettings.json.
+builder.Host.UseSerilog((context, services, logger) => logger
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command",
+        context.HostingEnvironment.IsDevelopment() ? LogEventLevel.Information : LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} (request {RequestId}, user {UserId}){NewLine}{Exception}")
+    .WriteTo.File(
+        new CompactJsonFormatter(),
+        Path.Combine(context.HostingEnvironment.ContentRootPath, "App_Data", "logs", "safya-.json"),
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 31,
+        fileSizeLimitBytes: 20 * 1024 * 1024,
+        rollOnFileSizeLimit: true));
 
 // ── MVC ──────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
@@ -66,6 +88,9 @@ builder.Services.AddSingleton(
 // ── Clinic clock (F2): one time zone for "today" and every time shown ──
 builder.Services.AddSingleton<IClinicClock>(new ClinicClock(ClinicClock.FindZone(
     builder.Configuration[ClinicClock.TimeZoneSettingKey] ?? ClinicClock.DefaultTimeZoneId)));
+
+// ── Health check (F3a): GET /health → Healthy / Unhealthy ──
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 // ── Pipeline ─────────────────────────────────────────────────
 var app = builder.Build();
 
@@ -97,8 +122,19 @@ app.Use(async (context, next) =>
 });
 
 app.UseStaticFiles();
+
+// One summary line per request (F3a); static files above are not logged.
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnostics, http) =>
+    {
+        var userId = http.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is not null) diagnostics.Set("UserId", userId);
+    };
+});
 app.UseRouting();
 app.UseAuthentication();
+app.UseMiddleware<UserLogScopeMiddleware>();   // F3a: user id on every log entry
 app.UseAuthorization();
 
 // A user whose password was reset must choose a new one before using the app (S5).
@@ -113,6 +149,7 @@ app.Use(async (context, next) =>
     }
     await next();
 });
+app.MapHealthChecks("/health");   // F3
 // Default route: Home/Index redirects authenticated → Dashboard, guests → Login
 app.MapControllerRoute(
     name: "default",
