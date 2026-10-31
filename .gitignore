@@ -11,3 +11,8 @@ SafyaClinicPublish/
 # Attachment files are runtime data, never committed (S3)
 App_Data/
 **/wwwroot/uploads/
+# Personal editor / IDE settings (F10)
+.vscode/
+*.user
+# Patient documents are never committed (F10)
+P-Analysis/
