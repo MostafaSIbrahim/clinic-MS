@@ -635,23 +635,15 @@ public class PaymentService : IPaymentService
     }
 
     //-----Aggregate method-----//
-    public async Task<ServiceResult<decimal>> GetRevenueByDateRangeAsync(DateTime from, DateTime to)
+    public async Task<ServiceResult<decimal>> GetRevenueBetweenAsync(DateTime fromUtc, DateTime toUtcExclusive)
     {
-        var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
-        var paymentsQuery = _uow.Payments.Query()
-            .Where(p => p.Status == PaymentStatusEnum.Active);
-        if (fromInclusive.HasValue)
-        {
-            paymentsQuery = paymentsQuery
-                .Where(p => p.PaymentDate >= fromInclusive.Value);
-        }
-        if (toInclusive.HasValue)
-        {
-            paymentsQuery = paymentsQuery
-                .Where(p => p.PaymentDate <= toInclusive.Value);
-        }
-        var totalCollected = await paymentsQuery.SumAsync(p => p.Amount);
-        return ServiceResult<decimal>.Success(totalCollected);
+        var total = await _uow.Payments.Query()
+            .Where(p => p.Status == PaymentStatusEnum.Active
+                        && p.PaymentDate >= fromUtc
+                        && p.PaymentDate < toUtcExclusive)
+            .SumAsync(p => p.Amount);
+
+        return ServiceResult<decimal>.Success(total);
     }
     // ── Payment dashboard ─────────────────────────────────────────
 

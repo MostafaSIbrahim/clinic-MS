@@ -102,7 +102,7 @@
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-4 text-muted">Category</dt>
-                    <dd class="col-8"><span class="badge bg-secondary">@Model.Category</span></dd>
+                    <dd class="col-8"><span class="badge bg-secondary">@Labels.Humanize(Model.Category)</span></dd>
                     <dt class="col-4 text-muted">Chief Complaint</dt>
                     <dd class="col-8 clinical-text">@(Model.ChiefComplaint ?? "—")</dd>
                     <dt class="col-4 text-muted">History</dt>
@@ -137,7 +137,7 @@
                             <li class="list-group-item px-0 d-flex justify-content-between">
                                 <div>
                                     <strong>@t.Description</strong>
-                                    <div class="small text-muted">@t.PerformedDate.ToString("dd MMM yyyy") @(t.Cost != null ? $"• {t.Cost:C}" : "")</div>
+                                    <div class="small text-muted">@t.PerformedDate.ToString("dd MMM yyyy") @(t.Cost != null ? $"• {t.Cost.Value.ToMoney()}" : "")</div>
                                 </div>
                                 @if (!Model.IsLocked)
                                 {

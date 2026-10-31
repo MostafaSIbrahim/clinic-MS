@@ -6,6 +6,7 @@ using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Models;
 using SafyaClinic.Application.DTOs.Reservation;
+using SafyaClinic.Application.Common;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -232,7 +233,7 @@ public class FollowUpsController : BaseController
             {
                 Value = t.Id.ToString(),
                 Text = t.TypeName +
-                    (t.DefaultCost.HasValue ? $" — {t.DefaultCost.Value:C}" : "")
+                    (t.DefaultCost.HasValue ? $" — {Money.Format(t.DefaultCost.Value)}" : "")
             })
             .ToList();
 

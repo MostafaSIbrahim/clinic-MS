@@ -20,19 +20,19 @@
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card bg-primary-soft">
             <div class="small opacity-75">Total Charged</div>
-            <div class="fs-3 fw-bold">@Model.TotalCharged.ToString("C")</div>
+            <div class="fs-3 fw-bold">@Model.TotalCharged.ToMoney()</div>
         </div>
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card bg-teal-soft">
             <div class="small opacity-75">Total Paid</div>
-            <div class="fs-3 fw-bold">@Model.TotalPaid.ToString("C")</div>
+            <div class="fs-3 fw-bold">@Model.TotalPaid.ToMoney()</div>
         </div>
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card bg-amber-soft">
             <div class="small opacity-75">Written Off (Cancelled)</div>
-            <div class="fs-3 fw-bold">@Model.TotalWrittenOff.ToString("C")</div>
+            <div class="fs-3 fw-bold">@Model.TotalWrittenOff.ToMoney()</div>
         </div>
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
@@ -49,7 +49,7 @@
             else
             {
                 <div class="fs-3 fw-bold">
-                    @Model.CollectibleBalance.ToString("C")
+                    @Model.CollectibleBalance.ToMoney()
                 </div>
             }
         </div>
@@ -66,7 +66,7 @@
         {
             <div class="alert alert-warning mb-0">
                 This patient has
-                <strong>@Model.UnallocatedCoverage.ToString("C")</strong>
+                <strong>@Model.UnallocatedCoverage.ToMoney()</strong>
                 in payments or write-offs that are not linked to a reservation
                 or nutrition enrollment. Reconcile these records before
                 collecting additional payment.
@@ -108,7 +108,7 @@
                                 <td>@item.Description</td>
                                 <td>@(item.ClinicName ?? "Select during collection")</td>
                                 <td class="fw-semibold text-danger">
-                                    @item.AmountDue.ToString("C")
+                                    @item.AmountDue.ToMoney()
                                 </td>
                                 <td class="text-end">
                                     <a asp-action="Collect"
@@ -157,10 +157,10 @@
                         <tr class="@(p.Status == "Cancelled" ? "text-muted text-decoration-line-through" : "")">
                             <td>@p.PaymentDate.ToString("dd MMM yyyy HH:mm")</td>
                             <td class="fw-semibold">
-                                @p.Amount.ToString("C")
+                                @p.Amount.ToMoney()
                                 @if (p.OriginalAmount.HasValue && p.OriginalAmount.Value != p.Amount)
                                 {
-                                    <br /><small class="text-muted">was @p.OriginalAmount.Value.ToString("C")</small>
+                                    <br /><small class="text-muted">was @p.OriginalAmount.Value.ToMoney()</small>
                                 }
                             </td>
                             <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
@@ -169,14 +169,14 @@
                             <td>
                                 @if (p.IsFirstVisitDeduction)
                                 {
-                                    <span class="badge bg-warning text-dark">@p.DeductionPercentage%  (@p.SourceDeductionAmount.ToString("C"))</span>
+                                    <span class="badge bg-warning text-dark">@p.DeductionPercentage%  (@p.SourceDeductionAmount.ToMoney())</span>
                                 }
                                 else
                                 {
                                     <span class="text-muted">—</span>
                                 }
                             </td>
-                            <td>@p.ClinicNetAmount.ToString("C")</td>
+                            <td>@p.ClinicNetAmount.ToMoney()</td>
                             <td>
                                 @if (p.Status == "Active")
                                 {

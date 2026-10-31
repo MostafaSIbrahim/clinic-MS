@@ -15,14 +15,14 @@
         <div class="stat-card bg-primary-soft">
             <div class="small">Original Amount</div>
             <div class="fs-3 fw-bold">
-                @(payment.OriginalAmount?.ToString("C") ?? "Not recorded")
+                @(payment.OriginalAmount?.ToMoney() ?? "Not recorded")
             </div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="stat-card bg-teal-soft">
             <div class="small">Current Recorded Amount</div>
-            <div class="fs-3 fw-bold">@payment.Amount.ToString("C")</div>
+            <div class="fs-3 fw-bold">@payment.Amount.ToMoney()</div>
         </div>
     </div>
     <div class="col-md-4">
@@ -39,7 +39,7 @@
             <i class="bi bi-journal-text me-2"></i>
             Adjustment History (@history.TotalCount)
         </span>
-        <small class="text-muted">Newest first · Timestamps in UTC</small>
+        <small class="text-muted">Newest first</small>
     </div>
 
     @if (!history.Items.Any())
@@ -58,7 +58,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th>Date / Time (UTC)</th>
+                        <th>Date / Time</th>
                         <th>Action</th>
                         <th>Previous Amount</th>
                         <th>New Amount</th>
@@ -78,15 +78,15 @@
 
                         <tr>
                             <td class="text-nowrap">
-                                @adjustment.PerformedAt.ToString("dd MMM yyyy HH:mm")
+                                @Clock.ToClinicTime(adjustment.PerformedAt).ToString("dd MMM yyyy HH:mm")
                             </td>
                             <td>
                                 <span class="badge @(adjustment.ActionType == "Cancelled" ? "bg-danger" : "bg-primary")">
                                     @actionLabel
                                 </span>
                             </td>
-                            <td>@(adjustment.OldAmount?.ToString("C") ?? "—")</td>
-                            <td>@(adjustment.NewAmount?.ToString("C") ?? "—")</td>
+                            <td>@(adjustment.OldAmount?.ToMoney() ?? "—")</td>
+                            <td>@(adjustment.NewAmount?.ToMoney() ?? "—")</td>
                             <td style="min-width:180px; white-space:pre-wrap; overflow-wrap:anywhere;">@(string.IsNullOrWhiteSpace(adjustment.Reason) ? "—" : adjustment.Reason)</td>
                             <td>
                                 <div>@adjustment.PerformedByName</div>

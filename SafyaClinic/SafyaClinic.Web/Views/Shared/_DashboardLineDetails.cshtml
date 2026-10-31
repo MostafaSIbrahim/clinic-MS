@@ -11,11 +11,11 @@
     </div>
     <div class="text-end">
         <div class="small text-muted">Total Paid</div>
-        <div class="fw-bold text-success">@Model.TotalAmountPaid.ToString("C")</div>
+        <div class="fw-bold text-success">@Model.TotalAmountPaid.ToMoney()</div>
     </div>
     <div class="text-end">
         <div class="small text-muted">Total Deducted</div>
-        <div class="fw-bold text-warning">@Model.TotalDeducted.ToString("C")</div>
+        <div class="fw-bold text-warning">@Model.TotalDeducted.ToMoney()</div>
     </div>
 </div>
 
@@ -62,8 +62,8 @@ else
                         <td>@line.PaymentDate.ToString("dd MMM yyyy")</td>
                         <td>@line.PaymentMethod</td>
                         <td class="text-muted">@(string.IsNullOrWhiteSpace(line.ReferenceNumber) ? "—" : line.ReferenceNumber)</td>
-                        <td class="text-end fw-semibold">@line.AmountPaid.ToString("C")</td>
-                        <td class="text-end text-warning">@(line.DeductedAmount > 0 ? line.DeductedAmount.ToString("C") : "—")</td>
+                        <td class="text-end fw-semibold">@line.AmountPaid.ToMoney()</td>
+                        <td class="text-end text-warning">@(line.DeductedAmount > 0 ? line.DeductedAmount.ToMoney() : "—")</td>
                     </tr>
                 }
             </tbody>

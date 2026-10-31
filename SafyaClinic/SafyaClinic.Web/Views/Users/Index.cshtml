@@ -92,7 +92,7 @@
                                         <span class="badge bg-secondary">Inactive</span>
                                     }
                                 </td>
-                                <td class="small text-muted">@(u.LastLoginAt?.ToString("dd MMM yyyy HH:mm") ?? "Never")</td>
+                                <td class="small text-muted">@(u.LastLoginAt is DateTime lastLogin ? Clock.ToClinicTime(lastLogin).ToString("dd MMM yyyy HH:mm") : "Never")</td>
                                 <td class="text-end">
                                     <form asp-action="ToggleActive" method="post" class="d-inline">
                                         @Html.AntiForgeryToken()

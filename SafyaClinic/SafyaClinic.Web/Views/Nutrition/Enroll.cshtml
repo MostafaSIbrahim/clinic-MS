@@ -28,7 +28,7 @@
                     @foreach (var p in packages)
                     {
                         <option value="@p.Id" data-price="@p.BasePrice" data-maxdiscount="@p.MaxDiscountPercent">
-                            @p.PackageName (@p.BasePrice.ToString("C")) — max @p.MaxDiscountPercent% off
+                            @p.PackageName (@p.BasePrice.ToMoney()) — max @p.MaxDiscountPercent% off
                         </option>
                     }
                 </select>

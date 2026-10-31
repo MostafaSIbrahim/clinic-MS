@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Payment;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Application.DTOs.Common;
-
+using SafyaClinic.Application.Common;
 namespace SafyaClinic.Web.Controllers;
 
 [Authorize] // Payment access: each action below declares its specific permission.
@@ -275,8 +275,8 @@ public class PaymentsController : BaseController
         }
 
         var message = result.Data!.IsFirstVisitDeduction
-            ? $"Payment of {result.Data.Amount:C} collected. First-visit source deduction of {result.Data.SourceDeductionAmount:C} ({result.Data.DeductionPercentage}%) applied."
-            : $"Payment of {result.Data.Amount:C} collected.";
+            ? $"Payment of {Money.Format(result.Data.Amount)} collected. First-visit source deduction of {Money.Format(result.Data.SourceDeductionAmount)} ({result.Data.DeductionPercentage}%) applied."
+            : $"Payment of {Money.Format(result.Data.Amount)} collected.";
 
         return RedirectWithSuccess(
             message,

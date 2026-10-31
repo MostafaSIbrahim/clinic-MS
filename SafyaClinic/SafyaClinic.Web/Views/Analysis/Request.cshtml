@@ -32,7 +32,7 @@
                             <input class="form-check-input" type="checkbox" name="AnalysisTypeIds"
                                    value="@t.Id" id="type_@t.Id" checked="@(Model.AnalysisTypeIds?.Contains(t.Id) == true)" />
                             <label class="form-check-label" for="type_@t.Id">
-                                @t.TypeName @(t.DefaultCost != null ? $"({t.DefaultCost:C})" : "")
+                                @t.TypeName @(t.DefaultCost != null ? $"({t.DefaultCost.Value.ToMoney()})" : "")
                                 @if (!string.IsNullOrWhiteSpace(t.PreparationInstructions))
                                 {
                                     <span class="text-muted small d-block">@t.PreparationInstructions</span>

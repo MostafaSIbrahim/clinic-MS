@@ -9,6 +9,7 @@ using SafyaClinic.Web.Services.Files;
 using SafyaClinic.Application.Security;
 using SafyaClinic.Web.Security;
 using SafyaClinic.Web.Startup;
+using SafyaClinic.Application.Common;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,10 +58,14 @@ var storageRoot = Path.Combine(
 var maxUploadBytes = builder.Configuration.GetValue<long?>("FileStorage:MaxFileSizeBytes") ?? 10 * 1024 * 1024;
 builder.Services.AddSingleton<IFileStorage>(new LocalFileStorage(storageRoot, maxUploadBytes));
 
+
 // ── Sign-in lockout (S5) ─────────────────────────────────────
 builder.Services.AddSingleton(
     builder.Configuration.GetSection(LockoutSettings.SectionName).Get<LockoutSettings>() ?? new LockoutSettings());
 
+// ── Clinic clock (F2): one time zone for "today" and every time shown ──
+builder.Services.AddSingleton<IClinicClock>(new ClinicClock(ClinicClock.FindZone(
+    builder.Configuration[ClinicClock.TimeZoneSettingKey] ?? ClinicClock.DefaultTimeZoneId)));
 // ── Pipeline ─────────────────────────────────────────────────
 var app = builder.Build();
 
