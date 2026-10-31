@@ -1,5 +1,5 @@
 # Safya Clinic: update the existing MonsterASP site
-
+> **Since slice S8 (2026-10-30):** the application no longer applies migrations at start-up outside Development, and `docs/DeploymentMigrations.sql` has been removed. Follow `Docs/deployment/database-migrations.md` for any release that contains new migrations. Statements below about automatic start-up migration are out of date.
 Target: https://safyaclinic.runasp.net
 
 The files have been prepared locally. Nothing has been published, and the hosted database has not been contacted or modified.
