@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using SafyaClinic.Web.Services.Files;
 using SafyaClinic.Application.Security;
 using SafyaClinic.Web.Security;
+using SafyaClinic.Web.Startup;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,14 +64,12 @@ builder.Services.AddSingleton(
 // ── Pipeline ─────────────────────────────────────────────────
 var app = builder.Build();
 
-// Run pending EF Core migrations on startup
+// Database: migrate only in Development (opt-in); elsewhere require the reviewed script (S8).
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SafyaDbContext>();
-    db.Database.Migrate();
-    await DbSeeder.SeedAsync(db, app.Configuration);
-
-
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseStartup");
+    await DatabaseStartup.PrepareAsync(db, app.Environment, app.Configuration, logger);
 }
 
 if (!app.Environment.IsDevelopment())

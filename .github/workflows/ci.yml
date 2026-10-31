@@ -42,6 +42,11 @@ jobs:
 
       - name: Test (JavaScript)
         run: node --test "SafyaClinic/tests/**/*.test.cjs"
+      
+      - name: Migrations match the model (and produce the review script)
+        run: |
+          mkdir -p TestResults
+          dotnet run --project SafyaClinic/tests/DeploymentChecks --configuration Release -- TestResults/migrations-idempotent.sql
 
       - name: Vulnerable packages
         run: |
