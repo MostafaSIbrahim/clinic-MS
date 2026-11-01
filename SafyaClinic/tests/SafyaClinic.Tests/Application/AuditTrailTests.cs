@@ -162,4 +162,21 @@ public class AuditTrailTests
         Assert.Equal(AuditActions.RoleAssigned, entry.Action);
         Assert.Contains(receptionRoleId.ToString(), entry.Details);
     }
+
+    [Fact]
+    public async Task Password_change_is_recorded_once()
+    {
+        await using var context = await SeededAsync();
+        var adminId = await AdminIdAsync(context);
+
+        await Auth(context, adminId).ChangePasswordAsync(adminId, new ChangePasswordRequest
+        {
+            CurrentPassword = AdminPassword,
+            NewPassword = "Brand-new-pass-7",
+            ConfirmPassword = "Brand-new-pass-7"
+        });
+
+        var entry = Assert.Single(await EntriesAsync(context));
+        Assert.Equal(AuditActions.PasswordChanged, entry.Action);
+    }
 }

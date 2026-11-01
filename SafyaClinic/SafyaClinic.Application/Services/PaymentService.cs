@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.Common.Auditing;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Payment;
 using SafyaClinic.Application.Interfaces.Services;
@@ -13,8 +14,13 @@ public class PaymentService : IPaymentService
 {
     private readonly IUnitOfWork _uow;
 
-    public PaymentService(IUnitOfWork uow) => _uow = uow;
+    private readonly IAuditTrail _audit;
 
+    public PaymentService(IUnitOfWork uow, IAuditTrail? audit = null)
+    {
+        _uow = uow;
+        _audit = audit ?? NoAuditTrail.Instance;
+    }
     public async Task<ServiceResult<PaymentDto>> CollectPaymentAsync(
     CollectPaymentRequest request,
     int currentUserId)
@@ -179,6 +185,16 @@ public class PaymentService : IPaymentService
         // included when we decide whether the reservation is now fully paid.
         await _uow.SaveChangesAsync();
 
+        // F3b-2: saved by the final SaveChangesAsync below, inside the same payment lock.
+        await _audit.RecordAsync(AuditActions.PaymentCollected, "Payment", payment.Id, new
+        {
+            amount = payment.Amount,
+            method = payment.PaymentMethod.ToString(),
+            reservationId = payment.ReservationId,
+            enrollmentId = payment.EnrollmentId
+        }, currentUserId);
+
+        // Auto-mark reservation as paid if linked and payments cover total
         // Auto-mark reservation as paid if linked and payments cover total
         if (request.ReservationId.HasValue)
             await RecalculateReservationPaidStatusAsync(request.ReservationId.Value);
@@ -529,6 +545,9 @@ public class PaymentService : IPaymentService
             PerformedAt = DateTime.UtcNow
         });
 
+        await _audit.RecordAsync(AuditActions.PaymentCancelled, "Payment", payment.Id,
+            new { amount = oldAmount }, currentUserId);
+
         // NOTE: Cancelling a payment writes the amount off — it is removed from "collected
         // revenue" (excluded from Active-only totals/reports) but it does NOT reopen the
         // patient's/reservation's due balance. We deliberately do NOT reverse
@@ -608,6 +627,9 @@ public class PaymentService : IPaymentService
             PerformedBy = currentUserId,
             PerformedAt = DateTime.UtcNow
         });
+
+        await _audit.RecordAsync(AuditActions.PaymentAmountChanged, "Payment", payment.Id,
+            new { oldAmount, newAmount = request.NewAmount }, currentUserId);
 
         // Adjust enrollment total paid by the delta
         if (payment.EnrollmentId.HasValue)

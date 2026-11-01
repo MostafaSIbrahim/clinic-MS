@@ -7,12 +7,19 @@ using global::SafyaClinic.Domain.Entities.Prescription;
 using global::SafyaClinic.Domain.Enums;
 using global::SafyaClinic.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.Common.Auditing;
 
 public class PatientRecordService : IPatientRecordService
 {
     private readonly IUnitOfWork _uow;
 
-    public PatientRecordService(IUnitOfWork uow) => _uow = uow;
+    private readonly IAuditTrail _audit;
+
+    public PatientRecordService(IUnitOfWork uow, IAuditTrail? audit = null)
+    {
+        _uow = uow;
+        _audit = audit ?? NoAuditTrail.Instance;
+    }
 
     public async Task<ServiceResult<PatientRecordDto>> CreateRecordAsync(
     CreatePatientRecordRequest request,
@@ -186,7 +193,17 @@ public class PatientRecordService : IPatientRecordService
             .Where(r => r.Id == recordId)
             .Select(r => new
             {
-                r.IsLocked
+                r.IsLocked,
+                Current = new UpdatePatientRecordRequest
+                {
+                    ChiefComplaint = r.ChiefComplaint,
+                    PresentIllnessHistory = r.PresentIllnessHistory,
+                    Diagnosis = r.Diagnosis,
+                    DifferentialDiagnosis = r.DifferentialDiagnosis,
+                    TreatmentPlan = r.TreatmentPlan,
+                    Notes = r.Notes,
+                    FollowUpDate = r.FollowUpDate
+                }
             })
             .FirstOrDefaultAsync();
         if (recordState is null) 
@@ -222,6 +239,10 @@ public class PatientRecordService : IPatientRecordService
         if (affectedRecord == 0)
             return ServiceResult.Failure("Record not found or locked.");
 
+        await _audit.RecordAsync(AuditActions.RecordEdited, "PatientRecord", recordId,
+            new { changed = MedicalRecordChanges.ChangedFields(recordState.Current, request) });
+        await _uow.SaveChangesAsync();
+
         return ServiceResult.Success("Record updated.");
     }
 
@@ -235,9 +256,12 @@ public class PatientRecordService : IPatientRecordService
                 .SetProperty(r => r.IsLocked, true)
                 .SetProperty(r => r.UpdatedAt, updatedAt));
 
-        return affectedRows == 0
-            ? ServiceResult.Failure("Record not found.")
-            : ServiceResult.Success("Record locked.");
+        if (affectedRows == 0)
+            return ServiceResult.Failure("Record not found.");
+
+        await _audit.RecordAsync(AuditActions.RecordLocked, "PatientRecord", recordId);
+        await _uow.SaveChangesAsync();
+        return ServiceResult.Success("Record locked.");
     }
     public async Task<ServiceResult<FollowUpBookingContextDto>>
     GetFollowUpBookingContextAsync(
