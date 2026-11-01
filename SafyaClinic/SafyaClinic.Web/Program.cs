@@ -14,6 +14,7 @@ using System.Security.Claims;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using SafyaClinic.Application.Common.Auditing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -91,6 +92,11 @@ builder.Services.AddSingleton<IClinicClock>(new ClinicClock(ClinicClock.FindZone
 
 // ── Health check (F3a): GET /health → Healthy / Unhealthy ──
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
+
+// ── Audit trail (F3b): saved together with the change it describes ──
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IAuditContext, HttpAuditContext>();
+builder.Services.AddScoped<IAuditTrail, AuditTrail>();
 // ── Pipeline ─────────────────────────────────────────────────
 var app = builder.Build();
 

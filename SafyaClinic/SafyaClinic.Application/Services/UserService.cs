@@ -1,18 +1,24 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.Common.Auditing;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Application.Security;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Interfaces.Repositories;
-using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Application.Services;
 
 public class UserService : IUserService
 {
     private readonly IUnitOfWork _uow;
+    private readonly IAuditTrail _audit;
 
-    public UserService(IUnitOfWork uow) => _uow = uow;
+    public UserService(IUnitOfWork uow, IAuditTrail? audit = null)
+    {
+        _uow = uow;
+        _audit = audit ?? NoAuditTrail.Instance;
+    }
 
     public async Task<ServiceResult<UserDto>> CreateUserAsync(
         CreateUserRequest request, int createdByUserId)
@@ -57,7 +63,7 @@ public class UserService : IUserService
 
         await _uow.Users.AddAsync(user);
         await _uow.SaveChangesAsync();
-
+        await _audit.RecordAsync(AuditActions.UserCreated, "User", user.Id, new { roleIds = requestedRoleIds }, createdByUserId);
         // Assign roles
         foreach (var roleId in requestedRoleIds)
         {
@@ -89,7 +95,8 @@ public class UserService : IUserService
         user.MustChangePassword = true;   // the user picks their own password at next sign-in
         user.FailedLoginCount = 0;
         user.LockoutEndUtc = null;        // a reset also unlocks the account
-        user.SecurityStamp = SecurityStamps.New();   // ends every session, including this one
+        user.SecurityStamp = SecurityStamps.New();   // ends the user's open sessions
+        await _audit.RecordAsync(AuditActions.PasswordReset, "User", user.Id);
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
 
@@ -205,6 +212,8 @@ public class UserService : IUserService
 
         user.IsActive = isActive;
         user.SecurityStamp = SecurityStamps.New();   // a deactivated user's open sessions end
+        await _audit.RecordAsync(isActive ? AuditActions.UserActivated : AuditActions.UserDeactivated,
+            "User", user.Id, actingUserId: actingUserId);
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
 
@@ -245,6 +254,7 @@ public class UserService : IUserService
             AssignedBy = assignedBy
         });
         await RenewStampAsync(userId);   // the user signs in again and gets the new role
+        await _audit.RecordAsync(AuditActions.RoleAssigned, "User", userId, new { roleId }, assignedBy);
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Role assigned. The user will be asked to sign in again.");
     }
@@ -264,6 +274,7 @@ public class UserService : IUserService
 
         _uow.UserRoles.Delete(userRole);
         await RenewStampAsync(userId);   // the removed role stops working at once
+        await _audit.RecordAsync(AuditActions.RoleRemoved, "User", userId, new { roleId, role = userRole.Role.RoleName });
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Role removed. The user will be asked to sign in again.");
     }

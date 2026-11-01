@@ -12,6 +12,7 @@ using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using SafyaClinic.Infrastructure.Data;
 using System.Data;
+using SafyaClinic.Domain.Entities.Audit;
 
 namespace SafyaClinic.Infrastructure.Repositories;
 
@@ -73,6 +74,7 @@ public class UnitOfWork : IUnitOfWork
     // ── Payment ───────────────────────────────────────────────
     private IRepository<Payment>? _payments;
     private IRepository<PaymentAdjustment>? _paymentAdjustments;
+    private IRepository<AuditLog>? _auditLogs;
 
     // ── Settings (Sources / Clinics) ────────────────────────────
     private IRepository<PatientSource>? _patientSources;
@@ -118,7 +120,7 @@ public class UnitOfWork : IUnitOfWork
 
     public IRepository<Payment> Payments => _payments ??= new GenericRepository<Payment>(_context);
     public IRepository<PaymentAdjustment> PaymentAdjustments => _paymentAdjustments ??= new GenericRepository<PaymentAdjustment>(_context);
-
+    public IRepository<AuditLog> AuditLogs => _auditLogs ??= new GenericRepository<AuditLog>(_context);
     public IRepository<PatientSource> PatientSources => _patientSources ??= new GenericRepository<PatientSource>(_context);
     public IRepository<Clinic> Clinics => _clinics ??= new GenericRepository<Clinic>(_context);
     public IRepository<ClinicSourceAgreement> ClinicSourceAgreements => _clinicSourceAgreements ??= new GenericRepository<ClinicSourceAgreement>(_context);
