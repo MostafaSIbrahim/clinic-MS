@@ -110,11 +110,7 @@ public class AuthService : IAuthService
         user.MustChangePassword = false;
         user.SecurityStamp = SecurityStamps.New();   // ends every session, including this one
         await _audit.RecordAsync(AuditActions.PasswordChanged, "User", user.Id, actingUserId: user.Id);
-        await _audit.RecordAsync(
-            user.LockoutEndUtc is not null && user.FailedLoginCount == 0 ? AuditActions.SignInLockedOut : AuditActions.SignInFailed,
-            "User", user.Id,
-            new { attempt = user.FailedLoginCount, lockedUntilUtc = user.LockoutEndUtc });
-
+        
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
         _logger.LogInformation("User {UserId} changed their password.", user.Id);
