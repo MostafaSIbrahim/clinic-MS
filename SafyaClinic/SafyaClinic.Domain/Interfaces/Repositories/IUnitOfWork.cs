@@ -7,6 +7,7 @@ using SafyaClinic.Domain.Entities.Prescription;
 using SafyaClinic.Domain.Entities.Reservation;
 using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Identity;
+using SafyaClinic.Domain.Entities.Audit;
 
 namespace SafyaClinic.Domain.Interfaces.Repositories;
 
@@ -57,6 +58,8 @@ public interface IUnitOfWork : IDisposable
     IRepository<Payment> Payments { get; }
     IRepository<PaymentAdjustment> PaymentAdjustments { get; }
 
+    // ── Audit ─────────────────────────────────────────────────
+    IRepository<AuditLog> AuditLogs { get; }
     // ── Settings (Sources / Clinics) ────────────────────────────
     IRepository<PatientSource> PatientSources { get; }
     IRepository<Clinic> Clinics { get; }

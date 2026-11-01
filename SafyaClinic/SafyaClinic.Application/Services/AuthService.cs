@@ -7,6 +7,7 @@ using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Application.Security;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Interfaces.Repositories;
+using SafyaClinic.Application.Common.Auditing;
 
 namespace SafyaClinic.Application.Services;
 
@@ -17,12 +18,14 @@ public class AuthService : IAuthService
     private readonly IUnitOfWork _uow;
     private readonly ILogger<AuthService> _logger;
     private readonly LockoutSettings _lockout;
+    private readonly IAuditTrail _audit;
 
-    public AuthService(IUnitOfWork uow, ILogger<AuthService> logger, LockoutSettings lockout)
+    public AuthService(IUnitOfWork uow, ILogger<AuthService> logger, LockoutSettings lockout, IAuditTrail? audit = null)
     {
         _uow = uow;
         _logger = logger;
         _lockout = lockout;
+        _audit = audit ?? NoAuditTrail.Instance;
     }
 
     public async Task<ServiceResult<LoginResponse>> LoginAsync(LoginRequest request)
@@ -33,6 +36,8 @@ public class AuthService : IAuthService
         if (user is null)
         {
             _logger.LogWarning("Sign-in failed: no active account for the given phone number.");
+            await _audit.RecordAsync(AuditActions.SignInFailed, "User", null, new { reason = "no active account" });
+            await _uow.SaveChangesAsync();
             return ServiceResult<LoginResponse>.Failure(InvalidCredentials);
         }
 
@@ -40,6 +45,8 @@ public class AuthService : IAuthService
         if (user.LockoutEndUtc is { } lockedUntil && lockedUntil > now)
         {
             _logger.LogWarning("Sign-in refused for user {UserId}: locked until {LockoutEndUtc:u}.", user.Id, lockedUntil);
+            await _audit.RecordAsync(AuditActions.SignInRefusedWhileLocked, "User", user.Id, new { lockedUntilUtc = lockedUntil });
+            await _uow.SaveChangesAsync();
             var minutes = (int)Math.Ceiling((lockedUntil - now).TotalMinutes);
             return ServiceResult<LoginResponse>.Failure(
                 $"This account is locked after too many failed sign-in attempts. Try again in {minutes} minute(s).");
@@ -59,6 +66,7 @@ public class AuthService : IAuthService
         user.FailedLoginCount = 0;
         user.LockoutEndUtc = null;
         user.LastLoginAt = now;
+        await _audit.RecordAsync(AuditActions.SignInSucceeded, "User", user.Id, actingUserId: user.Id);
         if (string.IsNullOrEmpty(user.SecurityStamp))
             user.SecurityStamp = SecurityStamps.New();   // users created before S6
         _uow.Users.Update(user);
@@ -101,12 +109,20 @@ public class AuthService : IAuthService
         user.PasswordHash = PasswordHashing.Hash(request.NewPassword);
         user.MustChangePassword = false;
         user.SecurityStamp = SecurityStamps.New();   // ends every session, including this one
+        await _audit.RecordAsync(AuditActions.PasswordChanged, "User", user.Id, actingUserId: user.Id);
+        await _audit.RecordAsync(
+            user.LockoutEndUtc is not null && user.FailedLoginCount == 0 ? AuditActions.SignInLockedOut : AuditActions.SignInFailed,
+            "User", user.Id,
+            new { attempt = user.FailedLoginCount, lockedUntilUtc = user.LockoutEndUtc });
+
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
-
         _logger.LogInformation("User {UserId} changed their password.", user.Id);
         return ServiceResult.Success("Password changed successfully.");
+    
     }
+
+
 
     public async Task<ServiceResult<UserDto>> GetCurrentUserAsync(int userId)
     {
@@ -156,7 +172,13 @@ public class AuthService : IAuthService
                 user.Id, user.FailedLoginCount, _lockout.MaxFailedAttempts);
         }
 
+        await _audit.RecordAsync(
+        user.LockoutEndUtc is not null && user.FailedLoginCount == 0 ? AuditActions.SignInLockedOut : AuditActions.SignInFailed,
+        "User", user.Id,
+        new { attempt = user.FailedLoginCount, lockedUntilUtc = user.LockoutEndUtc });
+
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
     }
 }
+    

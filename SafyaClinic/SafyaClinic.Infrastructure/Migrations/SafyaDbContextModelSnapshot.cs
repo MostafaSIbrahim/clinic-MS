@@ -178,33 +178,44 @@ namespace SafyaClinic.Infrastructure.Migrations
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
-                    b.Property<string>("IPAddress")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("Details")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
-                    b.Property<string>("NewValues")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("EntityId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("OldValues")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
-                    b.Property<DateTime>("PerformedAt")
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("PerformedBy")
-                        .HasColumnType("int");
+                    b.Property<string>("RequestId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
-                    b.Property<int>("RecordId")
+                    b.Property<int?>("UserId")
                         .HasColumnType("int");
-
-                    b.Property<string>("TableName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("AuditLogs");
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("EntityType", "EntityId");
+
+                    b.HasIndex("UserId", "OccurredAtUtc");
+
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", b =>
