@@ -6,6 +6,7 @@ using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SafyaClinic.Application.DTOs.Reservation;
+using SafyaClinic.Application.Common;
 
 
 namespace SafyaClinic.Application.Services;
@@ -15,6 +16,22 @@ public class PatientService : IPatientService
     private readonly IUnitOfWork _uow;
 
     public PatientService(IUnitOfWork uow) => _uow = uow;
+
+
+    // F5b: the primary phone identifies the patient (D8).
+    private async Task<string?> PrimaryPhoneConflictAsync(string phoneNumber, int? exceptPatientId)
+    {
+        var owner = await _uow.PatientPhones.Query()
+            .Where(ph => ph.IsPrimary && ph.PhoneNumber == phoneNumber
+                         && (exceptPatientId == null || ph.PatientId != exceptPatientId))
+            .Select(ph => new { ph.PatientId, ph.Patient.FirstName, ph.Patient.LastName })
+            .FirstOrDefaultAsync();
+
+        return owner is null
+            ? null
+            : $"This phone number is already the primary phone of {owner.FirstName} {owner.LastName} " +
+              $"(patient #{owner.PatientId}). Open that patient instead of registering a new one.";
+    }
 
     public async Task<ServiceResult<PatientDto>> CreatePatientAsync(
         CreatePatientRequest request, int createdByUserId)
@@ -28,6 +45,19 @@ public class PatientService : IPatientService
                 return ServiceResult<PatientDto>.Failure(
                     "A patient with this National ID already exists.");
         }
+        // F5b: a phone is required; numbers are normalised; the primary one must be free.
+        var phoneEntries = request.Phones.Where(ph => !string.IsNullOrWhiteSpace(ph.PhoneNumber)).ToList();
+        if (phoneEntries.Count == 0)
+            return ServiceResult<PatientDto>.Failure("Enter the patient's phone number.");
+
+        var phoneNumbers = phoneEntries.Select(ph => PhoneNumbers.Normalize(ph.PhoneNumber)).ToList();
+        if (phoneNumbers.Any(n => n.Length < PhoneNumbers.MinimumDigits))
+            return ServiceResult<PatientDto>.Failure($"Enter a valid phone number (at least {PhoneNumbers.MinimumDigits} digits).");
+
+        var primaryIndex = Math.Max(0, phoneEntries.FindIndex(ph => ph.IsPrimary));
+        var phoneConflict = await PrimaryPhoneConflictAsync(phoneNumbers[primaryIndex], exceptPatientId: null);
+        if (phoneConflict is not null)
+            return ServiceResult<PatientDto>.Failure(phoneConflict);
 
         if (!string.IsNullOrWhiteSpace(request.Gender) &&
             !Enum.TryParse<Gender>(request.Gender, out _))
@@ -59,13 +89,13 @@ public class PatientService : IPatientService
         await _uow.SaveChangesAsync();
 
         // Phones
-        var phones = request.Phones
-            .Select(ph => new PatientPhone
+        var phones = phoneEntries
+            .Select((ph, i) => new PatientPhone
             {
                 PatientId = patient.Id,
-                PhoneNumber = ph.PhoneNumber.Trim(),
+                PhoneNumber = phoneNumbers[i],
                 PhoneType = ph.PhoneType,
-                IsPrimary = ph.IsPrimary
+                IsPrimary = i == primaryIndex   // exactly one primary
             })
             .ToList();
 
@@ -307,13 +337,15 @@ public class PatientService : IPatientService
     {
         var all = _uow.Patients.Query();
         var search = request.Search?.Trim();
+        var phoneSearch = PhoneNumbers.Normalize(search);   // "+20 100…" finds "0100…"
         if (!string.IsNullOrWhiteSpace(search))
         {
             all = all.Where(p =>
                p.FirstName.Contains(search) ||
                p.LastName.Contains(search) ||
                (p.NationalId != null && p.NationalId.Contains(search)) ||
-               p.Phones.Any(ph => ph.PhoneNumber.Contains(search)));
+               p.Phones.Any(ph => ph.PhoneNumber.Contains(search)) ||
+               (phoneSearch.Length >= 3 && p.Phones.Any(ph => ph.PhoneNumber.Contains(phoneSearch))));
         }
         var totalCount = await all.CountAsync();
         var patients = await all
@@ -429,19 +461,45 @@ public class PatientService : IPatientService
         if (!await _uow.Patients.ExistsAsync(patientId))
             return ServiceResult.Failure("Patient not found.");
 
+        var number = PhoneNumbers.Normalize(request.PhoneNumber);
+        if (number.Length < PhoneNumbers.MinimumDigits)
+            return ServiceResult.Failure($"Enter a valid phone number (at least {PhoneNumbers.MinimumDigits} digits).");
+
+        var currentPrimaries = await _uow.PatientPhones.Query(asNoTracking: false)
+            .Where(ph => ph.PatientId == patientId && ph.IsPrimary)
+            .ToListAsync();
+        var makePrimary = request.IsPrimary || currentPrimaries.Count == 0;
+
+        if (makePrimary)
+        {
+            var conflict = await PrimaryPhoneConflictAsync(number, patientId);
+            if (conflict is not null)
+                return ServiceResult.Failure(conflict);
+
+            // Clear the old primary first, so the unique index never sees two at once.
+            foreach (var phone in currentPrimaries) phone.IsPrimary = false;
+            await _uow.SaveChangesAsync();
+        }
+
         await _uow.PatientPhones.AddAsync(new PatientPhone
         {
             PatientId = patientId,
-            PhoneNumber = request.PhoneNumber.Trim(),
+            PhoneNumber = number,
             PhoneType = request.PhoneType,
-            IsPrimary = request.IsPrimary
+            IsPrimary = makePrimary
         });
         await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Phone added.");
+        return ServiceResult.Success(makePrimary ? "Phone added as the primary phone." : "Phone added.");
     }
 
     public async Task<ServiceResult> RemovePhoneAsync(int patientId, int phoneId)
     {
+        var isPrimary = await _uow.PatientPhones.Query()
+            .Where(phone => phone.Id == phoneId && phone.PatientId == patientId)
+            .Select(phone => (bool?)phone.IsPrimary)
+            .FirstOrDefaultAsync();
+        if (isPrimary == true)
+            return ServiceResult.Failure("The primary phone cannot be removed. Add another phone as primary first.");
         var affectedRows = await _uow.PatientPhones
             .Query()
             .Where(phone => phone.Id == phoneId && phone.PatientId == patientId)

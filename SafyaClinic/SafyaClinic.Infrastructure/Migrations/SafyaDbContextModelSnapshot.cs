@@ -938,6 +938,11 @@ namespace SafyaClinic.Infrastructure.Migrations
 
                     b.HasIndex("PatientId");
 
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PatientPhones_PrimaryPhoneNumber")
+                        .HasFilter("[IsPrimary] = 1");
+
                     b.ToTable("PatientPhones", (string)null);
                 });
 
