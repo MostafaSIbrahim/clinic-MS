@@ -22,7 +22,7 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.HasOne(t => t.Record)
                    .WithMany(pr => pr.Treatments)
                    .HasForeignKey(t => t.RecordId)
-                   .OnDelete(DeleteBehavior.Cascade);
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

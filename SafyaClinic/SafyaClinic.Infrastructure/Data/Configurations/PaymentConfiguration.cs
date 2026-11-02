@@ -41,6 +41,12 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
                    .WithMany(s => s.Payments)
                    .HasForeignKey(p => p.PatientSourceId)
                    .OnDelete(DeleteBehavior.Restrict);
+
+            // F5a: a user who collected payments cannot be deleted (deactivate instead).
+            builder.HasOne(p => p.Collector)
+                   .WithMany()
+                   .HasForeignKey(p => p.CollectedBy)
+                   .OnDelete(DeleteBehavior.Restrict);
             builder.HasIndex(p => new
             {
                 p.Status,

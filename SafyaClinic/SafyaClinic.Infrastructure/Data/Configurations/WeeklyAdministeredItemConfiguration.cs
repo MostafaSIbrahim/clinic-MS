@@ -31,7 +31,7 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
 
             // PackageItemId → PackageItems (RESTRICT - avoid multiple cascade paths)
             builder.HasOne(w => w.PackageItem)
-                   .WithMany()
+                   .WithMany(p => p.AdministeredItems)
                    .HasForeignKey(w => w.PackageItemId)
                    .OnDelete(DeleteBehavior.NoAction);
 

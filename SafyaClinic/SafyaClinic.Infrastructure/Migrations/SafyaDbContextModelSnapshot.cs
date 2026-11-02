@@ -34,8 +34,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("ContentType")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -110,9 +110,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<int>("AnalysisTypeId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("AnalysisTypeId1")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -152,8 +149,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AnalysisTypeId");
-
-                    b.HasIndex("AnalysisTypeId1");
 
                     b.HasIndex("CreatedBy");
 
@@ -664,9 +659,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<int>("PackageItemId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("PackageItemId1")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AdministeredBy");
@@ -674,8 +666,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasIndex("FollowUpId");
 
                     b.HasIndex("PackageItemId");
-
-                    b.HasIndex("PackageItemId1");
 
                     b.ToTable("WeeklyAdministeredItems", (string)null);
                 });
@@ -1123,9 +1113,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<int?>("PatientRecordId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("PrescriptionDate")
                         .HasColumnType("datetime2");
 
@@ -1133,8 +1120,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("PatientRecordId");
 
                     b.HasIndex("RecordId");
 
@@ -1150,7 +1135,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ContentType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -1631,14 +1617,10 @@ namespace SafyaClinic.Infrastructure.Migrations
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Analysis.MedicalAnalysis", b =>
                 {
                     b.HasOne("SafyaClinic.Domain.Entities.Analysis.AnalysisType", "Type")
-                        .WithMany()
+                        .WithMany("Analyses")
                         .HasForeignKey("AnalysisTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("SafyaClinic.Domain.Entities.Analysis.AnalysisType", null)
-                        .WithMany("Analyses")
-                        .HasForeignKey("AnalysisTypeId1");
 
                     b.HasOne("SafyaClinic.Domain.Identity.User", null)
                         .WithMany()
@@ -1720,7 +1702,7 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", "Record")
                         .WithMany("Treatments")
                         .HasForeignKey("RecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Record");
@@ -1754,19 +1736,19 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasOne("SafyaClinic.Domain.Identity.User", "Doctor")
                         .WithMany()
                         .HasForeignKey("DoctorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SafyaClinic.Domain.Entities.Nutrition.NutritionPackage", "Package")
                         .WithMany("Enrollments")
                         .HasForeignKey("PackageId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SafyaClinic.Domain.Entities.Patient.Patient", "Patient")
                         .WithMany("NutritionEnrollments")
                         .HasForeignKey("PatientId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Doctor");
@@ -1791,14 +1773,10 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("SafyaClinic.Domain.Entities.Nutrition.PackageItem", "PackageItem")
-                        .WithMany()
+                        .WithMany("AdministeredItems")
                         .HasForeignKey("PackageItemId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.HasOne("SafyaClinic.Domain.Entities.Nutrition.PackageItem", null)
-                        .WithMany("AdministeredItems")
-                        .HasForeignKey("PackageItemId1");
 
                     b.Navigation("AdministerByUser");
 
@@ -1823,7 +1801,7 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasOne("SafyaClinic.Domain.Entities.Analysis.AnalysisType", "AnalysisType")
                         .WithMany()
                         .HasForeignKey("AnalysisTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SafyaClinic.Domain.Entities.Nutrition.WeeklyFollowUp", "FollowUp")
@@ -1886,7 +1864,7 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasOne("SafyaClinic.Domain.Identity.User", "Collector")
                         .WithMany()
                         .HasForeignKey("CollectedBy")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("SafyaClinic.Domain.Entities.Nutrition.PatientNutritionEnrollment", "Enrollment")
@@ -1926,7 +1904,7 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasOne("SafyaClinic.Domain.Entities.Payment.Payment", "Payment")
                         .WithMany("Adjustments")
                         .HasForeignKey("PaymentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Payment");
@@ -1934,14 +1912,10 @@ namespace SafyaClinic.Infrastructure.Migrations
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Prescription.Prescription", b =>
                 {
-                    b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", null)
-                        .WithMany("Prescriptions")
-                        .HasForeignKey("PatientRecordId");
-
                     b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", "Record")
-                        .WithMany()
+                        .WithMany("Prescriptions")
                         .HasForeignKey("RecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Record");

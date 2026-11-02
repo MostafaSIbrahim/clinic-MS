@@ -16,6 +16,20 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
             builder.HasIndex(e => e.PatientId);
             builder.HasIndex(e => e.Status);
+
+            // F5a: enrollments are financial history — never deleted as a side effect.
+            builder.HasOne(e => e.Patient)
+                   .WithMany(p => p.NutritionEnrollments)
+                   .HasForeignKey(e => e.PatientId)
+                   .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.Package)
+                   .WithMany(p => p.Enrollments)
+                   .HasForeignKey(e => e.PackageId)
+                   .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(e => e.Doctor)
+                   .WithMany()
+                   .HasForeignKey(e => e.DoctorId)
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
