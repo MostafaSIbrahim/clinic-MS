@@ -3,7 +3,7 @@ using SafyaClinic.Domain.Entities.Common;
 using SafyaClinic.Domain.Entities.MedicalRecord;
 using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Entities.Reservation;
-
+using SafyaClinic.Domain.Enums;
 
 namespace SafyaClinic.Domain.Identity
 {
@@ -21,8 +21,10 @@ namespace SafyaClinic.Domain.Identity
         public DateTime? LockoutEndUtc { get; set; }         // sign-in refused until this time
         public bool MustChangePassword { get; set; }         // set by an admin reset
         public string SecurityStamp { get; set; } = string.Empty;   // changes end all sessions of this user
+        public ClinicianType ClinicianType { get; set; } = ClinicianType.None;   // F4a: doctor pickers and queues
         // Navigation properties
         public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+        public virtual ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
         public virtual ICollection<Patient> CreatedPatients { get; set; } = new List<Patient>();
         public virtual ICollection<Reservation> DoctorReservations { get; set; } = new List<Reservation>();
         public virtual ICollection<PatientRecord> DoctorRecords { get; set; } = new List<PatientRecord>();

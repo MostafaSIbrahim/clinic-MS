@@ -18,6 +18,7 @@ public static class DbSeeder
     {
         await SeedRolesAsync(context);
         await EnsureReceptionAdminRoleAsync(context);
+        await SeedPermissionsAsync(context);
         await SeedAdminAsync(context, configuration);
         await SeedAnalysisTypesAsync(context);
         await SeedTreatmentTypesAsync(context);
@@ -66,6 +67,57 @@ public static class DbSeeder
                 Description = "Front-desk supervisor: payments and payment reports"
             });
 
+        await context.SaveChangesAsync();
+    }
+
+
+    // ── Permissions and system groups (F4a) ─────────────────
+    /// <summary>
+    /// Copies the permission catalogue from code and creates one group per role in use, granting
+    /// what that role can do today. Each group is created once; grants an admin removes later stay
+    /// removed, except that Administrators always receive every permission.
+    /// </summary>
+    private static async Task SeedPermissionsAsync(SafyaDbContext context)
+    {
+        var existing = await context.Permissions.ToDictionaryAsync(p => p.Code);
+        foreach (var definition in PermissionCatalogue.All)
+        {
+            if (!existing.TryGetValue(definition.Code, out var permission))
+            {
+                permission = new Permission { Code = definition.Code };
+                context.Permissions.Add(permission);
+            }
+            permission.Area = definition.Area;
+            permission.Description = definition.Description;
+            permission.IsSensitive = definition.IsSensitive;
+        }
+        await context.SaveChangesAsync();
+
+        foreach (var definition in SystemGroups.All)
+        {
+            var group = await context.PermissionGroups
+                .Include(g => g.GroupPermissions)
+                .FirstOrDefaultAsync(g => g.SystemKey == definition.RoleName);
+
+            if (group is null)
+            {
+                group = new PermissionGroup
+                {
+                    Name = definition.Name,
+                    Description = definition.Description,
+                    SystemKey = definition.RoleName
+                };
+                context.PermissionGroups.Add(group);
+            }
+            else if (definition.RoleName != SystemGroups.AdminRole)
+            {
+                continue;   // an existing group keeps the grants an admin gave it
+            }
+
+            var granted = group.GroupPermissions.Select(p => p.PermissionCode).ToHashSet();
+            foreach (var code in definition.Permissions.Where(c => !granted.Contains(c)))
+                group.GroupPermissions.Add(new GroupPermission { PermissionCode = code });
+        }
         await context.SaveChangesAsync();
     }
     public const string AdminPasswordSettingKey = "Seed:AdminPassword";
