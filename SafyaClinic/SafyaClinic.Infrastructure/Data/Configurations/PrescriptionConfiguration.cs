@@ -11,9 +11,10 @@ public class PrescriptionConfiguration : IEntityTypeConfiguration<Prescription>
         builder.Property(p => p.PrescriptionDate).IsRequired();
         builder.Property(p => p.Notes).HasMaxLength(1000);
 
+        // F5a: name the collection (removes the shadow PatientRecordId) and protect clinical history.
         builder.HasOne(p => p.Record)
-               .WithMany()
+               .WithMany(r => r.Prescriptions)
                .HasForeignKey(p => p.RecordId)
-               .OnDelete(DeleteBehavior.Cascade);
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }

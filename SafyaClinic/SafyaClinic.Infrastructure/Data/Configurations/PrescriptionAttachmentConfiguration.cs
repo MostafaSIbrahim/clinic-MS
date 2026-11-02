@@ -10,6 +10,7 @@ public class PrescriptionAttachmentConfiguration : IEntityTypeConfiguration<Pres
         builder.HasKey(pa => pa.Id);
         builder.Property(pa => pa.FileName).IsRequired().HasMaxLength(255);
         builder.Property(pa => pa.FilePath).IsRequired().HasMaxLength(500);
+        builder.Property(pa => pa.ContentType).HasMaxLength(100);
 
         builder.HasOne(pa => pa.Prescription)
                .WithMany(p => p.Attachments)

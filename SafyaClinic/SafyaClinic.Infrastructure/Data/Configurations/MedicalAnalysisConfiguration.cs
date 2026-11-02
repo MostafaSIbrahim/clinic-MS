@@ -2,11 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SafyaClinic.Domain.Entities.Analysis;
 using SafyaClinic.Domain.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace SafyaClinic.Infrastructure.Data.Configurations
 {
@@ -51,7 +47,7 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
 
             // AnalysisType → MedicalAnalysis (1:N)
             builder.HasOne(ma => ma.Type)
-                   .WithMany()
+                   .WithMany(t => t.Analyses)
                    .HasForeignKey(ma => ma.AnalysisTypeId)
                    .OnDelete(DeleteBehavior.Restrict);
 
