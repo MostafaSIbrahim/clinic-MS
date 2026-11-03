@@ -1,0 +1,29 @@
+@model IReadOnlyList<SafyaClinic.Web.Navigation.NavSection>
+@* F7: one labelled list per workspace; headings name the groups for screen readers. *@
+@{
+    var index = 0;
+}
+@foreach (var navGroup in Model)
+{
+    index++;
+    var headingId = $"nav-section-{index}";
+    <div class="app-nav-section">
+        @if (navGroup.Label is not null)
+        {
+            <h2 class="nav-section-label" id="@headingId">@navGroup.Label</h2>
+        }
+        <ul class="nav flex-column" aria-labelledby="@(navGroup.Label is null ? null : headingId)">
+            @foreach (var link in navGroup.Links)
+            {
+                <li class="nav-item">
+                    <a class="nav-link @(link.IsActive ? "active" : null)"
+                       asp-controller="@link.Controller"
+                       asp-action="@link.Action"
+                       aria-current="@(link.IsActive ? "page" : null)">
+                        <i class="bi @link.Icon" aria-hidden="true"></i>@link.Label
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+}
