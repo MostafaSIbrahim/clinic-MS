@@ -66,12 +66,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 // ── Authorization ────────────────────────────────────────────
-// Role-based policies until F4b-2 moves every controller to [RequirePermission].
-builder.Services.AddAuthorization(options =>
-{
-    foreach (var (name, roles) in LegacyRolePolicies.All)
-        options.AddPolicy(name, policy => policy.RequireRole(roles));
-});
+builder.Services.AddAuthorization();
 // Permissions (F4b): "perm:<code>" policies are built on demand and checked against the user's groups.
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

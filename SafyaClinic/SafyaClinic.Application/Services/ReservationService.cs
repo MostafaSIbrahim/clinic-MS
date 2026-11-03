@@ -9,26 +9,25 @@ using SafyaClinic.Domain.Entities.Reservation;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using SafyaClinic.Application.Common;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Application.Services;
 
 public class ReservationService : IReservationService
 {
     private readonly IUnitOfWork _uow;
+    private readonly IPermissionStore _permissions;
     private readonly IClinicClock _clock;
 
-    public ReservationService(IUnitOfWork uow, IClinicClock? clock = null)
+    public ReservationService(IUnitOfWork uow, IPermissionStore permissions, IClinicClock? clock = null)
     {
         _uow = uow;
+        _permissions = permissions;
         _clock = clock ?? ClinicClock.Cairo;
     }
-    // ── S7 rule helpers ──────────────────────────────────────
-    private Task<List<string>> RoleNamesAsync(int userId) =>
-        _uow.UserRoles
-            .Query()
-            .Where(ur => ur.UserId == userId)
-            .Select(ur => ur.Role.RoleName)
-            .ToListAsync();
+    // ── S7 rule helpers (F4b: permissions) ───────────────────
+    private Task<IReadOnlySet<string>> PermissionsAsync(int userId) =>
+        _permissions.GetPermissionsAsync(userId);
 
     private async Task<string?> StatusChangeProblemAsync(int reservationId, int actingUserId, string targetStatus)
     {
@@ -42,7 +41,7 @@ public class ReservationService : IReservationService
             return "Reservation not found.";
 
         return ReservationRules.CheckStatusChange(
-            await RoleNamesAsync(actingUserId), actingUserId, doctorId.Value, targetStatus);
+            await PermissionsAsync(actingUserId), actingUserId, doctorId.Value, targetStatus);
     }
     public async Task<ServiceResult<ReservationDto>> CreateReservationAsync(
         CreateReservationRequest request, int createdBy)
@@ -85,7 +84,7 @@ public class ReservationService : IReservationService
 
         // The treatment type carries the price for this reservation; use the
         // caller-supplied amount only if they explicitly overrode it.
-        var requestedAmount = ReservationRules.CanOverridePrice(await RoleNamesAsync(createdBy))
+        var requestedAmount = ReservationRules.CanOverridePrice(await PermissionsAsync(createdBy))
     ? request.TotalAmount
     : null;   // D4: only an Admin may change the price
         var totalAmount = requestedAmount ?? treatmentType.DefaultCost;
@@ -688,7 +687,7 @@ public class ReservationService : IReservationService
 
         // If the treatment type changed and the caller didn't explicitly supply a new
         // amount, re-derive the price from the new type instead of keeping the old one.
-        var requestedAmount = ReservationRules.CanOverridePrice(await RoleNamesAsync(updatedBy))
+        var requestedAmount = ReservationRules.CanOverridePrice(await PermissionsAsync(updatedBy))
     ? request.TotalAmount
     : null;   // D4: only an Admin may change the price
         var totalAmount = requestedAmount

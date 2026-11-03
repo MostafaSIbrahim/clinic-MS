@@ -1,15 +1,17 @@
 ﻿using SafyaClinic.Application.Services;
 using Xunit;
+using SafyaClinic.Tests.Web.Security;
 
 namespace SafyaClinic.Tests.Application;
 
-/// <summary>S7: D4 (price, completion) and D6 (other doctors' reservations).</summary>
+/// <summary>S7/F4b: D4 (price, completion) and D6 (other doctors' reservations), by role, through permissions.</summary>
 public class ReservationRulesTests
 {
     private const int Me = 10;
     private const int OtherDoctor = 20;
 
-    private static string[] Roles(params string[] roles) => roles;
+    // F4b: the rules take permissions; each role stands for its system group's permissions.
+    private static IReadOnlySet<string> Roles(params string[] roles) => RolePermissions.Of(roles);
 
     [Fact]
     public void Admin_may_set_completed()

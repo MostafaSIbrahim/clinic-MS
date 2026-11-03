@@ -3,9 +3,14 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Controllers;
 using Xunit;
+using Microsoft.Extensions.DependencyInjection;
+using SafyaClinic.Application.Security;
+using SafyaClinic.Tests.Web.Security;
+using SafyaClinic.Web.Security;
 
 namespace SafyaClinic.Tests.Web.Payments;
 
@@ -16,6 +21,13 @@ namespace SafyaClinic.Tests.Web.Payments;
 public class PaymentsControllerAccessTests
 {
     private static readonly TimeZoneInfo Cairo = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+
+    // The controller calls View(), which reads TempData; nothing is stored in these tests.
+    private sealed class NoTempDataProvider : ITempDataProvider
+    {
+        public IDictionary<string, object> LoadTempData(HttpContext context) => new Dictionary<string, object>();
+        public void SaveTempData(HttpContext context, IDictionary<string, object> values) { }
+    }
 
     private static (PaymentsController Controller, PaymentServiceSpy Spy) Create(params string[] roles)
     {
@@ -30,11 +42,15 @@ public class PaymentsControllerAccessTests
             {
                 HttpContext = new DefaultHttpContext
                 {
-                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, "tests"))
+                    User = new ClaimsPrincipal(new ClaimsIdentity(claims, "tests")),
+                    RequestServices = new ServiceCollection()
+                          .AddSingleton<ICurrentPermissions>(new RolePermissions(roles))
+                          .BuildServiceProvider()
                 }
             }
         };
 
+        controller.TempData = new TempDataDictionary(controller.HttpContext, new NoTempDataProvider());
         return (controller, (PaymentServiceSpy)(object)service);
     }
 
@@ -157,26 +173,29 @@ public class PaymentsControllerAccessTests
     }
 
     [Fact]
-    public void Every_action_declares_its_expected_payment_policy()
+    public void Every_action_declares_its_expected_payment_permission()
     {
         var actions = typeof(PaymentsController)
             .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .ToList();
 
         var missing = actions
-            .Where(action => !action.GetCustomAttributes<AuthorizeAttribute>()
-                .Any(attribute => attribute.Policy == ExpectedPolicy(action.Name)))
-            .Select(action => $"{action.Name} (expected {ExpectedPolicy(action.Name)})")
+            .Where(action => !action.GetCustomAttributes<RequirePermissionAttribute>()
+                .Any(attribute => attribute.Code == ExpectedPermission(action.Name)))
+            .Select(action => $"{action.Name} (expected {ExpectedPermission(action.Name)})")
             .ToList();
 
         Assert.NotEmpty(actions);
         Assert.Empty(missing);
     }
 
-    private static string ExpectedPolicy(string action) => action switch
+    private static string ExpectedPermission(string action) => action switch
     {
-        "Report" => "PaymentReports",
-        "DashboardLineDetails" or "RecalculateAllPaidStatuses" or "BackfillZeroCostPayments" => "AdminOnly",
-        _ => "PaymentStaff"
+        "Report" => Permissions.Payments.ViewReport,
+        "DashboardLineDetails" => Permissions.Payments.ViewFullDashboard,
+        "RecalculateAllPaidStatuses" or "BackfillZeroCostPayments" => Permissions.Payments.Maintenance,
+        "Collect" => Permissions.Payments.Collect,
+        "Cancel" or "ChangeAmount" => Permissions.Payments.Adjust,
+        _ => Permissions.Payments.View
     };
 }

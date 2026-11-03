@@ -7,10 +7,12 @@ using SafyaClinic.Application.DTOs.Common;
 using Microsoft.EntityFrameworkCore;
 using SafyaClinic.Infrastructure.Data;
 using SafyaClinic.Web.Models;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
-[Authorize(Policy = "AdminOnly")]
+[RequirePermission(Permissions.Users.Manage)]
 public class UsersController : BaseController
 {
     private readonly IUserService _userService;

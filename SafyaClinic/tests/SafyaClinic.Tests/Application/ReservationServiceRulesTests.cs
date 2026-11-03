@@ -8,6 +8,7 @@ using SafyaClinic.Domain.Identity;
 using SafyaClinic.Infrastructure.Data;
 using SafyaClinic.Infrastructure.Repositories;
 using Xunit;
+using SafyaClinic.Infrastructure.Security;
 
 namespace SafyaClinic.Tests.Application;
 
@@ -75,7 +76,7 @@ public class ReservationServiceRulesTests
     private static ReservationService Service(SafyaDbContext context)
     {
         context.ChangeTracker.Clear();   // each call is a new request in the app
-        return new ReservationService(new UnitOfWork(context));
+        return new ReservationService(new UnitOfWork(context), new PermissionStore(context));
     }
 
     private CreateReservationRequest Booking(Setup s, decimal amount) => new()

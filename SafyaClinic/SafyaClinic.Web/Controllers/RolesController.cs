@@ -5,11 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Infrastructure.Data;
 using SafyaClinic.Web.Models;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
 // Role lookup: protect both direct navigation and POST requests, not only the menu link.
-[Authorize(Policy = "AdminOnly")]
+[RequirePermission(Permissions.Users.Manage)]
 public class RolesController : BaseController
 {
     private readonly SafyaDbContext _context;

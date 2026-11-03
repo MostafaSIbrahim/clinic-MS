@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Services.Files;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers
 {
-    [Authorize(Policy = "DoctorOrAdmin")]
+    [RequirePermission(Permissions.Records.View)]
     public class MedicalRecordsController : BaseController
     {
         private readonly IPatientRecordService _recordService;
@@ -59,7 +61,7 @@ namespace SafyaClinic.Web.Controllers
                     await _reservationService.GetConsultationContextAsync(
                         record.ReservationId.Value,
                         CurrentUserId,
-                        IsAdmin);
+                        await CanAsync(Permissions.Consultations.ActOnBehalf));
 
                 if (contextResult.IsSuccess && contextResult.Data is { } context)
                 {
@@ -84,6 +86,7 @@ namespace SafyaClinic.Web.Controllers
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> Create(int patientId, int? reservationId)
         {
             if (reservationId.HasValue)
@@ -91,7 +94,7 @@ namespace SafyaClinic.Web.Controllers
                 var result = await _reservationService.GetConsultationContextAsync(
                     reservationId.Value,
                     CurrentUserId,
-                    IsAdmin);
+                    await CanAsync(Permissions.Consultations.ActOnBehalf));
 
                 if (!result.IsSuccess ||
                     result.Data is null ||
@@ -115,6 +118,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> Create(CreatePatientRecordRequest model)
         {
             if (!ModelState.IsValid)
@@ -124,12 +128,13 @@ namespace SafyaClinic.Web.Controllers
             var result = await _recordService.CreateRecordAsync(
                     model,
                     CurrentUserId,
-                    IsAdmin);
+                    await CanAsync(Permissions.Consultations.ActOnBehalf));
             if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
             return RedirectWithSuccess("Record created.", nameof(Details), routeValues: new { id = result.Data!.Id });
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> Edit(int id)
         {
             var result = await _recordService.GetRecordByIdAsync(id);
@@ -150,6 +155,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> Edit(int id, UpdatePatientRecordRequest model)
         {
             if (!ModelState.IsValid) return View(model);
@@ -160,7 +166,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Records.Lock)]
         public async Task<IActionResult> Lock(int id)
         {
             await _recordService.LockRecordAsync(id);
@@ -171,6 +177,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> AddTreatment(int recordId, AddTreatmentRequest model)
         {
             var result = await _recordService.AddTreatmentAsync(recordId, model, CurrentUserId);
@@ -180,6 +187,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> RemoveTreatment(int treatmentId, int recordId)
         {
             await _recordService.RemoveTreatmentAsync(treatmentId);
@@ -190,6 +198,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> CreatePrescription(CreatePrescriptionRequest model)
         {
             if (!ModelState.IsValid) return View(model);
@@ -198,6 +207,7 @@ namespace SafyaClinic.Web.Controllers
             return RedirectWithSuccess("Prescription created.", nameof(Details), routeValues: new { id = model.RecordId });
         }
         [HttpGet]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> CreatePrescription(int recordId)
         {
             return View(new CreatePrescriptionRequest { RecordId = recordId });
@@ -213,6 +223,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> AddPrescriptionItem(int prescriptionId, AddPrescriptionItemRequest model)
         {
             var result = await _recordService.AddPrescriptionItemAsync(prescriptionId, model);
@@ -222,6 +233,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> RemovePrescriptionItem(int itemId, int prescriptionId)
         {
             await _recordService.RemovePrescriptionItemAsync(itemId);
@@ -230,6 +242,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> MarkPrescriptionPrinted(int prescriptionId, int recordId)
         {
             await _recordService.MarkPrescriptionPrintedAsync(prescriptionId);
@@ -239,7 +252,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "ClinicalStaff")]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> UploadPrescriptionAttachment(
      int prescriptionId, int recordId, IFormFile? file)
         {
@@ -273,7 +286,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Attachments.Delete)]
         public async Task<IActionResult> DeleteAttachment(int attachmentId, int recordId)
         {
             var attachment = await _recordService.GetAttachmentAsync(attachmentId);
@@ -329,7 +342,7 @@ namespace SafyaClinic.Web.Controllers
             var result = await _reservationService.GetConsultationContextAsync(
                 reservationId,
                 CurrentUserId,
-                IsAdmin);
+                await CanAsync(Permissions.Consultations.ActOnBehalf));
 
             if (!result.IsSuccess || result.Data is null)
             {
@@ -358,13 +371,13 @@ namespace SafyaClinic.Web.Controllers
         }
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "DoctorOrAdmin")]
+        [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> CompleteConsultation(int recordId)
         {
             var result = await _reservationService.CompleteConsultationAsync(
                 recordId,
                 CurrentUserId,
-                IsAdmin);
+                await CanAsync(Permissions.Consultations.ActOnBehalf));
 
             if (!result.IsSuccess || result.Data is null)
             {
@@ -376,7 +389,7 @@ namespace SafyaClinic.Web.Controllers
 
             var reservation = result.Data;
 
-            if (IsAdmin || IsReception)
+            if (await CanAsync(Permissions.Payments.Collect))
             {
                 var dueResult = await _paymentService.GetDueAmountAsync(
                     reservation.PatientId,

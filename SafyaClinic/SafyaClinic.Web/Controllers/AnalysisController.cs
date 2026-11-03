@@ -4,10 +4,12 @@ using SafyaClinic.Application.DTOs.Analysis;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Services.Files;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers
 {
-    [Authorize(Policy = "DoctorOrAdmin")]
+    [RequirePermission(Permissions.Analyses.View)]
     public class AnalysisController : BaseController
     {
         private readonly IAnalysisService _analysisService;
@@ -69,6 +71,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpGet]
         [ActionName("Request")]
+        [RequirePermission(Permissions.Analyses.Manage)]
         public async Task<IActionResult> GetRequest(int patientId, int? recordId)
         {
             var types = await _analysisService.GetAnalysisTypesAsync();
@@ -84,6 +87,7 @@ namespace SafyaClinic.Web.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("Request")]
+        [RequirePermission(Permissions.Analyses.Manage)]
         public async Task<IActionResult> PostRequest(RequestAnalysisBatchRequest model)
         {
             if (!ModelState.IsValid || model.AnalysisTypeIds is null || !model.AnalysisTypeIds.Any())
@@ -158,6 +162,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Analyses.Manage)]
         public async Task<IActionResult> UpdateStatus(int id, UpdateAnalysisStatusRequest model)
         {
             var result = await _analysisService.UpdateStatusAsync(id, model);
@@ -168,7 +173,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "ClinicalStaff")]
+        [RequirePermission(Permissions.Analyses.Manage)]
         public async Task<IActionResult> UploadAttachment(int analysisId, IFormFile? file)
         {
             var (stored, error) = await _files.SaveAsync(file, LocalFileStorage.Analysis);
@@ -216,7 +221,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Attachments.Delete)]
         public async Task<IActionResult> DeleteAttachment(int attachmentId, int analysisId)
         {
             var attachment = await _analysisService.GetAttachmentAsync(attachmentId);

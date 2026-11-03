@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers.Api
 {
@@ -8,7 +10,7 @@ namespace SafyaClinic.Web.Controllers.Api
     // prescription form (see wwwroot/js/medicine-autocomplete.js).
     [ApiController]
     [Route("api/medicines")]
-    [Authorize(Policy = "ClinicalStaff")]
+    [RequirePermission(Permissions.Medicines.Search)]
     public class MedicinesController : ControllerBase
     {
         private readonly IEgyptianDrugService _drugService;

@@ -1,32 +1,29 @@
-﻿namespace SafyaClinic.Application.Services;
+﻿using SafyaClinic.Application.Security;
+
+namespace SafyaClinic.Application.Services;
 
 /// <summary>
-/// Interim reservation rules until permission groups ship (S7; decisions D4 and D6).
-/// Roles are read from the database by the caller, never from the browser.
+/// Reservation rules (S7; decisions D4 and D6), decided by the acting user's permissions (F4b).
+/// Permissions are read from the database by the caller, never from the browser.
 /// </summary>
 public static class ReservationRules
 {
-    public const string AdminRole = "Admin";
-    public const string DoctorRole = "Doctor";
-    public const string NutritionistRole = "Nutritionist";
     public const string CompletedStatus = "Completed";
 
-    /// <summary>D4: only an Admin may set a price different from the treatment type's.</summary>
-    public static bool CanOverridePrice(IReadOnlyCollection<string> roles) => roles.Contains(AdminRole);
+    /// <summary>D4: a price different from the treatment type's needs Reservations.OverridePrice.</summary>
+    public static bool CanOverridePrice(IReadOnlySet<string> permissions) =>
+        permissions.Contains(Permissions.Reservations.OverridePrice);
 
     /// <summary>Returns a message for the user, or null when the status change is allowed.</summary>
     public static string? CheckStatusChange(
-        IReadOnlyCollection<string> roles, int actingUserId, int reservationDoctorId, string targetStatus)
+        IReadOnlySet<string> permissions, int actingUserId, int reservationDoctorId, string targetStatus)
     {
-        var isAdmin = roles.Contains(AdminRole);
-
         // D4: doctors complete a visit from the consultation screen, which records it properly.
-        if (targetStatus == CompletedStatus && !isAdmin)
+        if (targetStatus == CompletedStatus && !permissions.Contains(Permissions.Reservations.SetCompleted))
             return "Only an administrator can set a visit to Completed here. The doctor completes it from the consultation screen.";
 
-        // D6: a clinician never changes the status of another doctor's reservation.
-        var isClinician = roles.Contains(DoctorRole) || roles.Contains(NutritionistRole);
-        if (isClinician && !isAdmin && reservationDoctorId != actingUserId)
+        // D6: without Reservations.ChangeAnyDoctorStatus, only one's own reservations.
+        if (reservationDoctorId != actingUserId && !permissions.Contains(Permissions.Reservations.ChangeAnyDoctorStatus))
             return "You cannot change the status of another doctor's reservation.";
 
         return null;

@@ -2,6 +2,7 @@
 using SafyaClinic.Application.DTOs.Common;
 using System.Security.Claims;
 using SafyaClinic.Web.Services.Files;
+using SafyaClinic.Web.Security;
 
 namespace SafyaClinic.Web.Controllers
 {
@@ -12,11 +13,13 @@ namespace SafyaClinic.Web.Controllers
         protected int CurrentUserId =>
             int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
 
-        protected bool IsAdmin => User.IsInRole("Admin");
+        // F4b: what a user may do is a permission from their groups.
+        protected Task<bool> CanAsync(string permission) =>
+            HttpContext.RequestServices.GetRequiredService<ICurrentPermissions>().HasAsync(permission);
+
+        // Which clinician's day the dashboard shows; moves to ClinicianType in F4c.
         protected bool IsDoctor => User.IsInRole("Doctor");
         protected bool IsNutritionist => User.IsInRole("Nutritionist");
-        protected bool IsReception => User.IsInRole("Reception");
-
         // ── TempData alerts (rendered in _Layout) ────────────────
 
         protected void Success(string message) =>
