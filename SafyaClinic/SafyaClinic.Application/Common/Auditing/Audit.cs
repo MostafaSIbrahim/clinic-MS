@@ -23,6 +23,11 @@ public static class AuditActions
     public const string PaymentCollected = "Payment.Collected";
     public const string PaymentCancelled = "Payment.Cancelled";
     public const string PaymentAmountChanged = "Payment.AmountChanged";
+    public const string GroupCreated = "Group.Created";
+    public const string GroupUpdated = "Group.Updated";
+    public const string GroupDeleted = "Group.Deleted";
+    public const string GroupMemberAdded = "Group.MemberAdded";
+    public const string GroupMemberRemoved = "Group.MemberRemoved";
 }
 
 /// <summary>Who is acting and from where — supplied by the web layer.</summary>

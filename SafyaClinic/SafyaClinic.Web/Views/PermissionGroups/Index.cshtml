@@ -1,0 +1,47 @@
+@model IReadOnlyList<PermissionGroupSummary>
+@{
+    ViewData["Title"] = "Permission Groups";
+}
+<div class="page-toolbar">
+    <div>
+        <h1>Permission Groups</h1>
+        <p class="text-muted mb-0">What each group of users may see and do. A user's access is everything their groups allow.</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New group</a>
+        <a asp-controller="Users" asp-action="Index" class="btn btn-outline-secondary">Users</a>
+    </div>
+</div>
+<div class="card">
+    <div class="table-responsive" tabindex="0" role="region" aria-label="Permission groups">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Group</th>
+                    <th scope="col">Description</th>
+                    <th scope="col" class="text-end">Permissions</th>
+                    <th scope="col" class="text-end">Members</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var g in Model)
+            {
+                <tr>
+                    <th scope="row">
+                        @g.Name
+                        @if (g.SystemKey is not null)
+                        {
+                            <span class="badge bg-secondary ms-1">Built-in</span>
+                        }
+                    </th>
+                    <td class="clinical-text">@(g.Description ?? "—")</td>
+                    <td class="text-end">@g.PermissionCount</td>
+                    <td class="text-end">@g.MemberCount</td>
+                    <td class="text-end"><a asp-action="Edit" asp-route-id="@g.Id" class="btn btn-sm btn-outline-primary">Open</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
