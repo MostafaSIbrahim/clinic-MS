@@ -669,3 +669,14 @@ main.app-main {
     max-width: 46rem;
 }
 
+/* ── F7: sidebar sections from the navigation catalogue ───── */
+#sidebar .app-nav-section ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#sidebar h2.nav-section-label {
+    margin: 0.75rem 0 0;
+    line-height: var(--line-height-base);
+}
