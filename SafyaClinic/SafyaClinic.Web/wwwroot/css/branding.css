@@ -13,7 +13,7 @@
 }
 
 .clinic-brand-link:focus-visible {
-    outline: 3px solid #5b21b6;
+    outline: 3px solid var(--color-focus-ring);
     outline-offset: 4px;
     border-radius: 4px;
 }

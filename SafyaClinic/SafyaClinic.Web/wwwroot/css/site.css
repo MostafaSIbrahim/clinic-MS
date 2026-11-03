@@ -1,37 +1,34 @@
 /* ══════════════════════════════════════════════════════════════
-   Safya Clinic — Telerik-inspired design system
+   Safya Clinic — application styles (colours, radii and shadows come from tokens.css, F6)
    Palette: deep violet primary, teal accent, warm off-white surface
    ══════════════════════════════════════════════════════════════ */
 
 :root {
-    --brand-ink: #171223;
-    --brand-primary: #5B21B6;
-    --brand-primary-dark: #3E1878;
-    --brand-primary-light: #EDE7FB;
-    --brand-accent: #7C3AED;
-    --brand-teal: #0EA5B7;
-    --brand-orange: #FF6358;
-    --brand-rose: #E11D6C;
+    /* F6: these older names now point at the design tokens (tokens.css).
+       New CSS should use the token names directly. */
+    --brand-ink: var(--color-text);
+    --brand-primary: var(--color-primary);
+    --brand-primary-dark: var(--color-primary-active);
+    --brand-primary-light: var(--color-primary-subtle);
+    --brand-accent: var(--violet-600);
+    --brand-teal: var(--color-accent);
 
-    --muted: #6B7280;
-    --border-soft: #E7E3F5;
-    --bg-page: #F6F5FB;
-    --surface: #FFFFFF;
+    --muted: var(--color-text-muted);
+    --border-soft: var(--color-border);
+    --bg-page: var(--color-bg-page);
+    --surface: var(--color-surface);
 
-    --radius-lg: 16px;
-    --radius-md: 10px;
-    --radius-pill: 999px;
-    --shadow-soft: 0 2px 10px rgba(23, 18, 35, 0.05);
-    --shadow-card: 0 6px 24px rgba(23, 18, 35, 0.07);
-    --shadow-lift: 0 14px 34px rgba(91, 33, 182, 0.16);
+    --shadow-soft: var(--shadow-sm);
+    --shadow-card: var(--shadow-md);
+    --shadow-lift: var(--shadow-lg);
 
-    --sidebar-width: 250px;
+    --sidebar-width: 250px;   /* the current sidebar; F7 moves to the token width */
 
-    --primary-color: var(--brand-primary);
-    --success-color: #17A673;
-    --warning-color: #F2B33D;
-    --danger-color: #E5484D;
-    --info-color: var(--brand-teal);
+    --primary-color: var(--color-primary);
+    --success-color: var(--color-success-icon);
+    --warning-color: var(--color-warning-icon);
+    --danger-color: var(--color-danger);
+    --info-color: var(--color-accent);
 }
 /* ══════════════════════════════════════════════════════════════
    Bootstrap Icons & Sidebar Dropdown Fixes
@@ -129,9 +126,9 @@ a:hover { color: var(--brand-primary-dark); }
     height: 36px;
     border-radius: 10px;
     background: linear-gradient(135deg, var(--brand-accent) 0%, var(--brand-primary) 55%, var(--brand-teal) 130%);
-    color: #fff;
+    color: var(--color-on-primary);
     font-size: 1.05rem;
-    box-shadow: 0 6px 16px rgba(91, 33, 182, 0.35);
+    box-shadow: var(--shadow-md);
     flex: 0 0 auto;
 }
 
@@ -146,14 +143,14 @@ a:hover { color: var(--brand-primary-dark); }
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #9CA3AF;
+    color: var(--color-text-muted);
     padding: 0.5rem 1.1rem 0.35rem;
 }
 
 #sidebar .nav-link {
     font-weight: 600;
     font-size: 0.9rem;
-    color: #4B5060 !important;
+    color: var(--color-text-subtle) !important;
     padding: 0.6rem 1.1rem;
     margin: 0.1rem 0.65rem;
     border-radius: var(--radius-md);
@@ -167,7 +164,7 @@ a:hover { color: var(--brand-primary-dark); }
     text-align: center;
     margin-right: 0.65rem;
     font-size: 1rem;
-    color: #9891B0;
+    color: var(--color-text-muted);
     transition: color 0.15s ease;
 }
 
@@ -180,11 +177,11 @@ a:hover { color: var(--brand-primary-dark); }
 
 #sidebar .nav-link.active {
     background: linear-gradient(135deg, var(--brand-accent), var(--brand-primary));
-    color: #fff !important;
-    box-shadow: 0 8px 18px rgba(91, 33, 182, 0.28);
+    color: var(--color-on-primary) !important;
+    box-shadow: var(--shadow-md);
 }
 
-#sidebar .nav-link.active i { color: #fff; }
+#sidebar .nav-link.active i { color: var(--color-on-primary); }
 
 #sidebar .sidebar-footer {
     border-top: 1px solid var(--border-soft);
@@ -233,7 +230,7 @@ main {
     font-size: 0.7rem;
     letter-spacing: 0.06em;
     color: var(--muted);
-    background: #FBFAFE;
+    background: var(--color-surface-subtle);
     border-bottom: 1px solid var(--border-soft);
     padding: 0.85rem 1rem;
 }
@@ -272,12 +269,12 @@ main {
 .btn-primary {
     background: linear-gradient(135deg, var(--brand-accent), var(--brand-primary));
     border: none;
-    box-shadow: 0 6px 16px rgba(91, 33, 182, 0.25);
+    box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover, .btn-primary:focus {
     background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
-    box-shadow: 0 10px 22px rgba(91, 33, 182, 0.32);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-success { background: var(--success-color); border-color: var(--success-color); }
@@ -295,13 +292,13 @@ main {
 /* ── Forms ────────────────────────────────────────────────── */
 .form-control, .form-select {
     border-radius: var(--radius-md);
-    border: 1.5px solid var(--border-soft);
+    border: 1.5px solid var(--color-border-control);   /* F6: at least 3:1 against white */
     padding: 0.6rem 0.875rem;
 }
 
 .form-control:focus, .form-select:focus {
     border-color: var(--brand-primary);
-    box-shadow: 0 0 0 0.2rem rgba(91, 33, 182, 0.14);
+    box-shadow: var(--focus-ring);
 }
 
 .form-label {
@@ -316,16 +313,16 @@ main {
     border: 1px solid transparent;
     border-left: 4px solid transparent;
 }
-.alert-success { border-left-color: var(--success-color); background: #ECFAF4; color: #0B6B49; }
-.alert-danger  { border-left-color: var(--danger-color);  background: #FDECEC; color: #8B1D22; }
-.alert-warning { border-left-color: var(--warning-color); background: #FFF6E5; color: #7A5209; }
-.alert-info    { border-left-color: var(--brand-teal);    background: #E8F8FA; color: #0B5C68; }
+.alert-success { border-left-color: var(--success-color); background: var(--color-success-bg); color: var(--color-success-fg); }
+.alert-danger  { border-left-color: var(--danger-color);  background: var(--color-danger-bg);  color: var(--color-danger-fg); }
+.alert-warning { border-left-color: var(--warning-color); background: var(--color-warning-bg); color: var(--color-warning-fg); }
+.alert-info    { border-left-color: var(--brand-teal);    background: var(--color-info-bg);    color: var(--color-info-fg); }
 
 /* ── Print styles ─────────────────────────────────────────── */
 @media print {
     .no-print { display: none !important; }
     body { background: white; padding: 0; }
-    .card { box-shadow: none !important; border: 1px solid #dee2e6; }
+    .card { box-shadow: none !important; border: 1px solid var(--color-border-strong); }
 }
 
 /* ── Animations ───────────────────────────────────────────── */
@@ -338,15 +335,15 @@ main {
 
 /* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: #CBBFE8; border-radius: 4px; }
+::-webkit-scrollbar-track { background: var(--color-surface-sunken); }
+::-webkit-scrollbar-thumb { background: var(--violet-300); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--brand-primary); }
 
 /* ── Stat cards (Dashboard) ──────────────────────────────── */
 .stat-card {
     border-radius: var(--radius-lg);
     padding: 1.25rem 1.5rem;
-    color: #fff;
+    color: var(--color-text-inverse);
     box-shadow: var(--shadow-card);
     position: relative;
     overflow: hidden;
@@ -360,13 +357,13 @@ main {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.12);
+    background: color-mix(in srgb, var(--color-text-inverse) 12%, transparent);
 }
 
 .stat-card.bg-primary-soft  { background: linear-gradient(135deg, var(--brand-accent) 0%, var(--brand-primary) 100%); }
-.stat-card.bg-teal-soft     { background: linear-gradient(135deg, #0EA5B7 0%, #0B7A88 100%); }
-.stat-card.bg-amber-soft    { background: linear-gradient(135deg, #F2B33D 0%, #E08E1E 100%); }
-.stat-card.bg-rose-soft     { background: linear-gradient(135deg, var(--brand-rose) 0%, #A61354 100%); }
+.stat-card.bg-teal-soft     { background: linear-gradient(135deg, var(--teal-700) 0%, var(--teal-900) 100%); }
+.stat-card.bg-amber-soft    { background: linear-gradient(135deg, var(--amber-700) 0%, var(--amber-800) 100%); }
+.stat-card.bg-rose-soft     { background: linear-gradient(135deg, var(--red-700) 0%, var(--red-900) 100%); }
 
 /* ── Layout body fix (sidebar layout doesn't need top padding) */
 #wrapper body,
@@ -636,7 +633,7 @@ main.app-main {
 .empty-state {
     padding: 2rem 1rem;
     text-align: center;
-    color: #4b5563;
+    color: var(--color-text-muted);
 }
 
 .table-responsive:focus-visible, .btn:focus-visible, a:focus-visible {
