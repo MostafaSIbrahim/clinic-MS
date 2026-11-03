@@ -15,6 +15,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 using SafyaClinic.Application.Common.Auditing;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,16 +65,17 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Events.OnValidatePrincipal = SessionValidator.ValidateAsync;   // S6
     });
 
-builder.Services.AddAuthorizationBuilder()
-    // Payment access: financial reporting and collection have separate permissions.
-    .AddPolicy("PaymentStaff", p => p.RequireRole("Admin", "Reception", "ReceptionAdmin"))
-    .AddPolicy("PaymentReports", p => p.RequireRole("Admin", "Reception", "ReceptionAdmin", "Doctor"))
-    .AddPolicy("AdminOnly",        p => p.RequireRole("Admin"))
-    .AddPolicy("DoctorOrAdmin",    p => p.RequireRole("Admin", "Doctor"))
-    .AddPolicy("ReceptionOrAdmin", p => p.RequireRole("Admin", "Reception"))
-    .AddPolicy("NutritionTeam",    p => p.RequireRole("Admin", "Nutritionist"))
-    .AddPolicy("ClinicalStaff",    p => p.RequireRole("Admin", "Doctor", "Nutritionist", "Reception"));
-
+// ── Authorization ────────────────────────────────────────────
+// Role-based policies until F4b-2 moves every controller to [RequirePermission].
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var (name, roles) in LegacyRolePolicies.All)
+        options.AddPolicy(name, policy => policy.RequireRole(roles));
+});
+// Permissions (F4b): "perm:<code>" policies are built on demand and checked against the user's groups.
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddScoped<ICurrentPermissions, CurrentPermissions>();
 // ── Attachment storage (S3): outside wwwroot, never served statically ──
 var storageRoot = Path.Combine(
     builder.Environment.ContentRootPath,

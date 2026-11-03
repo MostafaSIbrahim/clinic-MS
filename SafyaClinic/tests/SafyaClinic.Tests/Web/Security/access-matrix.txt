@@ -1,0 +1,158 @@
+Analysis.DeleteAttachment POST: Admin
+Analysis.Details ANY: Admin Doctor
+Analysis.DownloadAttachment GET: Admin Doctor
+Analysis.GetRequest GET: Admin Doctor
+Analysis.Index ANY: Admin Doctor
+Analysis.PatientAnalyses ANY: Admin Doctor
+Analysis.PostRequest POST: Admin Doctor
+Analysis.PrintPatientRequests GET: Admin Doctor
+Analysis.PrintRequestSlip GET: Admin Doctor
+Analysis.UpdateStatus POST: Admin Doctor
+Analysis.UploadAttachment POST: Admin Doctor
+Analysis.ViewAttachment GET: Admin Doctor
+Auth.AccessDenied GET: anyone
+Auth.ChangePassword GET: signed-in
+Auth.ChangePassword POST: signed-in
+Auth.Login GET: anyone
+Auth.Login POST: anyone
+Auth.Logout POST: signed-in
+Clinics.Create GET: Admin
+Clinics.Create POST: Admin
+Clinics.Delete POST: Admin
+Clinics.Details ANY: Admin
+Clinics.Edit GET: Admin
+Clinics.Edit POST: Admin
+Clinics.Index ANY: Admin
+Clinics.RemoveAgreement POST: Admin
+Clinics.SaveAgreement POST: Admin
+Dashboard.Index ANY: signed-in
+FollowUps.Book GET: Admin Doctor Reception
+FollowUps.Book POST: Admin Doctor Reception
+FollowUps.Dismiss POST: Admin Doctor Reception
+FollowUps.Index GET: Admin Doctor Reception
+Home.Error ANY: anyone
+Home.Index ANY: anyone
+Lookups.AnalysisTypes ANY: Admin
+Lookups.CreateAnalysisType POST: Admin
+Lookups.CreateInjectionType POST: Admin
+Lookups.CreateTreatmentType POST: Admin
+Lookups.CreateVitaminType POST: Admin
+Lookups.DeleteInjectionType POST: Admin
+Lookups.DeleteTreatmentType POST: Admin
+Lookups.DeleteVitaminType POST: Admin
+Lookups.Index ANY: Admin
+Lookups.InjectionTypes ANY: Admin
+Lookups.SaveInjectionType POST: Admin
+Lookups.SaveTreatmentType POST: Admin
+Lookups.SaveVitaminType POST: Admin
+Lookups.TreatmentTypes ANY: Admin
+Lookups.VitaminTypes ANY: Admin
+MedicalRecords.AddPrescriptionItem POST: Admin Doctor
+MedicalRecords.AddTreatment POST: Admin Doctor
+MedicalRecords.CompleteConsultation POST: Admin Doctor
+MedicalRecords.Consultation GET: Admin Doctor
+MedicalRecords.Create GET: Admin Doctor
+MedicalRecords.Create POST: Admin Doctor
+MedicalRecords.CreatePrescription GET: Admin Doctor
+MedicalRecords.CreatePrescription POST: Admin Doctor
+MedicalRecords.DeleteAttachment POST: Admin
+MedicalRecords.Details ANY: Admin Doctor
+MedicalRecords.DownloadAttachment GET: Admin Doctor
+MedicalRecords.Edit GET: Admin Doctor
+MedicalRecords.Edit POST: Admin Doctor
+MedicalRecords.Lock POST: Admin
+MedicalRecords.MarkPrescriptionPrinted POST: Admin Doctor
+MedicalRecords.PatientRecords ANY: Admin Doctor
+MedicalRecords.PrescriptionDetails GET: Admin Doctor
+MedicalRecords.PrintPrescription GET: Admin Doctor
+MedicalRecords.RemovePrescriptionItem POST: Admin Doctor
+MedicalRecords.RemoveTreatment POST: Admin Doctor
+MedicalRecords.UploadPrescriptionAttachment POST: Admin Doctor
+MedicalRecords.ViewAttachment GET: Admin Doctor
+Medicines.Search GET: Admin Doctor Nutritionist Reception
+Nutrition.CompleteFollowUp POST: Admin Nutritionist
+Nutrition.CreateInjectionType GET: Admin
+Nutrition.CreateInjectionType POST: Admin
+Nutrition.CreatePackage GET: Admin
+Nutrition.CreatePackage POST: Admin
+Nutrition.CreateVitaminType GET: Admin
+Nutrition.CreateVitaminType POST: Admin
+Nutrition.DeactivatePackage POST: Admin
+Nutrition.DeleteFollowUp POST: Admin Nutritionist
+Nutrition.DeleteInjectionType POST: Admin
+Nutrition.DeleteVitaminType POST: Admin
+Nutrition.EditFollowUp GET: Admin Nutritionist
+Nutrition.EditFollowUp POST: Admin Nutritionist
+Nutrition.EditInjectionType GET: Admin
+Nutrition.EditInjectionType POST: Admin
+Nutrition.EditVitaminType GET: Admin
+Nutrition.EditVitaminType POST: Admin
+Nutrition.Enroll GET: Admin Nutritionist
+Nutrition.Enroll POST: Admin Nutritionist
+Nutrition.EnrollmentDetails ANY: Admin Nutritionist
+Nutrition.FollowUpDetails ANY: Admin Nutritionist
+Nutrition.InjectionTypes ANY: Admin
+Nutrition.PackageDetails ANY: Admin Nutritionist
+Nutrition.Packages ANY: Admin Nutritionist
+Nutrition.PatientEnrollments ANY: Admin Nutritionist
+Nutrition.RecordFollowUp GET: Admin Nutritionist
+Nutrition.RecordFollowUp POST: Admin Nutritionist
+Nutrition.UpdateEnrollmentStatus POST: Admin Nutritionist
+Nutrition.VitaminTypes ANY: Admin
+PatientSources.Create GET: Admin
+PatientSources.Create POST: Admin
+PatientSources.Delete POST: Admin
+PatientSources.Edit GET: Admin
+PatientSources.Edit POST: Admin
+PatientSources.Index ANY: Admin
+Patients.AddAddress POST: Admin Doctor Nutritionist Reception
+Patients.AddPhone POST: Admin Doctor Nutritionist Reception
+Patients.Create GET: Admin Doctor Nutritionist Reception
+Patients.Create POST: Admin Doctor Nutritionist Reception
+Patients.Details ANY: Admin Doctor Nutritionist Reception
+Patients.EditBasic GET: Admin Doctor Nutritionist Reception
+Patients.EditBasic POST: Admin Doctor Nutritionist Reception
+Patients.EditMedical GET: Admin Doctor
+Patients.EditMedical POST: Admin Doctor
+Patients.Index ANY: Admin Doctor Nutritionist Reception
+Patients.RemoveAddress POST: Admin Doctor Nutritionist Reception
+Patients.RemovePhone POST: Admin Doctor Nutritionist Reception
+Patients.Timeline GET: Admin Doctor
+PatientsApi.Search GET: Admin Doctor Nutritionist Reception
+Payments.Audit GET: Admin Reception ReceptionAdmin
+Payments.BackfillZeroCostPayments POST: Admin
+Payments.Cancel GET: Admin Reception ReceptionAdmin
+Payments.Cancel POST: Admin Reception ReceptionAdmin
+Payments.ChangeAmount GET: Admin Reception ReceptionAdmin
+Payments.ChangeAmount POST: Admin Reception ReceptionAdmin
+Payments.Collect GET: Admin Reception ReceptionAdmin
+Payments.Collect POST: Admin Reception ReceptionAdmin
+Payments.Dashboard GET: Admin Reception ReceptionAdmin
+Payments.DashboardLineDetails GET: Admin
+Payments.PatientSummary ANY: Admin Reception ReceptionAdmin
+Payments.RecalculateAllPaidStatuses POST: Admin
+Payments.Report GET: Admin Doctor Reception ReceptionAdmin
+Reservations.Board GET: Admin Doctor Nutritionist Reception
+Reservations.Cancel POST: Admin Doctor Nutritionist Reception
+Reservations.CheckIn POST: Admin Reception
+Reservations.Create GET: Admin Doctor Nutritionist Reception
+Reservations.Create POST: Admin Doctor Nutritionist Reception
+Reservations.Details ANY: Admin Doctor Nutritionist Reception
+Reservations.Edit GET: Admin Doctor Nutritionist Reception
+Reservations.Edit POST: Admin Doctor Nutritionist Reception
+Reservations.Index ANY: Admin Doctor Nutritionist Reception
+Reservations.PatientReservationHistoryReport GET: Admin Doctor Nutritionist Reception
+Reservations.Queue GET: Admin Doctor Reception
+Reservations.StartConsultation POST: Admin Doctor
+Reservations.Today ANY: Admin Doctor Nutritionist Reception
+Reservations.UpdateStatus POST: Admin Doctor Nutritionist Reception
+Roles.Create POST: Admin
+Roles.Index GET: Admin
+Users.AssignRole POST: Admin
+Users.Create GET: Admin
+Users.Create POST: Admin
+Users.Index ANY: Admin
+Users.RemoveRole POST: Admin
+Users.ResetPassword GET: Admin
+Users.ResetPassword POST: Admin
+Users.ToggleActive POST: Admin
