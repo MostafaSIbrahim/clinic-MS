@@ -6,6 +6,7 @@ using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Application.Security;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Interfaces.Repositories;
+using SafyaClinic.Domain.Enums;
 
 namespace SafyaClinic.Application.Services;
 
@@ -47,6 +48,12 @@ public class UserService : IUserService
                     $"Role ID {roleId} does not exist.");
         }
 
+        // F4a: the clinician type follows the roles until roles are retired (F4d).
+        var requestedRoleNames = await _uow.Roles
+            .Query()
+            .Where(role => requestedRoleIds.Contains(role.Id))
+            .Select(role => role.RoleName)
+            .ToListAsync();
         var user = new User
         {
             FullName = request.FullName,
@@ -56,6 +63,7 @@ public class UserService : IUserService
             SecurityStamp = SecurityStamps.New(),
             Specialization = request.Specialization,
             LicenseNumber = request.LicenseNumber,
+            ClinicianType = ClinicianTypes.FromRoles(requestedRoleNames),
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = createdByUserId
@@ -166,11 +174,10 @@ public class UserService : IUserService
 
     public async Task<ServiceResult<IEnumerable<UserDto>>> GetDoctorsAsync()
     {
-        // Doctor role = ID 2, Nutritionist = ID 5
+        //F4a: clinicians are marked by ClinicianType (was role IDs 2 and 5).
         var doctors = await _uow.Users
             .Query()
-            .Where(u => u.IsActive &&
-                        u.UserRoles.Any(ur => ur.RoleId == 2 || ur.RoleId == 5))
+            .Where(u => u.IsActive && u.ClinicianType != ClinicianType.None)
             .Select(u => new UserDto
             {
                 Id = u.Id,
@@ -253,7 +260,9 @@ public class UserService : IUserService
             AssignedAt = DateTime.UtcNow,
             AssignedBy = assignedBy
         });
-        await RenewStampAsync(userId);   // the user signs in again and gets the new role
+        var roleNames = await RoleNamesAsync(userId);
+        roleNames.Add(await _uow.Roles.Query().Where(r => r.Id == roleId).Select(r => r.RoleName).FirstAsync());
+        await RenewStampAsync(userId, ClinicianTypes.FromRoles(roleNames));   // the user signs in again and gets the new role
         await _audit.RecordAsync(AuditActions.RoleAssigned, "User", userId, new { roleId }, assignedBy);
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Role assigned. The user will be asked to sign in again.");
@@ -273,7 +282,9 @@ public class UserService : IUserService
             return ServiceResult.Failure(LastAdminMessage);
 
         _uow.UserRoles.Delete(userRole);
-        await RenewStampAsync(userId);   // the removed role stops working at once
+        var roleNames = await RoleNamesAsync(userId);
+        roleNames.Remove(userRole.Role.RoleName);
+        await RenewStampAsync(userId, ClinicianTypes.FromRoles(roleNames));   // the removed role stops working at once
         await _audit.RecordAsync(AuditActions.RoleRemoved, "User", userId, new { roleId, role = userRole.Role.RoleName });
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Role removed. The user will be asked to sign in again.");
@@ -291,14 +302,22 @@ public class UserService : IUserService
         return activeAdminIds.Count == 1 && activeAdminIds[0] == userId;
     }
 
-    private async Task RenewStampAsync(int userId)
+    private async Task RenewStampAsync(int userId, ClinicianType clinicianType)
     {
         var user = await _uow.Users.GetByIdAsync(userId);
         if (user is null) return;
 
         user.SecurityStamp = SecurityStamps.New();
+        user.ClinicianType = clinicianType;   // F4a: follows the roles until F4d
         _uow.Users.Update(user);
     }
+
+    // Saved roles only: the caller adds or removes the role it is changing.
+    private Task<List<string>> RoleNamesAsync(int userId) =>
+        _uow.UserRoles.Query()
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role.RoleName)
+            .ToListAsync();
 
     // ── Mapper ────────────────────────────────────────────────
 
