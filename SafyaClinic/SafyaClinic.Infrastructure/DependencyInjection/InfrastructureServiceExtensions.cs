@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using SafyaClinic.Infrastructure.Data;
 using SafyaClinic.Infrastructure.Repositories;
+using SafyaClinic.Application.Security;
+using SafyaClinic.Infrastructure.Security;
 
 namespace SafyaClinic.Infrastructure.DependencyInjection;
 
@@ -20,6 +22,7 @@ public static class InfrastructureServiceExtensions
                     typeof(SafyaDbContext).Assembly.FullName)));
         // Register UnitOfWork
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IPermissionStore, PermissionStore>();   // F4b
 
 
         return services;

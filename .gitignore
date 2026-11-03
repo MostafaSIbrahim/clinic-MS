@@ -16,3 +16,5 @@ App_Data/
 *.user
 # Patient documents are never committed (F10)
 P-Analysis/
+# F4b: written by AccessMatrixTests when access differs from the baseline
+access-matrix.actual.txt
