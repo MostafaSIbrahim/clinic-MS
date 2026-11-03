@@ -15,14 +15,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@clinicInfo.Name - @clinicInfo.Tagline</title>
-    <!-- Google Fonts Inter & Cairo -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <!-- Bootstrap 5 RTL -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" />
+    @* F6: fonts, icons and Bootstrap (RTL) are served by the app. *@
+    <link rel="stylesheet" href="~/css/fonts.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" asp-append-version="true" />
     @* Branding: this public page has no shared layout, so include logo sizing explicitly. *@
     <link rel="stylesheet" href="~/css/branding.css" asp-append-version="true" />
 
@@ -37,7 +33,7 @@
             }
 
             body {
-                font-family: 'Cairo', 'Inter', sans-serif;
+                font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif;
                 background-color: var(--bg-light);
                 color: var(--text-dark);
             }
@@ -190,7 +186,7 @@
                     <!-- Portal Login for Staff & Admin -->
                     <li class="nav-item ms-lg-3">
                         <a href="/Auth/Login" class="btn btn-outline-teal btn-sm px-4">
-                            <i class="fa-solid fa-right-to-bracket me-1"></i> دخول الطاقم الطبي
+                            <i aria-hidden="true" class="bi bi-box-arrow-in-left me-1"></i> دخول الطاقم الطبي
                         </a>
                     </li>
                 </ul>
@@ -228,7 +224,7 @@
                 <!-- Internal Medicine -->
                 <div class="col-md-4">
                     <div class="card service-card p-4 text-center">
-                        <div class="service-icon mx-auto"><i class="fa-solid fa-stethoscope"></i></div>
+                        <div class="service-icon mx-auto"><i aria-hidden="true" class="bi bi-heart-pulse"></i></div>
                         <h4 class="fw-bold mb-3">الباطنة العامة</h4>
                         <p class="text-muted">تشخيص وعلاج الأمراض المزمنة، المتابعة الدورية، والفحوصات الشاملة بأحدث التقنيات.</p>
                     </div>
@@ -236,7 +232,7 @@
                 <!-- Nutrition -->
                 <div class="col-md-4">
                     <div class="card service-card p-4 text-center">
-                        <div class="service-icon mx-auto"><i class="fa-solid fa-apple-whole"></i></div>
+                        <div class="service-icon mx-auto"><i aria-hidden="true" class="bi bi-basket2"></i></div>
                         <h4 class="fw-bold mb-3">التغذية العلاجية</h4>
                         <p class="text-muted">برامج غذائية مخصصة لإنقاص أو زيادة الوزن، وتغذية الرياضيين والمرضى باحترافية.</p>
                     </div>
@@ -244,7 +240,7 @@
                 <!-- Physio Therapy (Coming Soon) -->
                 <div class="col-md-4">
                     <div class="card service-card p-4 text-center position-relative">
-                        <div class="service-icon mx-auto"><i class="fa-solid fa-child-reaching"></i></div>
+                        <div class="service-icon mx-auto"><i aria-hidden="true" class="bi bi-person-hearts"></i></div>
                         <span class="badge badge-coming-soon position-absolute top-0 end-0 m-3">قريباً</span>
                         <h4 class="fw-bold mb-3">العلاج الطبيعي</h4>
                         <p class="text-muted">جلسات تأهيل وإعادة حركة بأحدث الأجهزة لمساعدتك على استعادة نشاطك وصحتك البدنية.</p>
@@ -264,16 +260,16 @@
 
                     <div class="d-flex align-items-center gap-3 mb-4">
                         <a href="@clinicInfo.Instagram" target="_blank" class="social-link bg-instagram">
-                            <i class="fa-brands fa-instagram"></i>
+                            <i aria-hidden="true" class="bi bi-instagram"></i>
                         </a>
                         <a href="@clinicInfo.Facebook" target="_blank" class="social-link bg-facebook">
-                            <i class="fa-brands fa-facebook-f"></i>
+                            <i aria-hidden="true" class="bi bi-facebook"></i>
                         </a>
                         <span class="fw-bold">dr.enaselharouny</span>
                     </div>
 
                     <a href="@clinicInfo.Instagram" target="_blank" class="btn btn-outline-teal">
-                        زيارة حساب إنستغرام <i class="fa-solid fa-arrow-left ms-2"></i>
+                        زيارة حساب إنستغرام <i aria-hidden="true" class="bi bi-arrow-left ms-2"></i>
                     </a>
                 </div>
 
@@ -331,6 +327,6 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
 </body>
 </html>
