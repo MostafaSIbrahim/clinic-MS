@@ -5,10 +5,12 @@ using SafyaClinic.Web.Models;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
-[Authorize(Policy = "ClinicalStaff")]
+[RequirePermission(Permissions.Reservations.View)]
 public class ReservationsController : BaseController
 {
     private readonly IReservationService _reservationService;
@@ -69,7 +71,7 @@ public class ReservationsController : BaseController
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Reception,Doctor")]
+    [RequirePermission(Permissions.Reservations.ViewQueue)]
     public async Task<IActionResult> Queue(int? clinicId, int? doctorId)
     {
         if (!ModelState.IsValid ||
@@ -82,7 +84,7 @@ public class ReservationsController : BaseController
         if (CurrentUserId <= 0)
             return Challenge();
 
-        var canViewAllQueues = IsAdmin || IsReception;
+        var canViewAllQueues = await CanAsync(Permissions.Reservations.ViewAllQueues);
 
         // Doctors cannot override their own queue through URL parameters.
         if (!canViewAllQueues)
@@ -197,7 +199,7 @@ public class ReservationsController : BaseController
         if (!result.IsSuccess) { Error("Reservation not found."); return RedirectToAction(nameof(Index)); }
         ViewBag.CanCollectPayment = false;
         ViewBag.CollectionStateKnown = false;
-        if ((IsAdmin || IsReception) && result.Data is { } reservation)
+        if (await CanAsync(Permissions.Payments.Collect) && result.Data is { } reservation)
         {
             var due = await _paymentService.GetDueAmountAsync(
                 reservation.PatientId, reservation.Id, null);
@@ -209,6 +211,7 @@ public class ReservationsController : BaseController
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.Reservations.Manage)]
     public async Task<IActionResult> Create(int? patientId)
     {
         if (patientId.HasValue)
@@ -240,6 +243,7 @@ public class ReservationsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Reservations.Manage)]
     public async Task<IActionResult> Create(CreateReservationRequest model)
     {
         if (!ModelState.IsValid)
@@ -274,6 +278,7 @@ public class ReservationsController : BaseController
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.Reservations.Manage)]
     public async Task<IActionResult> Edit(int id)
     {
         var result = await _reservationService.GetReservationByIdAsync(id);
@@ -304,6 +309,7 @@ public class ReservationsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Reservations.Manage)]
     public async Task<IActionResult> Edit(int id, UpdateReservationRequest model)
     {
         if (!ModelState.IsValid)
@@ -331,6 +337,7 @@ public class ReservationsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Reservations.Manage)]
     public async Task<IActionResult> UpdateStatus(int id, int statusId)
     {
         var result = await _reservationService.UpdateStatusAsync(
@@ -344,7 +351,7 @@ public class ReservationsController : BaseController
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        if (result.Data is { StatusName: "Completed" } r && (IsAdmin || IsReception))
+        if (result.Data is { StatusName: "Completed" } r && await CanAsync(Permissions.Payments.Collect))
         {
             var due = await _paymentService.GetDueAmountAsync(r.PatientId, id, null);
             if (due.IsSuccess && due.Data > 0m)
@@ -361,6 +368,7 @@ public class ReservationsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Reservations.Manage)]
     public async Task<IActionResult> Cancel(int id, string? reason)
     {
         var result = await _reservationService.CancelReservationAsync(id, CurrentUserId, reason);
@@ -407,7 +415,7 @@ public class ReservationsController : BaseController
     }
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "ReceptionOrAdmin")]
+    [RequirePermission(Permissions.Reservations.CheckIn)]
     public async Task<IActionResult> CheckIn(int id)
     {
         var result = await _reservationService.CheckInAsync(id);
@@ -425,13 +433,13 @@ public class ReservationsController : BaseController
     }
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "DoctorOrAdmin")]
+    [RequirePermission(Permissions.Reservations.StartConsultation)]
     public async Task<IActionResult> StartConsultation(int id)
     {
         var result = await _reservationService.StartConsultationAsync(
             id,
             CurrentUserId,
-            IsAdmin);
+            await CanAsync(Permissions.Consultations.ActOnBehalf));
 
         if (!result.IsSuccess)
         {

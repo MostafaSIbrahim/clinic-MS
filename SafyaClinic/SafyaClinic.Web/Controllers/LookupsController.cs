@@ -8,10 +8,12 @@ using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [RequirePermission(Permissions.Settings.Lookups)]
     public class LookupsController : BaseController
     {
         private readonly SafyaDbContext _context;

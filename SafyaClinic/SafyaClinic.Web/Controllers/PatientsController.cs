@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
-[Authorize(Policy = "ClinicalStaff")]
+[RequirePermission(Permissions.Patients.View)]
 public class PatientsController : BaseController
 {
     private readonly IPatientService _patientService;
@@ -54,7 +56,7 @@ public class PatientsController : BaseController
     }
 
     [HttpGet]
-    [Authorize(Policy = "DoctorOrAdmin")]
+    [RequirePermission(Permissions.Patients.ViewTimeline)]
     public async Task<IActionResult> Timeline(
     int id,
     [FromQuery] PaginationRequest pagination)
@@ -84,6 +86,7 @@ public class PatientsController : BaseController
     // ── Create ────────────────────────────────────────────────
 
     [HttpGet]
+    [RequirePermission(Permissions.Patients.Edit)]
     public async Task<IActionResult> Create(bool popup = false)
     {
         ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
@@ -93,6 +96,7 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Patients.Edit)]
     public async Task<IActionResult> Create(CreatePatientRequest model, bool popup = false)
     {
         if (!ModelState.IsValid)
@@ -125,6 +129,7 @@ public class PatientsController : BaseController
     // ── Edit Basic (Reception + above) ───────────────────────
 
     [HttpGet]
+    [RequirePermission(Permissions.Patients.Edit)]
     public async Task<IActionResult> EditBasic(int id)
     {
         var result = await _patientService.GetPatientByIdAsync(id);
@@ -142,6 +147,7 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Patients.Edit)]
     public async Task<IActionResult> EditBasic(int id, UpdatePatientBasicRequest model)
     {
         if (!ModelState.IsValid)
@@ -157,7 +163,7 @@ public class PatientsController : BaseController
     // ── Edit Medical (Doctor + Admin) ─────────────────────────
 
     [HttpGet]
-    [Authorize(Policy = "DoctorOrAdmin")]
+    [RequirePermission(Permissions.Patients.EditMedical)]
     public async Task<IActionResult> EditMedical(int id)
     {
         var result = await _patientService.GetPatientByIdAsync(id);
@@ -178,7 +184,7 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "DoctorOrAdmin")]
+    [RequirePermission(Permissions.Patients.EditMedical)]
     public async Task<IActionResult> EditMedical(int id, UpdatePatientMedicalRequest model)
     {
         if (!ModelState.IsValid) return View(model);
@@ -191,6 +197,7 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Patients.Edit)]
     public async Task<IActionResult> AddPhone(
     int patientId,
     CreatePatientPhoneRequest model)
@@ -250,6 +257,7 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Patients.Edit)]
     public async Task<IActionResult> RemovePhone(int patientId, int phoneId)
     {
         var result = await _patientService.RemovePhoneAsync(patientId, phoneId);
@@ -265,6 +273,7 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Patients.Edit)]
     public async Task<IActionResult> AddAddress(
     int patientId, CreatePatientAddressRequest model)
     {
@@ -315,6 +324,7 @@ public class PatientsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Patients.Edit)]
     public async Task<IActionResult> RemoveAddress(int patientId, int addressId)
     {
         var result = await _patientService.RemoveAddressAsync(patientId, addressId);

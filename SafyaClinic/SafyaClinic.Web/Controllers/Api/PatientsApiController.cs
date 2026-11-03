@@ -2,12 +2,14 @@
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers.Api
 {
     [ApiController]
     [Route("api/patients")]
-    [Authorize(Policy = "ClinicalStaff")]
+    [RequirePermission(Permissions.Patients.View)]
     public class PatientsApiController : ControllerBase
     {
         private readonly IPatientService _patientService;

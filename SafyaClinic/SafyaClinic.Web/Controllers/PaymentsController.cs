@@ -4,6 +4,8 @@ using SafyaClinic.Application.DTOs.Payment;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.Common;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 namespace SafyaClinic.Web.Controllers;
 
 [Authorize] // Payment access: each action below declares its specific permission.
@@ -22,7 +24,7 @@ public class PaymentsController : BaseController
         _reservationService = reservationService;
     }
 
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.View)]
     public async Task<IActionResult> PatientSummary(int patientId)
     {
         var result = await _paymentService.GetPatientFinancialSummaryAsync(patientId);
@@ -31,7 +33,7 @@ public class PaymentsController : BaseController
     }
 
     [HttpGet]
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.View)]
     public async Task<IActionResult> Audit(
     int paymentId,
     [FromQuery] PaginationRequest pagination)
@@ -46,11 +48,12 @@ public class PaymentsController : BaseController
     }
 
     [HttpGet]
-    [Authorize(Policy = "PaymentReports")]
+    [RequirePermission(Permissions.Payments.ViewReport)]
     public async Task<IActionResult> Report(DateTime? from, DateTime? to, bool run = false)
     {
         // Payment access: derive scope from authenticated roles, never query-string doctor IDs.
-        var todayOnly = !IsAdmin && !IsDoctor;
+        var todayOnly = !await CanAsync(Permissions.Payments.ReportAnyDate);
+        var ownPaymentsOnly = !await CanAsync(Permissions.Payments.ReportAllDoctors);
         var reportZone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
         ViewBag.TodayOnly = todayOnly;
         ViewBag.ReportTimeZone = reportZone;
@@ -65,7 +68,7 @@ public class PaymentsController : BaseController
             ModelState.Clear();
             if (!requested) return View(Enumerable.Empty<PaymentDto>());
         }
-        if (!IsAdmin && IsDoctor && CurrentUserId <= 0) return Forbid();
+        if (ownPaymentsOnly && CurrentUserId <= 0) return Forbid();
         if (to?.Date == DateTime.MaxValue.Date)
             ModelState.AddModelError(nameof(to), "Choose an earlier end date.");
         // Search-first: do not substitute a default range and query payments on initial navigation.
@@ -89,7 +92,7 @@ public class PaymentsController : BaseController
         var fromUtc = ReportDayStartUtc(from.Value.Date, reportZone);
         var toUtc = ReportDayStartUtc(to.Value.Date.AddDays(1), reportZone);
         var result = await _paymentService.GetPaymentsByDateRangeAsync(
-            fromUtc, toUtc, !IsAdmin && IsDoctor ? CurrentUserId : null);
+            fromUtc, toUtc, ownPaymentsOnly ? CurrentUserId : null);
         // Failed report loads must not appear as a valid zero-total report.
         if (!result.IsSuccess)
             ModelState.AddModelError("", "Could not load the payment report. Please try again.");
@@ -113,7 +116,7 @@ public class PaymentsController : BaseController
     // more than once — it only updates rows whose computed status actually differs.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "AdminOnly")]
+    [RequirePermission(Permissions.Payments.Maintenance)]
     public async Task<IActionResult> RecalculateAllPaidStatuses()
     {
         var result = await _paymentService.RecalculateAllReservationsPaidStatusAsync();
@@ -137,7 +140,7 @@ public class PaymentsController : BaseController
     // have one.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "AdminOnly")]
+    [RequirePermission(Permissions.Payments.Maintenance)]
     public async Task<IActionResult> BackfillZeroCostPayments()
     {
         var result = await _paymentService.BackfillZeroCostPaymentsAsync(CurrentUserId);
@@ -156,15 +159,16 @@ public class PaymentsController : BaseController
     // ── Dashboard ───────────────────────────────────────────────
 
     [HttpGet]
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.View)]
     public async Task<IActionResult> Dashboard(DateTime? from, DateTime? to)
     {
         // Payment access: reception never loads paid totals or financial breakdowns.
-        var result = await _paymentService.GetPaymentDashboardAsync(IsAdmin ? from : null, IsAdmin ? to : null, unpaidOnly: !IsAdmin);
+        var fullDashboard = await CanAsync(Permissions.Payments.ViewFullDashboard);
+        var result = await _paymentService.GetPaymentDashboardAsync(fullDashboard ? from : null, fullDashboard ? to : null, unpaidOnly: !fullDashboard);
         if (!result.IsSuccess) ModelState.AddModelError("", "Could not load unpaid balances. Please try again.");
         ViewBag.From = from;
         ViewBag.To = to;
-        return View(IsAdmin ? "Dashboard" : "Unpaid", result.IsSuccess ? result.Data : new PaymentDashboardDto());
+        return View(fullDashboard ? "Dashboard" : "Unpaid", result.IsSuccess ? result.Data : new PaymentDashboardDto());
     }
 
     // ── Dashboard line drill-down (AJAX, rendered inside a modal) ─
@@ -173,7 +177,7 @@ public class PaymentsController : BaseController
     // ClinicId/PatientSourceId of that row (omitted/null for the "No Clinic"/"No
     // Source" row). from/to are the date range the user enters in the popup prompt.
     [HttpGet]
-    [Authorize(Policy = "AdminOnly")] // Payment access: protect direct drill-down requests too.
+    [RequirePermission(Permissions.Payments.ViewFullDashboard)]
     public async Task<IActionResult> DashboardLineDetails(string groupType, int? groupId, DateTime? from, DateTime? to)
     {
         var result = await _paymentService.GetDashboardLineDetailsAsync(groupType, groupId, from, to);
@@ -186,7 +190,7 @@ public class PaymentsController : BaseController
     // ── Collect ─────────────────────────────────────────────────
 
     [HttpGet]
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.Collect)]
     public async Task<IActionResult> Collect(
     int patientId,
     int? reservationId,
@@ -250,7 +254,7 @@ public class PaymentsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.Collect)]
     public async Task<IActionResult> Collect(CollectPaymentRequest model)
     {
         if (CurrentUserId <= 0)
@@ -287,7 +291,7 @@ public class PaymentsController : BaseController
     // ── Cancel ──────────────────────────────────────────────────
 
     [HttpGet]
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.Adjust)]
     public async Task<IActionResult> Cancel(int paymentId)
     {
         var result = await _paymentService.GetPaymentByIdAsync(paymentId);
@@ -297,7 +301,7 @@ public class PaymentsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.Adjust)]
     public async Task<IActionResult> Cancel(CancelPaymentRequest model)
     {
         if (!ModelState.IsValid) return View(model);
@@ -312,7 +316,7 @@ public class PaymentsController : BaseController
     // ── Change amount ───────────────────────────────────────────
 
     [HttpGet]
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.Adjust)]
     public async Task<IActionResult> ChangeAmount(int paymentId)
     {
         var result = await _paymentService.GetPaymentByIdAsync(paymentId);
@@ -323,7 +327,7 @@ public class PaymentsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "PaymentStaff")]
+    [RequirePermission(Permissions.Payments.Adjust)]
     public async Task<IActionResult> ChangeAmount(ChangePaymentAmountRequest model)
     {
         if (!ModelState.IsValid) return View(model);

@@ -7,10 +7,12 @@ using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Models;
 using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Common;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
-[Authorize(Roles = "Admin,Reception,Doctor")]
+[RequirePermission(Permissions.FollowUps.View)]
 public class FollowUpsController : BaseController
 {
     private readonly IPatientRecordService _recordService;
@@ -38,8 +40,7 @@ public class FollowUpsController : BaseController
         if (CurrentUserId <= 0)
             return Challenge();
 
-        var canViewAll = IsAdmin || IsReception;
-        var doctors = new List<SelectListItem>();
+        var canViewAll = await CanAsync(Permissions.FollowUps.ViewAll); var doctors = new List<SelectListItem>();
 
         if (canViewAll)
         {
@@ -93,6 +94,7 @@ public class FollowUpsController : BaseController
         });
     }
     [HttpGet]
+    [RequirePermission(Permissions.FollowUps.Manage)]
     public async Task<IActionResult> Book(int recordId)
     {
         if (CurrentUserId <= 0)
@@ -115,6 +117,7 @@ public class FollowUpsController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.FollowUps.Manage)]
     public async Task<IActionResult> Book(BookFollowUpViewModel model)
     {
         if (CurrentUserId <= 0)
@@ -176,7 +179,7 @@ public class FollowUpsController : BaseController
                 TotalAmount = null
             },
             CurrentUserId,
-            IsAdmin || IsReception);
+            await CanAsync(Permissions.FollowUps.ViewAll));
 
         if (!result.IsSuccess || result.Data is null)
         {
@@ -197,7 +200,7 @@ public class FollowUpsController : BaseController
         var contextResult = await _recordService.GetFollowUpBookingContextAsync(
             model.RecordId,
             CurrentUserId,
-            IsAdmin || IsReception);
+            await CanAsync(Permissions.FollowUps.ViewAll));
 
         if (!contextResult.IsSuccess || contextResult.Data is null)
         {
@@ -241,6 +244,7 @@ public class FollowUpsController : BaseController
     }
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.FollowUps.Manage)]
     public async Task<IActionResult> Dismiss(int recordId, string? reason)
     {
         if (CurrentUserId <= 0)
@@ -256,7 +260,7 @@ public class FollowUpsController : BaseController
             recordId,
             reason,
             CurrentUserId,
-            IsAdmin || IsReception);
+            await CanAsync(Permissions.FollowUps.ViewAll));
 
         if (result.IsSuccess)
             Success(result.Message);

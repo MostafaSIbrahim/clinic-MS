@@ -2,9 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Nutrition;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 namespace SafyaClinic.Web.Controllers
 {
-    [Authorize(Policy = "NutritionTeam")]
+    [RequirePermission(Permissions.Nutrition.View)]
     public class NutritionController : BaseController
     {
         private readonly INutritionService _nutritionService;
@@ -37,7 +39,7 @@ namespace SafyaClinic.Web.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Nutrition.ManagePackages)]
         public async Task<IActionResult> CreatePackage()
         {
             await LoadCatalogViewBagsAsync();
@@ -46,7 +48,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Nutrition.ManagePackages)]
         public async Task<IActionResult> CreatePackage(CreateNutritionPackageDto model)
         {
             if (!ModelState.IsValid)
@@ -74,7 +76,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Nutrition.ManagePackages)]
         public async Task<IActionResult> DeactivatePackage(int id)
         {
             await _nutritionService.DeactivatePackageAsync(id);
@@ -98,6 +100,7 @@ namespace SafyaClinic.Web.Controllers
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> Enroll(int patientId)
         {
             var packages = await _nutritionService.GetActivePackagesAsync();
@@ -113,6 +116,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> Enroll(CreateEnrollmentDto model)
         {
             if (!ModelState.IsValid)
@@ -132,6 +136,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> UpdateEnrollmentStatus(int id, string status, int patientId)
         {
             await _nutritionService.UpdateEnrollmentStatusAsync(id, status);
@@ -148,11 +153,13 @@ namespace SafyaClinic.Web.Controllers
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public IActionResult RecordFollowUp(int enrollmentId) =>
             View(new RecordFollowUpDto { FollowUpId = enrollmentId });
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> RecordFollowUp(int enrollmentId, RecordFollowUpDto model)
         {
             var actualEnrollmentId = enrollmentId > 0 ? enrollmentId : model.FollowUpId;
@@ -172,6 +179,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> CompleteFollowUp(int id, int enrollmentId)
         {
             await _nutritionService.CompleteFollowUpAsync(id);
@@ -180,6 +188,7 @@ namespace SafyaClinic.Web.Controllers
         // In NutritionController.cs
 
         [HttpGet]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> EditFollowUp(int id)
         {
             var result = await _nutritionService.GetFollowUpByIdAsync(id);
@@ -218,6 +227,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> EditFollowUp(int id, RecordFollowUpDto model)
         {
             if (!ModelState.IsValid) return View("RecordFollowUp", model);
@@ -232,6 +242,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> DeleteFollowUp(int id, int enrollmentId)
         {
             var result = await _nutritionService.DeleteFollowUpAsync(id);
@@ -243,7 +254,7 @@ namespace SafyaClinic.Web.Controllers
 
         // ── Injection Types (feature 5) ───────────────────────────
 
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> InjectionTypes()
         {
             var result = await _nutritionService.GetInjectionTypesAsync(includeInactive: true);
@@ -251,12 +262,12 @@ namespace SafyaClinic.Web.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public IActionResult CreateInjectionType() => View(new CreateInjectionTypeDto());
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> CreateInjectionType(CreateInjectionTypeDto model)
         {
             if (!ModelState.IsValid) return View(model);
@@ -266,7 +277,7 @@ namespace SafyaClinic.Web.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> EditInjectionType(int id)
         {
             var result = await _nutritionService.GetInjectionTypeByIdAsync(id);
@@ -286,7 +297,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> EditInjectionType(int id, UpdateInjectionTypeDto model)
         {
             if (!ModelState.IsValid) { ViewBag.Id = id; return View(model); }
@@ -297,7 +308,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> DeleteInjectionType(int id)
         {
             var result = await _nutritionService.DeleteInjectionTypeAsync(id);
@@ -307,7 +318,7 @@ namespace SafyaClinic.Web.Controllers
 
         // ── Vitamin Types (feature 6) ─────────────────────────────
 
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> VitaminTypes()
         {
             var result = await _nutritionService.GetVitaminTypesAsync(includeInactive: true);
@@ -315,12 +326,12 @@ namespace SafyaClinic.Web.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public IActionResult CreateVitaminType() => View(new CreateVitaminTypeDto());
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> CreateVitaminType(CreateVitaminTypeDto model)
         {
             if (!ModelState.IsValid) return View(model);
@@ -330,7 +341,7 @@ namespace SafyaClinic.Web.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> EditVitaminType(int id)
         {
             var result = await _nutritionService.GetVitaminTypeByIdAsync(id);
@@ -350,7 +361,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> EditVitaminType(int id, UpdateVitaminTypeDto model)
         {
             if (!ModelState.IsValid) { ViewBag.Id = id; return View(model); }
@@ -361,7 +372,7 @@ namespace SafyaClinic.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [RequirePermission(Permissions.Settings.Lookups)]
         public async Task<IActionResult> DeleteVitaminType(int id)
         {
             var result = await _nutritionService.DeleteVitaminTypeAsync(id);

@@ -73,14 +73,10 @@ public class AccessMatrixTests
 
     private static IEnumerable<string> RolesFor(string policy)
     {
-        if (policy.StartsWith(PermissionPolicy.Prefix, StringComparison.Ordinal))
-        {
-            var code = policy[PermissionPolicy.Prefix.Length..];
-            return SystemGroups.All.Where(g => g.Permissions.Contains(code)).Select(g => g.RoleName);
-        }
-
-        Assert.True(LegacyRolePolicies.All.ContainsKey(policy), $"Unknown policy '{policy}'.");
-        return LegacyRolePolicies.All[policy];
+        Assert.True(policy.StartsWith(PermissionPolicy.Prefix, StringComparison.Ordinal),
+            $"'{policy}' is not a permission policy (F4b-2 removed the role policies).");
+        var code = policy[PermissionPolicy.Prefix.Length..];
+        return SystemGroups.All.Where(g => g.Permissions.Contains(code)).Select(g => g.RoleName);
     }
 
     private static string BaselinePath([CallerFilePath] string source = "") =>
@@ -117,5 +113,25 @@ public class AccessMatrixTests
             .Select(a => a.Code);
 
         Assert.All(used, code => Assert.Contains(code, known));
+    }
+
+    [Fact]
+    public void No_controller_uses_roles_or_named_policies()
+    {
+        var rules = Controllers.SelectMany(c =>
+            c.GetCustomAttributes(true).OfType<IAuthorizeData>().Select(rule => (Where: c.Name, Rule: rule))
+                .Concat(c.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                    .SelectMany(m => m.GetCustomAttributes(true).OfType<IAuthorizeData>()
+                        .Select(rule => (Where: $"{c.Name}.{m.Name}", Rule: rule)))));
+
+        var offenders = rules
+            .Where(x => !string.IsNullOrEmpty(x.Rule.Roles)
+                        || (!string.IsNullOrEmpty(x.Rule.Policy)
+                            && !x.Rule.Policy.StartsWith(PermissionPolicy.Prefix, StringComparison.Ordinal)))
+            .Select(x => x.Where)
+            .Distinct()
+            .ToList();
+
+        Assert.Empty(offenders);
     }
 }

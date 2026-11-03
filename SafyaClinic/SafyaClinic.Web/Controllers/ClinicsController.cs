@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Settings;
 using SafyaClinic.Application.Interfaces.Services;
+using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
-[Authorize(Policy = "AdminOnly")]
+[RequirePermission(Permissions.Settings.Clinics)]
 public class ClinicsController : BaseController
 {
     private readonly IClinicService _clinicService;
