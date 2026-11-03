@@ -28,9 +28,10 @@ public static class SessionValidator
 
         var stamp = context.Principal?.FindFirstValue(AuthClaims.SecurityStamp);
         if (!int.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
-            || string.IsNullOrEmpty(stamp))
+            || string.IsNullOrEmpty(stamp)
+            || context.Principal?.FindFirst(AuthClaims.ClinicianType) is null)
         {
-            await RejectAsync(context);   // e.g. a cookie issued before S6
+            await RejectAsync(context);   // a cookie issued before S6 or F4c
             return;
         }
 

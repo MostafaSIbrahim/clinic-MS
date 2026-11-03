@@ -1,4 +1,6 @@
-﻿namespace SafyaClinic.Application.DTOs.Auth;
+﻿using SafyaClinic.Domain.Enums;
+
+namespace SafyaClinic.Application.DTOs.Auth;
 
 public class LoginRequest
 {
@@ -14,6 +16,7 @@ public class LoginResponse
     public IEnumerable<string> Roles { get; init; } = Enumerable.Empty<string>();
     public bool MustChangePassword { get; init; }
     public string SecurityStamp { get; init; } = string.Empty;
+    public ClinicianType ClinicianType { get; init; }   // F4c: whose day the dashboard shows
 }
 
 public class ChangePasswordRequest

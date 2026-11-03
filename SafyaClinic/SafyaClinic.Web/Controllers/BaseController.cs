@@ -3,6 +3,7 @@ using SafyaClinic.Application.DTOs.Common;
 using System.Security.Claims;
 using SafyaClinic.Web.Services.Files;
 using SafyaClinic.Web.Security;
+using SafyaClinic.Domain.Enums;
 
 namespace SafyaClinic.Web.Controllers
 {
@@ -17,9 +18,9 @@ namespace SafyaClinic.Web.Controllers
         protected Task<bool> CanAsync(string permission) =>
             HttpContext.RequestServices.GetRequiredService<ICurrentPermissions>().HasAsync(permission);
 
-        // Which clinician's day the dashboard shows; moves to ClinicianType in F4c.
-        protected bool IsDoctor => User.IsInRole("Doctor");
-        protected bool IsNutritionist => User.IsInRole("Nutritionist");
+        // F4c: clinicians see their own day on the dashboard (clinician type, not roles).
+        protected bool IsClinician =>
+            User.FindFirstValue(AuthClaims.ClinicianType) is { } type && type != nameof(ClinicianType.None);
         // ── TempData alerts (rendered in _Layout) ────────────────
 
         protected void Success(string message) =>

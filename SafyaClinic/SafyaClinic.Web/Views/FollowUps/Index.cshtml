@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Patient Follow-ups";
     var today = DateTime.Today;
-    var canOpenRecord = User.IsInRole("Admin") || User.IsInRole("Doctor");
+    var canOpenRecord = await Can.HasAsync(Permissions.Records.View);
 }
 
 <div class="page-toolbar">

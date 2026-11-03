@@ -49,7 +49,8 @@ public class AuthController : BaseController
         {
             new(ClaimTypes.NameIdentifier, data.UserId.ToString()),
             new(ClaimTypes.Name, data.FullName),
-            new(AuthClaims.SecurityStamp, data.SecurityStamp)
+            new(AuthClaims.SecurityStamp, data.SecurityStamp),
+            new(AuthClaims.ClinicianType, data.ClinicianType.ToString())
         };
     
         claims.AddRange(data.Roles.Select(r => new Claim(ClaimTypes.Role, r)));

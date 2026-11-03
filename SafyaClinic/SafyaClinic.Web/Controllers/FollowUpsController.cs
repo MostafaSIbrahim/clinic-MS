@@ -40,7 +40,8 @@ public class FollowUpsController : BaseController
         if (CurrentUserId <= 0)
             return Challenge();
 
-        var canViewAll = await CanAsync(Permissions.FollowUps.ViewAll); var doctors = new List<SelectListItem>();
+        var canViewAll = await CanAsync(Permissions.FollowUps.ViewAll);
+        var doctors = new List<SelectListItem>();
 
         if (canViewAll)
         {

@@ -35,7 +35,7 @@
             Book Reservation
         </a>
 
-        @if (IsDoctor() || IsAdmin())
+        @if (await Can.HasAsync(Permissions.Patients.ViewTimeline))
         {
             <a asp-action="Timeline"
                asp-route-id="@patient.Id"
@@ -68,7 +68,7 @@
                     </a>
                 </li>
 
-                @if (IsDoctor() || IsAdmin())
+                @if (await Can.HasAsync(Permissions.Patients.EditMedical))
                 {
                     <li>
                         <a class="dropdown-item"
@@ -100,7 +100,7 @@
 </header>
 
 <nav class="workspace-shortcuts" aria-label="Patient workspace">
-    @if (IsDoctor() || IsAdmin())
+    @if (await Can.HasAsync(Permissions.Records.View))
     {
         <a asp-controller="MedicalRecords"
            asp-action="PatientRecords"
@@ -119,7 +119,7 @@
         </a>
     }
 
-    @if (IsAdmin() || IsNutritionist())
+    @if (await Can.HasAsync(Permissions.Nutrition.View))
     {
         <a asp-controller="Nutrition"
            asp-action="PatientEnrollments"
@@ -130,7 +130,7 @@
         </a>
     }
 
-    @if (IsAdmin() || User.IsInRole("Reception"))
+    @if (await Can.HasAsync(Permissions.Payments.View))
     {
         <a asp-controller="Payments"
            asp-action="PatientSummary"
@@ -442,11 +442,6 @@
     </div>
 </div>
 
-@functions {
-    bool IsDoctor()       => ViewContext.HttpContext.User.IsInRole("Doctor");
-    bool IsAdmin()        => ViewContext.HttpContext.User.IsInRole("Admin");
-    bool IsNutritionist() => ViewContext.HttpContext.User.IsInRole("Nutritionist");
-}
 @section Scripts {
     <script src="~/js/contact-modal-forms.js" asp-append-version="true"></script>
 }

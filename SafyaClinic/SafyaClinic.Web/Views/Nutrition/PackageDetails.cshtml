@@ -8,7 +8,7 @@
         <h4 class="mb-0">@Model.PackageName</h4>
         <small class="text-muted">@Model.Description</small>
     </div>
-    @if (User.IsInRole("Admin"))
+    @if (await Can.HasAsync(Permissions.Nutrition.ManagePackages))
     {
         <form asp-action="DeactivatePackage" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Deactivate this package?')">
             @Html.AntiForgeryToken()

@@ -118,7 +118,7 @@
                             <a href="javascript:void(0)" onclick="showAttachmentPreview('@Url.Action("ViewAttachment", new { attachmentId = a.Id })', '@Url.Action("DownloadAttachment", new { attachmentId = a.Id })', '@a.FileName')">
                                 @a.FileName
                             </a>
-                            @if (User.IsInRole("Admin"))
+                            @if (await Can.HasAsync(Permissions.Attachments.Delete))
                             {
                                 <form asp-action="DeleteAttachment" method="post" class="d-inline">
                                     @Html.AntiForgeryToken()

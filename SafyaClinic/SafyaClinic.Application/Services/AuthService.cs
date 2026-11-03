@@ -86,6 +86,7 @@ public class AuthService : IAuthService
             ExpiresAt = now.AddHours(8),
             Roles = roleNames,
             SecurityStamp = user.SecurityStamp,
+            ClinicianType = user.ClinicianType,
             MustChangePassword = user.MustChangePassword
         });
     }

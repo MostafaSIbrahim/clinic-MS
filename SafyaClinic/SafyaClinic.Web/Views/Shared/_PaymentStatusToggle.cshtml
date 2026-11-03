@@ -2,7 +2,7 @@
 <span class="badge @(Model.IsPaid ? "bg-success" : "bg-secondary")">
     @(Model.IsPaid ? "Covered" : "Not fully covered")
 </span>
-@if (User.IsInRole("Admin") || User.IsInRole("Reception"))
+@if (await Can.HasAsync(Permissions.Reservations.View) && await Can.HasAsync(Permissions.Payments.View))
 {
     <a asp-controller="Payments" asp-action="PatientSummary"
        asp-route-patientId="@Model.PatientId"

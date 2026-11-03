@@ -4,7 +4,7 @@
 @{
     ViewData["Title"] = "Reservation Details";
     var canCheckIn =
-    (User.IsInRole("Reception") || User.IsInRole("Admin")) &&
+    await Can.HasAsync(Permissions.Reservations.CheckIn) &&
     Model.ReservationDate.Date == Clock.Today &&
    (Model.StatusName == "Pending" || Model.StatusName == "Confirmed") &&
     Model.QueueStatus == PatientQueueStatus.NotCheckedIn &&
@@ -25,8 +25,8 @@
 
     var canStartConsultation =
         hasUserId &&
-        (User.IsInRole("Admin") ||
-         (User.IsInRole("Doctor") && Model.DoctorId == currentUserId)) &&
+        (await Can.HasAsync(Permissions.Consultations.ActOnBehalf) ||
+         (await Can.HasAsync(Permissions.Reservations.StartConsultation) && Model.DoctorId == currentUserId)) &&
         (Model.StatusName == "Confirmed") &&
         Model.QueueStatus == PatientQueueStatus.Waiting &&
         Model.CheckedInAtUtc.HasValue &&
@@ -173,7 +173,7 @@
                     <select id="reservationStatus" name="statusId" class="form-select form-select-sm" disabled="@isCompleted">
                         <option value="1" selected="@(Model.StatusName == "Pending")">Pending</option>
                         <option value="2" selected="@(Model.StatusName == "Confirmed")">Confirmed</option>
-                        <option value="3" selected="@(Model.StatusName == "Completed")" disabled="@(!canCompleteFromQueue || !User.IsInRole("Admin"))">Completed</option>
+                        <option value="3" selected="@(Model.StatusName == "Completed")" disabled="@(!canCompleteFromQueue || !await Can.HasAsync(Permissions.Reservations.SetCompleted))">Completed</option>
                         <option value="4" selected="@(Model.StatusName == "Cancelled")">Cancelled</option>
                         <option value="5" selected="@(Model.StatusName == "NoShow")">NoShow</option>
                     </select>
@@ -190,7 +190,7 @@
         </div>
 
         
-            @if (User.IsInRole("Admin") || User.IsInRole("Reception"))
+            @if (await Can.HasAsync(Permissions.Payments.Collect))
              {
                     <div class="card mb-3">
                         <div class="card-header">Payment</div>
@@ -217,13 +217,13 @@
              }
 
 
-        @if (User.IsInRole("Doctor") || User.IsInRole("Admin"))
+        @if (await Can.HasAsync(Permissions.Records.View))
         {
             <div class="card mb-3">
                 <div class="card-header"><i class="bi bi-file-medical me-2"></i>Clinical</div>
                 <div class="card-body">
                     @* Review fix: resume through the existing ownership-checked consultation endpoint. *@
-                    @if (hasUserId && (User.IsInRole("Admin") || Model.DoctorId == currentUserId)
+                    @if (hasUserId && (await Can.HasAsync(Permissions.Consultations.ActOnBehalf) || Model.DoctorId == currentUserId)
                         && Model.StatusName == "Confirmed"
                         && Model.QueueStatus == PatientQueueStatus.InConsultation)
                     {
