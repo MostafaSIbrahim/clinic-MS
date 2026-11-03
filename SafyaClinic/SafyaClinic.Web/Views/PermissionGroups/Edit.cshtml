@@ -20,7 +20,7 @@
             }
             else if (group.IsBuiltIn)
             {
-                @:Members come from the user's role (@group.SystemKey). You can change what this group may do.
+                @:A built-in group. You can change what it may do and who is in it.
             }
             else
             {
@@ -111,31 +111,18 @@
                                 {
                                     <span class="badge bg-secondary">Inactive</span>
                                 }
-                                @if (m.ViaRole)
-                                {
-                                    <span class="badge bg-light text-dark">via role</span>
-                                }
-                                else
-                                {
-                                    <form asp-action="RemoveMember" asp-route-id="@group.Id" method="post" class="ms-auto"
+                                <form asp-action="RemoveMember" asp-route-id="@group.Id" method="post" class="ms-auto"
                                           onsubmit="return confirm('Remove this member from the group?');">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="userId" value="@m.UserId" />
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
                                     </form>
-                                }
                             </li>
                         }
                     </ul>
                 }
 
-                @if (group.IsBuiltIn)
-                {
-                    <p class="small text-muted mb-0">To add or remove members of this group, change the user's role on the <a asp-controller="Users" asp-action="Index">Users</a> page.</p>
-                }
-                else
-                {
-                    <form asp-action="AddMember" asp-route-id="@group.Id" method="post" class="d-flex gap-2">
+                <form asp-action="AddMember" asp-route-id="@group.Id" method="post" class="d-flex gap-2">
                         @Html.AntiForgeryToken()
                         <label for="addMemberUser" class="visually-hidden">User</label>
                         <select id="addMemberUser" name="userId" class="form-select" required>
@@ -147,7 +134,6 @@
                         </select>
                         <button type="submit" class="btn btn-outline-primary text-nowrap">Add member</button>
                     </form>
-                }
             </div>
         </div>
     </div>

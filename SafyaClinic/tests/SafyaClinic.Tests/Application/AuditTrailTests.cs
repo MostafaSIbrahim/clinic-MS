@@ -7,6 +7,7 @@ using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.Security;
 using SafyaClinic.Application.Services;
 using SafyaClinic.Domain.Entities.Audit;
+using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Infrastructure.Data;
 using SafyaClinic.Infrastructure.Repositories;
@@ -150,17 +151,16 @@ public class AuditTrailTests
     }
 
     [Fact]
-    public async Task Role_assignment_is_recorded()
+    public async Task Clinician_type_change_is_recorded()
     {
         await using var context = await SeededAsync();
         var adminId = await AdminIdAsync(context);
-        var receptionRoleId = await context.Roles.Where(r => r.RoleName == "Reception").Select(r => r.Id).SingleAsync();
 
-        await Users(context, adminId).AssignRoleAsync(adminId, receptionRoleId, adminId);
+        await Users(context, adminId).SetClinicianTypeAsync(adminId, ClinicianType.Doctor, adminId);
 
         var entry = Assert.Single(await EntriesAsync(context));
-        Assert.Equal(AuditActions.RoleAssigned, entry.Action);
-        Assert.Contains(receptionRoleId.ToString(), entry.Details);
+        Assert.Equal(AuditActions.ClinicianTypeChanged, entry.Action);
+        Assert.Contains("Doctor", entry.Details);
     }
 
     [Fact]

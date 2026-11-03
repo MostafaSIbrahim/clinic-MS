@@ -13,7 +13,6 @@ public class LoginResponse
     public int UserId { get; init; }
     public string FullName { get; init; } = string.Empty;
     public DateTime ExpiresAt { get; init; }
-    public IEnumerable<string> Roles { get; init; } = Enumerable.Empty<string>();
     public bool MustChangePassword { get; init; }
     public string SecurityStamp { get; init; } = string.Empty;
     public ClinicianType ClinicianType { get; init; }   // F4c: whose day the dashboard shows

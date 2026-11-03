@@ -17,14 +17,8 @@ public sealed class PermissionStore : IPermissionStore
         if (!await _db.Users.AnyAsync(u => u.Id == userId && u.IsActive, cancellationToken))
             return None;
 
-        var roleNames = await _db.UserRoles
-            .Where(ur => ur.UserId == userId)
-            .Select(ur => ur.Role.RoleName)
-            .ToListAsync(cancellationToken);
-
         var codes = await _db.GroupPermissions
-            .Where(gp => (gp.Group.SystemKey != null && roleNames.Contains(gp.Group.SystemKey!))
-                         || gp.Group.Members.Any(m => m.UserId == userId))
+            .Where(gp => gp.Group.Members.Any(m => m.UserId == userId))
             .Select(gp => gp.PermissionCode)
             .Distinct()
             .ToListAsync(cancellationToken);

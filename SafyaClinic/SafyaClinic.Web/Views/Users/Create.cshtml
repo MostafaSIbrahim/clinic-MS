@@ -1,9 +1,9 @@
 @model CreateUserRequest
 @{
     ViewData["Title"] = "Add User";
-    // Role lookup: use the actual catalog, including newly created roles.
-    var allRoles = ViewBag.AllRoles as IEnumerable<SafyaClinic.Web.Models.RoleLookupItem>
-        ?? Enumerable.Empty<SafyaClinic.Web.Models.RoleLookupItem>();
+    // F4d: new users join permission groups and get a clinician type.
+    var allGroups = ViewBag.AllGroups as IEnumerable<PermissionGroupSummary>
+        ?? Enumerable.Empty<PermissionGroupSummary>();
 }
 
 <div class="card" style="max-width:700px;">
@@ -46,19 +46,28 @@
                     <input asp-for="LicenseNumber" class="form-control" />
                 </div>
 
+                <div class="col-md-6">
+                    <label asp-for="ClinicianType" class="form-label">Clinician type</label>
+                    <select asp-for="ClinicianType" asp-items="Html.GetEnumSelectList<SafyaClinic.Domain.Enums.ClinicianType>()" class="form-select"
+                            aria-describedby="clinicianHelp"></select>
+                    <div id="clinicianHelp" class="form-text">Doctors and nutritionists appear in doctor pickers and queues.</div>
+                </div>
+
                 <div class="col-12">
-                    <label class="form-label">Roles *</label>
-                    <div class="d-flex flex-wrap gap-3">
-                        @foreach (var role in allRoles)
-                        {
-                            <div class="form-check">
-                                @* Role lookup: retain selections if user creation is rejected. *@
-                                <input type="checkbox" name="RoleIds" value="@role.Id" class="form-check-input" id="role_@role.Id"
-                                       checked="@(Model.RoleIds?.Contains(role.Id) == true)" />
-                                <label class="form-check-label" for="role_@role.Id">@role.Name</label>
-                            </div>
-                        }
-                    </div>
+                    <fieldset>
+                        <legend class="form-label fs-6">Permission groups</legend>
+                        <div class="d-flex flex-wrap gap-3">
+                            @foreach (var g in allGroups)
+                            {
+                                <div class="form-check">
+                                    <input type="checkbox" name="GroupIds" value="@g.Id" class="form-check-input" id="group_@g.Id"
+                                           checked="@(Model.GroupIds?.Contains(g.Id) == true)" />
+                                    <label class="form-check-label" for="group_@g.Id">@g.Name</label>
+                                </div>
+                            }
+                        </div>
+                        <div class="form-text">What the user may see and do. You can change this later on the Users page.</div>
+                    </fieldset>
                 </div>
             </div>
 

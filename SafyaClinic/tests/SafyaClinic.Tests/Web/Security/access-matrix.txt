@@ -154,13 +154,12 @@ Reservations.Queue GET: Admin Doctor Reception
 Reservations.StartConsultation POST: Admin Doctor
 Reservations.Today ANY: Admin Doctor Nutritionist Reception
 Reservations.UpdateStatus POST: Admin Doctor Nutritionist Reception
-Roles.Create POST: Admin
-Roles.Index GET: Admin
-Users.AssignRole POST: Admin
+Users.AddToGroup POST: Admin
 Users.Create GET: Admin
 Users.Create POST: Admin
 Users.Index ANY: Admin
-Users.RemoveRole POST: Admin
+Users.RemoveFromGroup POST: Admin
 Users.ResetPassword GET: Admin
 Users.ResetPassword POST: Admin
+Users.SetClinicianType POST: Admin
 Users.ToggleActive POST: Admin

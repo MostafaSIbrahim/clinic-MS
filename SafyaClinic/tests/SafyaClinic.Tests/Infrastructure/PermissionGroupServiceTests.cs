@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SafyaClinic.Tests.Infrastructure;
 
-/// <summary>F4d: admins manage groups; built-in groups keep their rules; access follows at once.</summary>
+/// <summary>F4d: admins manage groups and members; built-in groups keep their rules; access follows at once.</summary>
 public class PermissionGroupServiceTests
 {
     private sealed record Setup(SafyaDbContext Context, int AdminId, int DoctorId);
@@ -26,9 +26,7 @@ public class PermissionGroupServiceTests
         var doctor = new User { FullName = "Doctor", PhoneNumber = "0161", PasswordHash = "x", SecurityStamp = "s" };
         context.Users.Add(doctor);
         await context.SaveChangesAsync();
-        var doctorRoleId = await context.Roles.Where(r => r.RoleName == SystemGroups.DoctorRole).Select(r => r.Id).SingleAsync();
-        context.UserRoles.Add(new UserRole { UserId = doctor.Id, RoleId = doctorRoleId });
-        await context.SaveChangesAsync();
+        await TestData.AddToBuiltInGroupAsync(context, doctor.Id, SystemGroups.DoctorRole);
         context.ChangeTracker.Clear();
         return new Setup(context, adminId, doctor.Id);
     }
@@ -77,7 +75,7 @@ public class PermissionGroupServiceTests
     }
 
     [Fact]
-    public async Task Removing_a_permission_from_a_built_in_group_affects_its_role_members()
+    public async Task Removing_a_permission_from_a_built_in_group_affects_its_members()
     {
         var s = await SeedAsync();
         var doctorsId = await BuiltIn(s.Context, SystemGroups.DoctorRole);
@@ -105,14 +103,37 @@ public class PermissionGroupServiceTests
     }
 
     [Fact]
-    public async Task Built_in_groups_cannot_be_deleted_or_given_direct_members()
+    public async Task Built_in_groups_cannot_be_deleted_but_take_members()
     {
         var s = await SeedAsync();
-        var doctorsId = await BuiltIn(s.Context, SystemGroups.DoctorRole);
+        var receptionId = await BuiltIn(s.Context, SystemGroups.ReceptionRole);
 
-        Assert.False((await Service(s.Context).DeleteGroupAsync(doctorsId, s.AdminId)).IsSuccess);
-        Assert.False((await Service(s.Context).AddMemberAsync(doctorsId, s.AdminId, s.AdminId)).IsSuccess);
-        Assert.True(await s.Context.PermissionGroups.AnyAsync(g => g.Id == doctorsId));
+        Assert.False((await Service(s.Context).DeleteGroupAsync(receptionId, s.AdminId)).IsSuccess);
+        Assert.True(await s.Context.PermissionGroups.AnyAsync(g => g.Id == receptionId));
+
+        Assert.True((await Service(s.Context).AddMemberAsync(receptionId, s.DoctorId, s.AdminId)).IsSuccess);
+        Assert.Contains(Permissions.Reservations.CheckIn, await PermissionsOf(s.Context, s.DoctorId));
+    }
+
+    [Fact]
+    public async Task The_last_active_administrator_cannot_be_removed()
+    {
+        var s = await SeedAsync();
+        var adminsId = await BuiltIn(s.Context, SystemGroups.AdminRole);
+
+        Assert.False((await Service(s.Context).RemoveMemberAsync(adminsId, s.AdminId, s.AdminId)).IsSuccess);
+        Assert.Contains(Permissions.Users.Manage, await PermissionsOf(s.Context, s.AdminId));
+    }
+
+    [Fact]
+    public async Task An_administrator_can_be_removed_when_another_active_one_remains()
+    {
+        var s = await SeedAsync();
+        var adminsId = await BuiltIn(s.Context, SystemGroups.AdminRole);
+        await Service(s.Context).AddMemberAsync(adminsId, s.DoctorId, s.AdminId);
+
+        Assert.True((await Service(s.Context).RemoveMemberAsync(adminsId, s.AdminId, s.DoctorId)).IsSuccess);
+        Assert.DoesNotContain(Permissions.Users.Manage, await PermissionsOf(s.Context, s.AdminId));
     }
 
     [Fact]
@@ -150,7 +171,7 @@ public class PermissionGroupServiceTests
     }
 
     [Fact]
-    public async Task Built_in_group_lists_its_role_members()
+    public async Task A_group_lists_its_members()
     {
         var s = await SeedAsync();
 
@@ -158,6 +179,5 @@ public class PermissionGroupServiceTests
 
         var member = Assert.Single(doctors!.Members);
         Assert.Equal(s.DoctorId, member.UserId);
-        Assert.True(member.ViaRole);
     }
 }

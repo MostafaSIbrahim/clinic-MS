@@ -46,8 +46,45 @@ public class DbSeederTests
 
         var admin = await context.Users.SingleAsync();
         Assert.Equal(PasswordCheck.Success, PasswordHashing.Verify(TestPassword, admin.PasswordHash));
+        var administratorsId = await context.PermissionGroups
+            .Where(g => g.SystemKey == SystemGroups.AdminRole).Select(g => g.Id).SingleAsync();
+        Assert.True(await context.UserGroups.AnyAsync(m => m.UserId == admin.Id && m.GroupId == administratorsId));
+    }
+
+    [Fact]
+    public async Task Role_memberships_become_group_memberships_once()
+    {
+        await using var context = NewContext();
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+
+        // A database from before F4d: memberships exist only as roles.
+        context.UserGroups.RemoveRange(await context.UserGroups.ToListAsync());
+        var doctor = new User { FullName = "Doctor", PhoneNumber = "0177", PasswordHash = "x" };
+        context.Users.Add(doctor);
+        await context.SaveChangesAsync();
+        var adminId = await context.Users.Where(u => u.PhoneNumber == "0100").Select(u => u.Id).SingleAsync();
+        var doctorRoleId = await context.Roles.Where(r => r.RoleName == "Doctor").Select(r => r.Id).SingleAsync();
         var adminRoleId = await context.Roles.Where(r => r.RoleName == "Admin").Select(r => r.Id).SingleAsync();
-        Assert.True(await context.UserRoles.AnyAsync(ur => ur.UserId == admin.Id && ur.RoleId == adminRoleId));
+        context.UserRoles.AddRange(
+            new UserRole { UserId = doctor.Id, RoleId = doctorRoleId },
+            new UserRole { UserId = adminId, RoleId = adminRoleId });
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        await DbSeeder.SeedAsync(context, Config(null));
+
+        var doctorsId = await context.PermissionGroups
+            .Where(g => g.SystemKey == SystemGroups.DoctorRole).Select(g => g.Id).SingleAsync();
+        Assert.True(await context.UserGroups.AnyAsync(m => m.UserId == doctor.Id && m.GroupId == doctorsId));
+
+        // Changes made later on the groups screen are kept: the move does not run again.
+        context.UserGroups.RemoveRange(await context.UserGroups.Where(m => m.UserId == doctor.Id).ToListAsync());
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        await DbSeeder.SeedAsync(context, Config(null));
+
+        Assert.False(await context.UserGroups.AnyAsync(m => m.UserId == doctor.Id));
     }
 
     [Fact]

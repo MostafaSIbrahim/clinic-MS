@@ -18,6 +18,7 @@ public static class AuditActions
     public const string UserDeactivated = "User.Deactivated";
     public const string RoleAssigned = "User.RoleAssigned";
     public const string RoleRemoved = "User.RoleRemoved";
+    public const string ClinicianTypeChanged = "User.ClinicianTypeChanged";
     public const string RecordEdited = "MedicalRecord.Edited";
     public const string RecordLocked = "MedicalRecord.Locked";
     public const string PaymentCollected = "Payment.Collected";

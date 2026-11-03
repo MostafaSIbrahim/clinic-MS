@@ -1,9 +1,9 @@
 @model PagedResult<UserDto>
 @{
     ViewData["Title"] = "Users";
-    // Role lookup: use database IDs for assigning and removing all roles, including custom ones.
-    var allRoles = (ViewBag.AllRoles as IEnumerable<SafyaClinic.Web.Models.RoleLookupItem>
-        ?? Enumerable.Empty<SafyaClinic.Web.Models.RoleLookupItem>()).ToList();
+    // F4d: users join permission groups; the clinician type decides who appears in doctor pickers.
+    var allGroups = (ViewBag.AllGroups as IEnumerable<PermissionGroupSummary>
+        ?? Enumerable.Empty<PermissionGroupSummary>()).ToList();
 }
 
 <div class="card">
@@ -31,7 +31,8 @@
                             <th>Phone</th>
                             <th>Email</th>
                             <th>Specialization</th>
-                            <th>Roles</th>
+                            <th>Groups</th>
+                            <th>Clinician</th>
                             <th>Status</th>
                             <th>Last Login</th>
                             <th class="text-end">Actions</th>
@@ -46,41 +47,55 @@
                                 <td>@(u.Email ?? "—")</td>
                                 <td>@(u.Specialization ?? "—")</td>
                                 <td>
-                                    @foreach (var r in u.Roles)
+                                    @foreach (var groupName in u.Groups)
                                     {
                                         <span class="badge bg-light text-dark border me-1 mb-1">
-                                            @r
-                                            @* Role lookup: do not submit a default ID if the catalog changed. *@
-                                            @if (allRoles.FirstOrDefault(x => x.Name == r) is { } assignedRole)
+                                            @groupName
+                                            @if (allGroups.FirstOrDefault(g => g.Name == groupName) is { } memberGroup)
                                             {
-                                            <form asp-action="RemoveRole" method="post" class="d-inline">
-                                                @Html.AntiForgeryToken()
-                                                <input type="hidden" name="userId" value="@u.Id" />
-                                                <input type="hidden" name="roleId" value="@assignedRole.Id" />
-                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1"
-                                                        style="font-size:.75rem;" onclick="return confirm('Remove this role?')">×</button>
-                                            </form>
+                                                <form asp-action="RemoveFromGroup" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="userId" value="@u.Id" />
+                                                    <input type="hidden" name="groupId" value="@memberGroup.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1"
+                                                            style="font-size:.75rem;" aria-label="Remove from @groupName"
+                                                            onclick="return confirm('Remove this user from the group?')">×</button>
+                                                </form>
                                             }
                                         </span>
                                     }
                                     <div class="dropdown d-inline">
-                                        <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="dropdown">
+                                        <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="dropdown" aria-label="Add to a group">
                                             <i class="bi bi-plus-circle text-primary"></i>
                                         </button>
-                                        <ul class="dropdown-menu p-2" style="min-width:180px;">
-                                            @foreach (var role in allRoles.Where(r => !u.Roles.Contains(r.Name)))
+                                        <ul class="dropdown-menu p-2" style="min-width:200px;">
+                                            @foreach (var g in allGroups.Where(g => !u.Groups.Contains(g.Name)))
                                             {
                                                 <li>
-                                                    <form asp-action="AssignRole" method="post">
+                                                    <form asp-action="AddToGroup" method="post">
                                                         @Html.AntiForgeryToken()
                                                         <input type="hidden" name="userId" value="@u.Id" />
-                                                        <input type="hidden" name="roleId" value="@role.Id" />
-                                                        <button type="submit" class="dropdown-item small">@role.Name</button>
+                                                        <input type="hidden" name="groupId" value="@g.Id" />
+                                                        <button type="submit" class="dropdown-item small">@g.Name</button>
                                                     </form>
                                                 </li>
                                             }
                                         </ul>
                                     </div>
+                                </td>
+                                <td>
+                                    <form asp-action="SetClinicianType" method="post" class="d-flex gap-1">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@u.Id" />
+                                        <label for="clinician-@u.Id" class="visually-hidden">Clinician type</label>
+                                        <select id="clinician-@u.Id" name="clinicianType" class="form-select form-select-sm" style="min-width:8rem;"
+                                                onchange="if (confirm('Change the clinician type? The user will be asked to sign in again.')) this.form.submit(); else this.form.reset();">
+                                            @foreach (var type in Enum.GetValues<SafyaClinic.Domain.Enums.ClinicianType>())
+                                            {
+                                                <option value="@type" selected="@(u.ClinicianType == type)">@type</option>
+                                            }
+                                        </select>
+                                    </form>
                                 </td>
                                 <td>
                                     @if (u.IsActive)

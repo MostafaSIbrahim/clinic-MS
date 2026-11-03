@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using SafyaClinic.Application.Security;
 using SafyaClinic.Application.Services;
+using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Infrastructure.Data;
 using SafyaClinic.Infrastructure.Repositories;
@@ -8,10 +10,10 @@ using Xunit;
 
 namespace SafyaClinic.Tests.Application;
 
-/// <summary>S6 / A3: no self-deactivation, the last Admin is protected, changes renew the stamp.</summary>
+/// <summary>S6 / A3 (F4d: administrators are the Administrators group): no self-deactivation, the last Admin is protected, changes renew the stamp.</summary>
 public class UserServiceAdminGuardTests
 {
-    private sealed record Setup(SafyaDbContext Context, int AdminId, int DoctorId, int AdminRoleId, int ReceptionRoleId);
+    private sealed record Setup(SafyaDbContext Context, int AdminId, int DoctorId);
 
     private static async Task<Setup> SeedAsync()
     {
@@ -26,15 +28,11 @@ public class UserServiceAdminGuardTests
         var doctor = new User { FullName = "Doctor", PhoneNumber = "0199", PasswordHash = "x", SecurityStamp = "doctor-stamp" };
         context.Users.Add(doctor);
         await context.SaveChangesAsync();
-        var doctorRoleId = await context.Roles.Where(r => r.RoleName == "Doctor").Select(r => r.Id).SingleAsync();
-        context.UserRoles.Add(new UserRole { UserId = doctor.Id, RoleId = doctorRoleId });
-        await context.SaveChangesAsync();
+        await TestData.AddToBuiltInGroupAsync(context, doctor.Id, SystemGroups.DoctorRole);
 
         var adminId = await context.Users.Where(u => u.PhoneNumber == "0100").Select(u => u.Id).SingleAsync();
-        var adminRoleId = await context.Roles.Where(r => r.RoleName == "Admin").Select(r => r.Id).SingleAsync();
-        var receptionRoleId = await context.Roles.Where(r => r.RoleName == "Reception").Select(r => r.Id).SingleAsync();
         context.ChangeTracker.Clear();
-        return new Setup(context, adminId, doctor.Id, adminRoleId, receptionRoleId);
+        return new Setup(context, adminId, doctor.Id);
     }
 
     private static UserService Service(SafyaDbContext context)
@@ -69,6 +67,18 @@ public class UserServiceAdminGuardTests
     }
 
     [Fact]
+    public async Task Admin_can_be_deactivated_when_another_active_admin_exists()
+    {
+        var s = await SeedAsync();
+        await TestData.AddToBuiltInGroupAsync(s.Context, s.DoctorId, SystemGroups.AdminRole);
+
+        var result = await Service(s.Context).SetUserActiveAsync(s.AdminId, isActive: false, actingUserId: s.DoctorId);
+
+        Assert.True(result.IsSuccess);
+        Assert.False((await Load(s.Context, s.AdminId)).IsActive);
+    }
+
+    [Fact]
     public async Task Deactivating_a_user_renews_their_stamp()
     {
         var s = await SeedAsync();
@@ -82,33 +92,11 @@ public class UserServiceAdminGuardTests
     }
 
     [Fact]
-    public async Task Admin_role_cannot_be_removed_from_the_last_admin()
+    public async Task Clinician_type_change_renews_the_stamp()
     {
         var s = await SeedAsync();
 
-        var result = await Service(s.Context).RemoveRoleAsync(s.AdminId, s.AdminRoleId);
-
-        Assert.False(result.IsSuccess);
-        Assert.True(await s.Context.UserRoles.AnyAsync(ur => ur.UserId == s.AdminId && ur.RoleId == s.AdminRoleId));
-    }
-
-    [Fact]
-    public async Task Admin_role_can_be_removed_when_another_active_admin_exists()
-    {
-        var s = await SeedAsync();
-        await Service(s.Context).AssignRoleAsync(s.DoctorId, s.AdminRoleId, s.AdminId);
-
-        var result = await Service(s.Context).RemoveRoleAsync(s.AdminId, s.AdminRoleId);
-
-        Assert.True(result.IsSuccess);
-    }
-
-    [Fact]
-    public async Task Role_change_renews_the_stamp()
-    {
-        var s = await SeedAsync();
-
-        var result = await Service(s.Context).AssignRoleAsync(s.DoctorId, s.ReceptionRoleId, s.AdminId);
+        var result = await Service(s.Context).SetClinicianTypeAsync(s.DoctorId, ClinicianType.Nutritionist, s.AdminId);
 
         Assert.True(result.IsSuccess);
         Assert.NotEqual("doctor-stamp", (await Load(s.Context, s.DoctorId)).SecurityStamp);
