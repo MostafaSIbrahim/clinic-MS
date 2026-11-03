@@ -174,7 +174,7 @@ public class UserService : IUserService
 
     public async Task<ServiceResult<IEnumerable<UserDto>>> GetDoctorsAsync()
     {
-        /// F4a: clinicians are marked by ClinicianType (was role IDs 2 and 5).
+        //F4a: clinicians are marked by ClinicianType (was role IDs 2 and 5).
         var doctors = await _uow.Users
             .Query()
             .Where(u => u.IsActive && u.ClinicianType != ClinicianType.None)

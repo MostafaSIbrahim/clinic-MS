@@ -17,7 +17,7 @@ namespace SafyaClinic.Infrastructure.Migrations
                 type: "nvarchar(20)",
                 maxLength: 20,
                 nullable: false,
-                defaultValue: "none");
+                defaultValue: "None");
 
             // F4a: clinician type from today's roles, by role name (not ID). Doctor wins over Nutritionist.
             migrationBuilder.Sql(@"
