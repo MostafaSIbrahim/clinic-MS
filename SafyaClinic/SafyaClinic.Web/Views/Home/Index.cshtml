@@ -62,7 +62,14 @@
             /* Hero Section */
             .hero-section {
                 background: linear-gradient(180deg, rgba(124, 58, 237, 0.05) 0%, rgba(248, 250, 252, 1) 100%);
-                padding: 100px 0 60px;
+                padding: 60px 0;
+            }
+
+            /* The header stays at the top while scrolling but takes its own space (it used to
+               float over the page and hide the first line of the hero). Menu links (#services,
+               #videos, #contact) stop below the header. */
+            html {
+                scroll-padding-top: 9rem;
             }
 
             .hero-title {
@@ -170,7 +177,7 @@
 <body>
 
     <!-- Header / Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-custom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
         <div class="container">
             @* Branding: use the approved wordmark instead of the placeholder letter and duplicated text. *@
             <a class="navbar-brand clinic-brand-link" asp-controller="Home" asp-action="Index" aria-label="عيادة صافيا - الصفحة الرئيسية">
