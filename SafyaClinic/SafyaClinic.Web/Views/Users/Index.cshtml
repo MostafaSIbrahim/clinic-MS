@@ -59,7 +59,7 @@
                                                     <input type="hidden" name="groupId" value="@memberGroup.Id" />
                                                     <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1"
                                                             style="font-size:.75rem;" aria-label="Remove from @groupName"
-                                                            onclick="return confirm('Remove this user from the group?')">×</button>
+                                                            data-confirm="Remove this user from the group?">×</button>
                                                 </form>
                                             }
                                         </span>
@@ -89,7 +89,7 @@
                                         <input type="hidden" name="userId" value="@u.Id" />
                                         <label for="clinician-@u.Id" class="visually-hidden">Clinician type</label>
                                         <select id="clinician-@u.Id" name="clinicianType" class="form-select form-select-sm" style="min-width:8rem;"
-                                                onchange="if (confirm('Change the clinician type? The user will be asked to sign in again.')) this.form.submit(); else this.form.reset();">
+                                                data-confirm="Change the clinician type? The user will be asked to sign in again." data-confirm-submit>
                                             @foreach (var type in Enum.GetValues<SafyaClinic.Domain.Enums.ClinicianType>())
                                             {
                                                 <option value="@type" selected="@(u.ClinicianType == type)">@type</option>

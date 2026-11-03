@@ -10,7 +10,7 @@
     </div>
     @if (await Can.HasAsync(Permissions.Nutrition.ManagePackages))
     {
-        <form asp-action="DeactivatePackage" asp-route-id="@Model.Id" method="post" onsubmit="return confirm('Deactivate this package?')">
+        <form asp-action="DeactivatePackage" asp-route-id="@Model.Id" method="post" data-confirm="Deactivate this package?">
             @Html.AntiForgeryToken()
             <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-slash-circle me-1"></i>Deactivate</button>
         </form>

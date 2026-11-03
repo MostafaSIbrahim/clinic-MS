@@ -23,7 +23,7 @@
                 <input type="hidden" name="id" value="@Model.Id" />
                 <input type="hidden" name="patientId" value="@Model.PatientId" />
                 <input type="hidden" name="status" value="Cancelled" />
-                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Cancel this enrollment?')">
+                <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Cancel this enrollment?">
                     <i class="bi bi-x-circle me-1"></i>Cancel
                 </button>
             </form>
@@ -150,7 +150,7 @@
                                     <i class="bi bi-pencil"></i> Edit
                                 </a>
                                 <form asp-action="DeleteFollowUp" method="post" class="d-inline"
-                                      onsubmit="return confirm('Delete Week @f.WeekNumber follow-up?');">
+                                      data-confirm="Delete Week @f.WeekNumber follow-up?">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@f.Id" />
                                     <input type="hidden" name="enrollmentId" value="@Model.Id" />

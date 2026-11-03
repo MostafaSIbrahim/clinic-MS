@@ -33,7 +33,7 @@
                         <td>@(a.Notes ?? "—")</td>
                         <td>
                             <form asp-action="RemoveAgreement" method="post" class="d-inline"
-                                  onsubmit="return confirm('Remove this agreement? The source default % will apply instead.');">
+                                  data-confirm="Remove this agreement? The source default % will apply instead.">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="agreementId" value="@a.Id" />
                                 <input type="hidden" name="clinicId" value="@Model.Id" />
