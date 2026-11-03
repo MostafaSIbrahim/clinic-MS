@@ -53,7 +53,6 @@ public class AuthController : BaseController
             new(AuthClaims.ClinicianType, data.ClinicianType.ToString())
         };
     
-        claims.AddRange(data.Roles.Select(r => new Claim(ClaimTypes.Role, r)));
         if (data.MustChangePassword)
             claims.Add(new Claim(AuthClaims.MustChangePassword, "true"));
 

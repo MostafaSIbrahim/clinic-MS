@@ -1,4 +1,6 @@
-﻿namespace SafyaClinic.Application.DTOs.Patient;
+﻿using SafyaClinic.Domain.Enums;
+
+namespace SafyaClinic.Application.DTOs.Patient;
 
 // ── Response ─────────────────────────────────────────────────
 
@@ -130,7 +132,8 @@ public class CreateUserRequest
     public string ConfirmPassword { get; init; } = string.Empty;
     public string? Specialization { get; init; }
     public string? LicenseNumber { get; init; }
-    public List<int> RoleIds { get; init; } = new();
+    public ClinicianType ClinicianType { get; init; } = ClinicianType.None;   // F4d: appears in doctor pickers unless None
+    public List<int> GroupIds { get; init; } = new();                          // F4d: groups the new user joins
 }
 
 
@@ -150,5 +153,6 @@ public class UserDto
     public string? Specialization { get; init; }
     public bool IsActive { get; init; }
     public DateTime? LastLoginAt { get; init; }
-    public IEnumerable<string> Roles { get; init; } = Enumerable.Empty<string>();
+    public ClinicianType ClinicianType { get; init; }
+    public IEnumerable<string> Groups { get; init; } = Enumerable.Empty<string>();   // F4d: permission group names
 }

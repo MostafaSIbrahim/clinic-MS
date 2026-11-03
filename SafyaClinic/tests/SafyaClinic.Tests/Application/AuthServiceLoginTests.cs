@@ -67,8 +67,8 @@ public class AuthServiceLoginTests
         var result = await SignIn(context, AdminPassword);
 
         Assert.True(result.IsSuccess);
-        Assert.Contains("Admin", result.Data!.Roles);
-        Assert.True(result.Data.ExpiresAt > DateTime.UtcNow);
+        Assert.NotNull(result.Data);
+        Assert.True(result.Data!.ExpiresAt > DateTime.UtcNow);
         Assert.False(result.Data.MustChangePassword);
     }
 

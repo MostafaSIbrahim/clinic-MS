@@ -34,15 +34,8 @@ public sealed class PermissionGroupService : IPermissionGroupService
             })
             .ToListAsync();
 
-        var roleMembers = (await _db.UserRoles.AsNoTracking()
-                .Select(ur => ur.Role.RoleName)
-                .ToListAsync())
-            .GroupBy(name => name)
-            .ToDictionary(g => g.Key, g => g.Count());
-
         return groups
-            .Select(g => new PermissionGroupSummary(g.Id, g.Name, g.Description, g.SystemKey, g.Permissions,
-                g.Direct + (g.SystemKey is not null && roleMembers.TryGetValue(g.SystemKey, out var n) ? n : 0)))
+            .Select(g => new PermissionGroupSummary(g.Id, g.Name, g.Description, g.SystemKey, g.Permissions, g.Direct))
             .OrderBy(g => g.SystemKey is null)
             .ThenBy(g => g.Name)
             .ToList();
@@ -61,19 +54,11 @@ public sealed class PermissionGroupService : IPermissionGroupService
             .Select(gp => gp.PermissionCode)
             .ToListAsync();
 
-        var direct = await _db.UserGroups.AsNoTracking()
+        var members = await _db.UserGroups.AsNoTracking()
             .Where(m => m.GroupId == id)
-            .Select(m => new GroupMember(m.UserId, m.User.FullName, m.User.IsActive, false))
+            .OrderBy(m => m.User.FullName)
+            .Select(m => new GroupMember(m.UserId, m.User.FullName, m.User.IsActive))
             .ToListAsync();
-
-        var viaRole = group.SystemKey is null
-            ? new List<GroupMember>()
-            : await _db.UserRoles.AsNoTracking()
-                .Where(ur => ur.Role.RoleName == group.SystemKey)
-                .Select(ur => new GroupMember(ur.UserId, ur.User.FullName, ur.User.IsActive, true))
-                .ToListAsync();
-
-        var members = viaRole.Concat(direct).OrderBy(m => m.FullName).ToList();
         return new PermissionGroupDetail(group.Id, group.Name, group.Description, group.SystemKey,
             codes.ToHashSet(StringComparer.Ordinal), members);
     }
@@ -175,8 +160,8 @@ public sealed class PermissionGroupService : IPermissionGroupService
 
     public async Task<ServiceResult> AddMemberAsync(int groupId, int userId, int actingUserId)
     {
-        var problem = await DirectMembershipProblemAsync(groupId);
-        if (problem is not null) return ServiceResult.Failure(problem);
+        if (!await _db.PermissionGroups.AnyAsync(g => g.Id == groupId))
+            return ServiceResult.Failure("Group not found.");
         if (!await _db.Users.AnyAsync(u => u.Id == userId && u.IsActive))
             return ServiceResult.Failure("Choose an active user.");
         if (await _db.UserGroups.AnyAsync(m => m.GroupId == groupId && m.UserId == userId))
@@ -196,29 +181,24 @@ public sealed class PermissionGroupService : IPermissionGroupService
 
     public async Task<ServiceResult> RemoveMemberAsync(int groupId, int userId, int actingUserId)
     {
-        var problem = await DirectMembershipProblemAsync(groupId);
-        if (problem is not null) return ServiceResult.Failure(problem);
-
-        var membership = await _db.UserGroups.FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == userId);
+        var membership = await _db.UserGroups
+            .Include(m => m.Group)
+            .FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == userId);
         if (membership is null) return ServiceResult.Failure("This user is not a member of the group.");
+
+        // At least one active administrator must remain.
+        if (membership.Group.SystemKey == SystemGroups.AdminRole)
+        {
+            var otherActiveAdmins = await _db.UserGroups.AnyAsync(m =>
+                m.GroupId == groupId && m.UserId != userId && m.User.IsActive);
+            if (!otherActiveAdmins)
+                return ServiceResult.Failure("This is the last active administrator. Add another active user to Administrators first.");
+        }
 
         _db.UserGroups.Remove(membership);
         await _audit.RecordAsync(AuditActions.GroupMemberRemoved, EntityType, groupId, new { userId }, actingUserId);
         await _db.SaveChangesAsync();
         return ServiceResult.Success("Member removed. Their access changes within a minute.");
-    }
-
-    // Built-in groups get their members from the user's role until roles are retired.
-    private async Task<string?> DirectMembershipProblemAsync(int groupId)
-    {
-        var systemKey = await _db.PermissionGroups.AsNoTracking()
-            .Where(g => g.Id == groupId)
-            .Select(g => new { g.SystemKey })
-            .FirstOrDefaultAsync();
-        if (systemKey is null) return "Group not found.";
-        return systemKey.SystemKey is null
-            ? null
-            : "Members of a built-in group follow the user's role. Change the role on the Users page.";
     }
 
     private async Task<string?> NameProblemAsync(string name, int? exceptId)

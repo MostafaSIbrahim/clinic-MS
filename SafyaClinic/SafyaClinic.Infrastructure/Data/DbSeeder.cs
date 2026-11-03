@@ -20,6 +20,7 @@ public static class DbSeeder
         await EnsureReceptionAdminRoleAsync(context);
         await SeedPermissionsAsync(context);
         await SeedAdminAsync(context, configuration);
+        await MoveRoleMembershipsAsync(context);
         await SeedAnalysisTypesAsync(context);
         await SeedTreatmentTypesAsync(context);
         await SeedInjectionTypesAsync(context);
@@ -153,16 +154,50 @@ public static class DbSeeder
         admin.CreatedBy = admin.Id;
         context.Users.Update(admin);
 
-        // Assign admin role
-        var adminRole = await context.Roles.FirstAsync(r => r.RoleName == "Admin");
-        await context.UserRoles.AddAsync(new UserRole
+        // F4d: the first administrator joins the Administrators group.
+        var administratorsId = await context.PermissionGroups
+            .Where(g => g.SystemKey == SystemGroups.AdminRole)
+            .Select(g => g.Id)
+            .FirstAsync();
+        await context.UserGroups.AddAsync(new UserGroup
         {
             UserId = admin.Id,
-            RoleId = adminRole.Id,
+            GroupId = administratorsId,
             AssignedAt = new DateTime(2026, 1, 1),
             AssignedBy = admin.Id
         });
 
+        await context.SaveChangesAsync();
+    }
+
+    // ── Role memberships become group memberships (F4d, once) ──
+    /// <summary>
+    /// Roles are no longer read. The first time this runs, each user's roles become memberships of
+    /// the matching built-in groups. It does nothing once any built-in group has a member, so later
+    /// changes made on the Permission Groups screen are never overwritten.
+    /// </summary>
+    private static async Task MoveRoleMembershipsAsync(SafyaDbContext context)
+    {
+        var builtIn = await context.PermissionGroups
+            .Where(g => g.SystemKey != null)
+            .ToDictionaryAsync(g => g.SystemKey!, g => g.Id);
+        var builtInIds = builtIn.Values.ToList();
+        if (await context.UserGroups.AnyAsync(m => builtInIds.Contains(m.GroupId))) return;
+
+        var memberships = await context.UserRoles
+            .Select(ur => new { ur.UserId, ur.Role.RoleName, ur.AssignedAt, ur.AssignedBy })
+            .ToListAsync();
+        foreach (var m in memberships)
+        {
+            if (builtIn.TryGetValue(m.RoleName, out var groupId))
+                context.UserGroups.Add(new UserGroup
+                {
+                    UserId = m.UserId,
+                    GroupId = groupId,
+                    AssignedAt = m.AssignedAt,
+                    AssignedBy = m.AssignedBy
+                });
+        }
         await context.SaveChangesAsync();
     }
 

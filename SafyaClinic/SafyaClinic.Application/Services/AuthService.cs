@@ -72,19 +72,11 @@ public class AuthService : IAuthService
         _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
 
-        var roleNames = await _uow.UserRoles
-            .Query()
-            .Where(ur => ur.UserId == user.Id)
-            .OrderBy(ur => ur.RoleId)
-            .Select(ur => ur.Role.RoleName)
-            .ToListAsync();
-
         return ServiceResult<LoginResponse>.Success(new LoginResponse
         {
             UserId = user.Id,
             FullName = user.FullName,
             ExpiresAt = now.AddHours(8),
-            Roles = roleNames,
             SecurityStamp = user.SecurityStamp,
             ClinicianType = user.ClinicianType,
             MustChangePassword = user.MustChangePassword
@@ -135,9 +127,10 @@ public class AuthService : IAuthService
                 Specialization = u.Specialization,
                 IsActive = u.IsActive,
                 LastLoginAt = u.LastLoginAt,
-                Roles = u.UserRoles
-                    .OrderBy(ur => ur.RoleId)
-                    .Select(ur => ur.Role.RoleName)
+                ClinicianType = u.ClinicianType,
+                Groups = u.UserGroups
+                    .OrderBy(m => m.Group.Name)
+                    .Select(m => m.Group.Name)
             })
             .FirstOrDefaultAsync();
 

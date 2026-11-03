@@ -31,29 +31,7 @@ public class UserService : IUserService
         if (await _uow.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber) is not null)
             return ServiceResult<UserDto>.Failure("A user with this phone number already exists.");
 
-        // Validate roles exist
-        var requestedRoleIds = request.RoleIds.ToList();
-
-        var existingRoleIds = (await _uow.Roles
-            .Query()
-            .Where(role => requestedRoleIds.Contains(role.Id))
-            .Select(role => role.Id)
-            .ToListAsync())
-            .ToHashSet();
-
-        foreach (var roleId in requestedRoleIds)
-        {
-            if (!existingRoleIds.Contains(roleId))
-                return ServiceResult<UserDto>.Failure(
-                    $"Role ID {roleId} does not exist.");
-        }
-
-        // F4a: the clinician type follows the roles until roles are retired (F4d).
-        var requestedRoleNames = await _uow.Roles
-            .Query()
-            .Where(role => requestedRoleIds.Contains(role.Id))
-            .Select(role => role.RoleName)
-            .ToListAsync();
+        // F4d: groups are added by the caller after creation; the clinician type is chosen directly.
         var user = new User
         {
             FullName = request.FullName,
@@ -63,7 +41,7 @@ public class UserService : IUserService
             SecurityStamp = SecurityStamps.New(),
             Specialization = request.Specialization,
             LicenseNumber = request.LicenseNumber,
-            ClinicianType = ClinicianTypes.FromRoles(requestedRoleNames),
+            ClinicianType = request.ClinicianType,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = createdByUserId
@@ -71,18 +49,8 @@ public class UserService : IUserService
 
         await _uow.Users.AddAsync(user);
         await _uow.SaveChangesAsync();
-        await _audit.RecordAsync(AuditActions.UserCreated, "User", user.Id, new { roleIds = requestedRoleIds }, createdByUserId);
-        // Assign roles
-        foreach (var roleId in requestedRoleIds)
-        {
-            await _uow.UserRoles.AddAsync(new UserRole
-            {
-                UserId = user.Id,
-                RoleId = roleId,
-                AssignedAt = DateTime.UtcNow,
-                AssignedBy = createdByUserId
-            });
-        }
+        await _audit.RecordAsync(AuditActions.UserCreated, "User", user.Id,
+            new { clinicianType = request.ClinicianType.ToString() }, createdByUserId);
         await _uow.SaveChangesAsync();
 
         return ServiceResult<UserDto>.Success(await MapUserDtoAsync(user));
@@ -124,9 +92,10 @@ public class UserService : IUserService
                 Specialization = u.Specialization,
                 IsActive = u.IsActive,
                 LastLoginAt = u.LastLoginAt,
-                Roles = u.UserRoles
-                    .OrderBy(ur => ur.RoleId)
-                    .Select(ur => ur.Role.RoleName)
+                ClinicianType = u.ClinicianType,
+                Groups = u.UserGroups
+                    .OrderBy(m => m.Group.Name)
+                    .Select(m => m.Group.Name)
             })
             .FirstOrDefaultAsync();
 
@@ -156,9 +125,10 @@ public class UserService : IUserService
                 Specialization = u.Specialization,
                 IsActive = u.IsActive,
                 LastLoginAt = u.LastLoginAt,
-                Roles = u.UserRoles
-                    .OrderBy(ur => ur.RoleId)
-                    .Select(ur => ur.Role.RoleName)
+                ClinicianType = u.ClinicianType,
+                Groups = u.UserGroups
+                    .OrderBy(m => m.Group.Name)
+                    .Select(m => m.Group.Name)
             })
             .ToListAsync();
 
@@ -187,18 +157,18 @@ public class UserService : IUserService
                 Specialization = u.Specialization,
                 IsActive = u.IsActive,
                 LastLoginAt = u.LastLoginAt,
-                Roles = u.UserRoles
-                    .OrderBy(ur => ur.RoleId)
-                    .Select(ur => ur.Role.RoleName)
+                ClinicianType = u.ClinicianType,
+                Groups = u.UserGroups
+                    .OrderBy(m => m.Group.Name)
+                    .Select(m => m.Group.Name)
             })
             .ToListAsync();
 
         return ServiceResult<IEnumerable<UserDto>>.Success(doctors);
     }
 
-    private const string AdminRoleName = "Admin";
     private const string LastAdminMessage =
-        "This is the last active administrator. Give another active user the Admin role first.";
+        "This is the last active administrator. Add another active user to the Administrators group first.";
 
     public async Task<ServiceResult> SetUserActiveAsync(int userId, bool isActive, int actingUserId)
     {
@@ -227,97 +197,39 @@ public class UserService : IUserService
         return ServiceResult.Success(isActive ? "User activated." : "User deactivated and signed out.");
     }
 
-    public async Task<ServiceResult> AssignRoleAsync(int userId, int roleId, int assignedBy)
+    /// <summary>F4d: who appears in doctor pickers and queues. The user signs in again (the type is in the cookie).</summary>
+    public async Task<ServiceResult> SetClinicianTypeAsync(int userId, ClinicianType clinicianType, int actingUserId)
     {
-        var roles = _uow.Roles.Query();
+        if (!Enum.IsDefined(clinicianType))
+            return ServiceResult.Failure("Choose a valid clinician type.");
 
-        var validation = await _uow.Users
-            .Query()
-            .Where(u => u.Id == userId)
-            .Select(_ => new
-            {
-                RoleExists = roles.Any(r => r.Id == roleId)
-            })
-            .FirstOrDefaultAsync();
-
-        if (validation is null)
+        var user = await _uow.Users.GetByIdAsync(userId);
+        if (user is null)
             return ServiceResult.Failure("User not found.");
+        if (user.ClinicianType == clinicianType)
+            return ServiceResult.Success("Clinician type unchanged.");
 
-        if (!validation.RoleExists)
-            return ServiceResult.Failure("Role not found.");
-
-        var roleAlreadyAssigned = await _uow.UserRoles
-     .Query()
-     .AnyAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
-
-        if (roleAlreadyAssigned)
-            return ServiceResult.Failure("User already has this role.");
-
-        await _uow.UserRoles.AddAsync(new UserRole
-        {
-            UserId = userId,
-            RoleId = roleId,
-            AssignedAt = DateTime.UtcNow,
-            AssignedBy = assignedBy
-        });
-        var roleNames = await RoleNamesAsync(userId);
-        roleNames.Add(await _uow.Roles.Query().Where(r => r.Id == roleId).Select(r => r.RoleName).FirstAsync());
-        await RenewStampAsync(userId, ClinicianTypes.FromRoles(roleNames));   // the user signs in again and gets the new role
-        await _audit.RecordAsync(AuditActions.RoleAssigned, "User", userId, new { roleId }, assignedBy);
+        var previous = user.ClinicianType;
+        user.ClinicianType = clinicianType;
+        user.SecurityStamp = SecurityStamps.New();
+        await _audit.RecordAsync(AuditActions.ClinicianTypeChanged, "User", userId,
+            new { from = previous.ToString(), to = clinicianType.ToString() }, actingUserId);
+        _uow.Users.Update(user);
         await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Role assigned. The user will be asked to sign in again.");
+        return ServiceResult.Success("Clinician type changed. The user will be asked to sign in again.");
     }
 
-    public async Task<ServiceResult> RemoveRoleAsync(int userId, int roleId)
-    {
-        var userRole = await _uow.UserRoles
-            .Query(asNoTracking: false)
-            .Include(ur => ur.Role)
-            .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
-
-        if (userRole is null)
-            return ServiceResult.Failure("User does not have this role.");
-
-        if (userRole.Role.RoleName == AdminRoleName && await IsLastActiveAdminAsync(userId))
-            return ServiceResult.Failure(LastAdminMessage);
-
-        _uow.UserRoles.Delete(userRole);
-        var roleNames = await RoleNamesAsync(userId);
-        roleNames.Remove(userRole.Role.RoleName);
-        await RenewStampAsync(userId, ClinicianTypes.FromRoles(roleNames));   // the removed role stops working at once
-        await _audit.RecordAsync(AuditActions.RoleRemoved, "User", userId, new { roleId, role = userRole.Role.RoleName });
-        await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Role removed. The user will be asked to sign in again.");
-    }
-
+    // F4d: administrators are the active members of the Administrators group.
     private async Task<bool> IsLastActiveAdminAsync(int userId)
     {
-        var activeAdminIds = await _uow.UserRoles
+        var activeAdminIds = await _uow.Users
             .Query()
-            .Where(ur => ur.Role.RoleName == AdminRoleName && ur.User.IsActive)
-            .Select(ur => ur.UserId)
-            .Distinct()
+            .Where(u => u.IsActive && u.UserGroups.Any(m => m.Group.SystemKey == SystemGroups.AdminRole))
+            .Select(u => u.Id)
             .ToListAsync();
 
         return activeAdminIds.Count == 1 && activeAdminIds[0] == userId;
     }
-
-    private async Task RenewStampAsync(int userId, ClinicianType clinicianType)
-    {
-        var user = await _uow.Users.GetByIdAsync(userId);
-        if (user is null) return;
-
-        user.SecurityStamp = SecurityStamps.New();
-        user.ClinicianType = clinicianType;   // F4a: follows the roles until F4d
-        _uow.Users.Update(user);
-    }
-
-    // Saved roles only: the caller adds or removes the role it is changing.
-    private Task<List<string>> RoleNamesAsync(int userId) =>
-        _uow.UserRoles.Query()
-            .Where(ur => ur.UserId == userId)
-            .Select(ur => ur.Role.RoleName)
-            .ToListAsync();
 
     // ── Mapper ────────────────────────────────────────────────
 
@@ -335,9 +247,10 @@ public class UserService : IUserService
                     Specialization = u.Specialization,
                     IsActive = u.IsActive,
                     LastLoginAt = u.LastLoginAt,
-                    Roles = u.UserRoles
-                        .OrderBy(ur => ur.RoleId)
-                        .Select(ur => ur.Role.RoleName)
+                    ClinicianType = u.ClinicianType,
+                    Groups = u.UserGroups
+                        .OrderBy(m => m.Group.Name)
+                        .Select(m => m.Group.Name)
                 })
                 .FirstOrDefaultAsync();
 
@@ -353,7 +266,8 @@ public class UserService : IUserService
             Specialization = user.Specialization,
             IsActive = user.IsActive,
             LastLoginAt = user.LastLoginAt,
-            Roles = Enumerable.Empty<string>()
+            ClinicianType = user.ClinicianType,
+            Groups = Enumerable.Empty<string>()
         };
     }
 }

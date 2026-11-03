@@ -10,7 +10,7 @@ using Xunit;
 
 namespace SafyaClinic.Tests.Application;
 
-/// <summary>F4a: doctor pickers use ClinicianType, which follows the Doctor and Nutritionist roles.</summary>
+/// <summary>F4a/F4d: doctor pickers use ClinicianType, which an admin sets on the user.</summary>
 public class ClinicianTypeTests
 {
     private static async Task<(SafyaDbContext Context, int AdminId)> SeedAsync()
@@ -32,20 +32,13 @@ public class ClinicianTypeTests
         return new UserService(new UnitOfWork(context));
     }
 
-    private static Task<int> RoleId(SafyaDbContext context, string name) =>
-        context.Roles.Where(r => r.RoleName == name).Select(r => r.Id).SingleAsync();
-
     private static async Task<int> AddUserAsync(SafyaDbContext context, string phone,
         ClinicianType type = ClinicianType.None, bool active = true)
     {
         var user = new User
         {
-            FullName = "User " + phone,
-            PhoneNumber = phone,
-            PasswordHash = "x",
-            SecurityStamp = "stamp",
-            ClinicianType = type,
-            IsActive = active
+            FullName = "User " + phone, PhoneNumber = phone, PasswordHash = "x",
+            SecurityStamp = "stamp", ClinicianType = type, IsActive = active
         };
         context.Users.Add(user);
         await context.SaveChangesAsync();
@@ -57,16 +50,25 @@ public class ClinicianTypeTests
         context.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.ClinicianType).SingleAsync();
 
     [Fact]
-    public async Task Assigning_and_removing_the_doctor_role_updates_the_clinician_type()
+    public async Task Admin_sets_and_clears_the_clinician_type()
     {
         var (context, adminId) = await SeedAsync();
         var userId = await AddUserAsync(context, "0155");
-        var doctorRoleId = await RoleId(context, "Doctor");
 
-        Assert.True((await Service(context).AssignRoleAsync(userId, doctorRoleId, adminId)).IsSuccess);
+        Assert.True((await Service(context).SetClinicianTypeAsync(userId, ClinicianType.Doctor, adminId)).IsSuccess);
         Assert.Equal(ClinicianType.Doctor, await TypeOf(context, userId));
 
-        Assert.True((await Service(context).RemoveRoleAsync(userId, doctorRoleId)).IsSuccess);
+        Assert.True((await Service(context).SetClinicianTypeAsync(userId, ClinicianType.None, adminId)).IsSuccess);
+        Assert.Equal(ClinicianType.None, await TypeOf(context, userId));
+    }
+
+    [Fact]
+    public async Task An_unknown_clinician_type_is_refused()
+    {
+        var (context, adminId) = await SeedAsync();
+        var userId = await AddUserAsync(context, "0156");
+
+        Assert.False((await Service(context).SetClinicianTypeAsync(userId, (ClinicianType)99, adminId)).IsSuccess);
         Assert.Equal(ClinicianType.None, await TypeOf(context, userId));
     }
 
@@ -80,7 +82,7 @@ public class ClinicianTypeTests
             PhoneNumber = "0166",
             Password = "Create-Test-Password-1",
             ConfirmPassword = "Create-Test-Password-1",
-            RoleIds = new() { await RoleId(context, "Nutritionist") }
+            ClinicianType = ClinicianType.Nutritionist
         };
 
         var result = await Service(context).CreateUserAsync(request, adminId);

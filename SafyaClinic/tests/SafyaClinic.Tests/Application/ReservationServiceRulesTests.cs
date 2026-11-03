@@ -27,9 +27,7 @@ public class ReservationServiceRulesTests
         var user = new User { FullName = name, PhoneNumber = phone, PasswordHash = "x", SecurityStamp = "s" };
         context.Users.Add(user);
         await context.SaveChangesAsync();
-        var roleId = await context.Roles.Where(r => r.RoleName == role).Select(r => r.Id).SingleAsync();
-        context.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = roleId });
-        await context.SaveChangesAsync();
+        await TestData.AddToBuiltInGroupAsync(context, user.Id, role);
         return user.Id;
     }
 

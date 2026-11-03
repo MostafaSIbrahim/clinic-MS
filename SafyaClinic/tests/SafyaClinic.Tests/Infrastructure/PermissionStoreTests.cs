@@ -8,7 +8,7 @@ using Xunit;
 
 namespace SafyaClinic.Tests.Infrastructure;
 
-/// <summary>F4b: effective permissions come from the groups of the user's roles and direct memberships.</summary>
+/// <summary>F4b/F4d: effective permissions are the union of the user's groups.</summary>
 public class PermissionStoreTests
 {
     private static async Task<SafyaDbContext> SeededAsync()
@@ -28,11 +28,7 @@ public class PermissionStoreTests
         context.Users.Add(user);
         await context.SaveChangesAsync();
         foreach (var role in roles)
-        {
-            var roleId = await context.Roles.Where(r => r.RoleName == role).Select(r => r.Id).SingleAsync();
-            context.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = roleId });
-        }
-        await context.SaveChangesAsync();
+            await TestData.AddToBuiltInGroupAsync(context, user.Id, role);
         context.ChangeTracker.Clear();
         return user.Id;
     }

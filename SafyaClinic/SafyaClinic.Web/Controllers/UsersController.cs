@@ -1,14 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.Interfaces.Services;
-using SafyaClinic.Application.DTOs.Common;
-// Role lookup: read available roles from the existing catalog instead of fixed IDs in views.
-using Microsoft.EntityFrameworkCore;
-using SafyaClinic.Infrastructure.Data;
-using SafyaClinic.Web.Models;
-using SafyaClinic.Web.Security;
 using SafyaClinic.Application.Security;
+using SafyaClinic.Domain.Enums;
+using SafyaClinic.Web.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -16,23 +12,20 @@ namespace SafyaClinic.Web.Controllers;
 public class UsersController : BaseController
 {
     private readonly IUserService _userService;
+    private readonly IPermissionGroupService _groups;
 
-    private readonly SafyaDbContext _context;
-
-    public UsersController(IUserService userService, SafyaDbContext context)
+    public UsersController(IUserService userService, IPermissionGroupService groups)
     {
         _userService = userService;
-        _context = context;
+        _groups = groups;
     }
 
-    private async Task LoadRolesAsync() => ViewBag.AllRoles = await _context.Roles.AsNoTracking()
-        .OrderBy(r => r.RoleName)
-        .Select(r => new RoleLookupItem(r.Id, r.RoleName, r.Description)).ToListAsync();
+    // F4d: users join permission groups (roles are retired).
+    private async Task LoadGroupsAsync() => ViewBag.AllGroups = await _groups.GetGroupsAsync();
 
     public async Task<IActionResult> Index(PaginationRequest request)
     {
-        // Role lookup: use real role IDs for both assignment and removal.
-        await LoadRolesAsync();
+        await LoadGroupsAsync();
         var result = await _userService.GetAllUsersAsync(request);
 
         if (!result.IsSuccess)
@@ -53,7 +46,7 @@ public class UsersController : BaseController
     [HttpGet]
     public async Task<IActionResult> Create()
     {
-        await LoadRolesAsync();
+        await LoadGroupsAsync();
         return View(new CreateUserRequest());
     }
 
@@ -61,16 +54,26 @@ public class UsersController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateUserRequest model)
     {
-        // Role lookup: preserve the complete choices when validation returns the form.
-        await LoadRolesAsync();
+        await LoadGroupsAsync();
         if (!ModelState.IsValid) return View(model);
 
         var result = await _userService.CreateUserAsync(model, CurrentUserId);
         if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
 
+        var problems = new List<string>();
+        foreach (var groupId in model.GroupIds.Distinct())
+        {
+            var added = await _groups.AddMemberAsync(groupId, result.Data!.Id, CurrentUserId);
+            if (!added.IsSuccess) problems.AddRange(added.Errors);
+        }
+
+        if (problems.Count > 0)
+        {
+            Warning("User created, but some groups were not added: " + string.Join(" ", problems));
+            return RedirectToAction(nameof(Index));
+        }
         return RedirectWithSuccess("User created successfully.", nameof(Index));
     }
-
 
     [HttpGet]
     public async Task<IActionResult> ResetPassword(int id)
@@ -109,23 +112,31 @@ public class UsersController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> AssignRole(int userId, int roleId)
+    public async Task<IActionResult> AddToGroup(int userId, int groupId)
     {
-        // Role lookup: show service failures instead of silently returning to the list.
-        var result = await _userService.AssignRoleAsync(userId, roleId, CurrentUserId);
-        if (!result.IsSuccess) Error(result.Errors.FirstOrDefault() ?? "Could not assign role.");
-        else Success("Role assigned.");
+        var result = await _groups.AddMemberAsync(groupId, userId, CurrentUserId);
+        if (result.IsSuccess) Success(result.Message);
+        else Error(result.Errors.FirstOrDefault() ?? "Could not add the user to the group.");
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> RemoveRole(int userId, int roleId)
+    public async Task<IActionResult> RemoveFromGroup(int userId, int groupId)
     {
-        // Role lookup: surface stale or invalid role removals to the administrator.
-        var result = await _userService.RemoveRoleAsync(userId, roleId);
-        if (!result.IsSuccess) Error(result.Errors.FirstOrDefault() ?? "Could not remove role.");
-        else Success("Role removed.");
+        var result = await _groups.RemoveMemberAsync(groupId, userId, CurrentUserId);
+        if (result.IsSuccess) Success(result.Message);
+        else Error(result.Errors.FirstOrDefault() ?? "Could not remove the user from the group.");
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetClinicianType(int userId, ClinicianType clinicianType)
+    {
+        var result = await _userService.SetClinicianTypeAsync(userId, clinicianType, CurrentUserId);
+        if (result.IsSuccess) Success(result.Message);
+        else Error(result.Errors.FirstOrDefault() ?? "Could not change the clinician type.");
         return RedirectToAction(nameof(Index));
     }
 }
