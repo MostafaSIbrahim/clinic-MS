@@ -1,0 +1,186 @@
+/* ==========================================================================
+   Safya Clinic — Bootstrap bridge (F6)
+   Feeds the design tokens (tokens.css) into Bootstrap 5.3, so existing
+   Bootstrap markup takes the brand colours, radii, focus ring and accessible
+   control borders without changing the views.
+   Load order: tokens.css → bootstrap.min.css → bootstrap-bridge.css → site.css.
+   The "-rgb" triplets repeat token colours because Bootstrap needs them as
+   numbers; keep them in step with tokens.css.
+   ========================================================================== */
+
+:root,
+[data-bs-theme="light"] {
+  --bs-body-font-family: var(--font-sans);
+  --bs-body-color: var(--color-text);
+  --bs-body-color-rgb: 28, 21, 48;                 /* --neutral-900 */
+  --bs-body-bg: var(--color-bg-page);
+  --bs-emphasis-color: var(--color-text);
+  --bs-secondary-color: var(--color-text-muted);   /* .text-muted, .form-text: 6.98:1 */
+  --bs-tertiary-bg: var(--color-surface-subtle);
+
+  --bs-primary: var(--color-primary);
+  --bs-primary-rgb: 91, 33, 182;                   /* --violet-700 */
+  --bs-secondary: var(--neutral-600);
+  --bs-secondary-rgb: 91, 86, 112;                 /* --neutral-600 */
+  --bs-success: var(--color-success-icon);
+  --bs-success-rgb: 21, 128, 61;                   /* --green-700 */
+  --bs-warning: var(--color-warning-icon);
+  --bs-warning-rgb: 180, 83, 9;                    /* --amber-700 */
+  --bs-danger: var(--color-danger);
+  --bs-danger-rgb: 185, 28, 28;                    /* --red-700 */
+  --bs-info: var(--color-accent);
+  --bs-info-rgb: 14, 116, 144;                     /* --teal-700 */
+
+  --bs-primary-text-emphasis: var(--violet-800);
+  --bs-primary-bg-subtle: var(--color-primary-subtle);
+  --bs-primary-border-subtle: var(--color-primary-border);
+  --bs-success-text-emphasis: var(--color-success-fg);
+  --bs-success-bg-subtle: var(--color-success-bg);
+  --bs-success-border-subtle: var(--color-success-border);
+  --bs-warning-text-emphasis: var(--color-warning-fg);
+  --bs-warning-bg-subtle: var(--color-warning-bg);
+  --bs-warning-border-subtle: var(--color-warning-border);
+  --bs-danger-text-emphasis: var(--color-danger-fg);
+  --bs-danger-bg-subtle: var(--color-danger-bg);
+  --bs-danger-border-subtle: var(--color-danger-border);
+  --bs-info-text-emphasis: var(--color-info-fg);
+  --bs-info-bg-subtle: var(--color-info-bg);
+  --bs-info-border-subtle: var(--color-info-border);
+
+  --bs-link-color: var(--color-link);
+  --bs-link-color-rgb: 91, 33, 182;                /* --violet-700 */
+  --bs-link-hover-color: var(--color-link-hover);
+  --bs-link-hover-color-rgb: 76, 29, 149;          /* --violet-800 */
+
+  --bs-border-color: var(--color-border);
+  --bs-border-radius-sm: var(--radius-sm);
+  --bs-border-radius: var(--radius-md);
+  --bs-border-radius-lg: var(--radius-lg);
+  --bs-border-radius-xl: var(--radius-xl);
+  --bs-border-radius-pill: var(--radius-pill);
+
+  --bs-focus-ring-color: color-mix(in srgb, var(--color-focus-ring) 40%, transparent);
+}
+
+/* Warning and info fills use the light status colours, so text on them stays readable
+   (white or dark text on a mid-yellow fails contrast). */
+.bg-warning { background-color: var(--color-warning-bg) !important; }
+.bg-info    { background-color: var(--color-info-bg) !important; }
+.badge.bg-warning { color: var(--color-warning-fg); border: 1px solid var(--color-warning-border); }
+.badge.bg-info    { color: var(--color-info-fg);    border: 1px solid var(--color-info-border); }
+
+/* Buttons */
+.btn-primary {
+  --bs-btn-bg: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: var(--color-primary-hover);
+  --bs-btn-hover-border-color: var(--color-primary-hover);
+  --bs-btn-active-bg: var(--color-primary-active);
+  --bs-btn-active-border-color: var(--color-primary-active);
+  --bs-btn-disabled-bg: var(--color-primary);
+  --bs-btn-disabled-border-color: var(--color-primary);
+  --bs-btn-focus-shadow-rgb: 91, 33, 182;
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: var(--color-primary);
+  --bs-btn-hover-border-color: var(--color-primary);
+  --bs-btn-active-bg: var(--color-primary-hover);
+  --bs-btn-active-border-color: var(--color-primary-hover);
+  --bs-btn-disabled-color: var(--color-primary);
+  --bs-btn-disabled-border-color: var(--color-primary);
+  --bs-btn-focus-shadow-rgb: 91, 33, 182;
+}
+.btn-outline-secondary {
+  --bs-btn-color: var(--color-text-subtle);
+  --bs-btn-border-color: var(--color-border-control);
+  --bs-btn-hover-color: var(--color-text);
+  --bs-btn-hover-bg: var(--color-surface-sunken);
+  --bs-btn-hover-border-color: var(--color-border-control);
+  --bs-btn-active-color: var(--color-text);
+  --bs-btn-active-bg: var(--color-border);
+  --bs-btn-active-border-color: var(--color-border-control);
+}
+.btn-success {
+  --bs-btn-bg: var(--color-success-icon);
+  --bs-btn-border-color: var(--color-success-icon);
+  --bs-btn-hover-bg: var(--color-success-fg);
+  --bs-btn-hover-border-color: var(--color-success-fg);
+  --bs-btn-active-bg: var(--color-success-fg);
+  --bs-btn-active-border-color: var(--color-success-fg);
+}
+.btn-outline-success {
+  --bs-btn-color: var(--color-success-icon);
+  --bs-btn-border-color: var(--color-success-icon);
+  --bs-btn-hover-bg: var(--color-success-icon);
+  --bs-btn-hover-border-color: var(--color-success-icon);
+  --bs-btn-active-bg: var(--color-success-fg);
+}
+.btn-danger {
+  --bs-btn-bg: var(--color-danger);
+  --bs-btn-border-color: var(--color-danger);
+  --bs-btn-hover-bg: var(--color-danger-hover);
+  --bs-btn-hover-border-color: var(--color-danger-hover);
+  --bs-btn-active-bg: var(--color-danger-active);
+  --bs-btn-active-border-color: var(--color-danger-active);
+}
+.btn-outline-danger {
+  --bs-btn-color: var(--color-danger);
+  --bs-btn-border-color: var(--color-danger);
+  --bs-btn-hover-bg: var(--color-danger);
+  --bs-btn-hover-border-color: var(--color-danger);
+  --bs-btn-active-bg: var(--color-danger-hover);
+}
+.btn-outline-warning {
+  --bs-btn-color: var(--color-warning-fg);
+  --bs-btn-border-color: var(--color-warning-icon);
+  --bs-btn-hover-color: var(--color-text-inverse);
+  --bs-btn-hover-bg: var(--color-warning-icon);
+  --bs-btn-hover-border-color: var(--color-warning-icon);
+  --bs-btn-active-color: var(--color-text-inverse);
+  --bs-btn-active-bg: var(--color-warning-fg);
+}
+.btn-outline-info {
+  --bs-btn-color: var(--color-info-fg);
+  --bs-btn-border-color: var(--color-accent);
+  --bs-btn-hover-color: var(--color-text-inverse);
+  --bs-btn-hover-bg: var(--color-accent);
+  --bs-btn-hover-border-color: var(--color-accent);
+  --bs-btn-active-color: var(--color-text-inverse);
+  --bs-btn-active-bg: var(--color-accent-hover);
+}
+
+/* Form controls: borders at least 3:1 against white; one focus ring everywhere. */
+.form-control,
+.form-select,
+.form-check-input {
+  border-color: var(--color-border-control);
+}
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+.form-check-input:checked {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Menus, pagination, pills */
+.dropdown-menu {
+  --bs-dropdown-link-active-bg: var(--color-primary);
+  --bs-dropdown-link-active-color: var(--color-on-primary);
+}
+.pagination {
+  --bs-pagination-color: var(--color-link);
+  --bs-pagination-hover-color: var(--color-link-hover);
+  --bs-pagination-focus-color: var(--color-link-hover);
+  --bs-pagination-focus-box-shadow: var(--focus-ring);
+  --bs-pagination-active-bg: var(--color-primary);
+  --bs-pagination-active-border-color: var(--color-primary);
+}
+.nav-pills {
+  --bs-nav-pills-link-active-bg: var(--color-primary);
+}
