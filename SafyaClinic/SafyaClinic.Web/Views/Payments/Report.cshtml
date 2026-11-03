@@ -6,7 +6,7 @@
 <div class="page-toolbar">
     <h1 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Payment Report</h1>
     @* Payment access: doctors have report access without collection dashboard access. *@
-    @if (User.IsInRole("Admin") || User.IsInRole("Reception") || User.IsInRole("ReceptionAdmin"))
+    @if (await Can.HasAsync(Permissions.Payments.View))
     {
     <a asp-action="Dashboard" class="btn btn-sm btn-outline-primary"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
     }

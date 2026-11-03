@@ -34,7 +34,8 @@ public class SessionValidatorTests
         public Task<ServiceResult<UserDto>> GetCurrentUserAsync(int userId) => throw new NotSupportedException();
     }
 
-    private static CookieValidatePrincipalContext Context(StampSource source, string? stampClaim, DateTimeOffset? lastCheck = null)
+    private static CookieValidatePrincipalContext Context(StampSource source, string? stampClaim,
+        DateTimeOffset? lastCheck = null, bool withClinicianType = true)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -44,6 +45,7 @@ public class SessionValidatorTests
 
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, UserId.ToString()) };
         if (stampClaim is not null) claims.Add(new Claim(AuthClaims.SecurityStamp, stampClaim));
+        if (withClinicianType) claims.Add(new Claim(AuthClaims.ClinicianType, "None"));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
 
         var properties = new AuthenticationProperties();
@@ -119,6 +121,16 @@ public class SessionValidatorTests
         await SessionValidator.ValidateAsync(context);
 
         Assert.Equal(1, source.Calls);
+        Assert.Null(context.Principal);
+    }
+
+    [Fact]
+    public async Task Session_from_before_F4c_ends()
+    {
+        var context = Context(new StampSource { Stamp = "abc" }, "abc", withClinicianType: false);
+
+        await SessionValidator.ValidateAsync(context);
+
         Assert.Null(context.Principal);
     }
 }

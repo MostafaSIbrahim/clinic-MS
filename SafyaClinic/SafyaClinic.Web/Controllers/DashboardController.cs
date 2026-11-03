@@ -25,9 +25,7 @@ public class DashboardController : BaseController
 
     public async Task<IActionResult> Index()
     {
-        var doctorId = (IsDoctor || IsNutritionist)
-            ? CurrentUserId
-            : (int?)null;
+        var doctorId = IsClinician ? CurrentUserId : (int?)null;
 
         var todayResult = await _reservationService.GetTodayReservationsAsync(doctorId);
 

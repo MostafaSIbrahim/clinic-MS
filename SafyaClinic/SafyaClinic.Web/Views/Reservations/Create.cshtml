@@ -4,6 +4,7 @@
 @using SafyaClinic.Application.DTOs.MedicalRecord
 @{
     ViewData["Title"] = "New Reservation";
+    var canOverridePrice = await Can.HasAsync(Permissions.Reservations.OverridePrice);   // D4
     var doctors = ViewBag.Doctors as IEnumerable<UserDto> ?? Enumerable.Empty<UserDto>();
     var clinics = ViewBag.Clinics as IEnumerable<ClinicDto> ?? Enumerable.Empty<ClinicDto>();
     var treatmentTypes = ViewBag.TreatmentTypes as IEnumerable<TreatmentTypeDto> ?? Enumerable.Empty<TreatmentTypeDto>();
@@ -100,9 +101,9 @@
                     @* Review fix: associate the label with the custom amount ID. *@
                     <label for="totalAmountInput" class="form-label">Amount</label>
                     <input asp-for="TotalAmount" id="totalAmountInput" type="number" step="0.01" class="form-control"
-                           readonly="@(!User.IsInRole("Admin"))" aria-describedby="totalAmountHelp" />
+                           readonly="@(!canOverridePrice)" aria-describedby="totalAmountHelp" />
                     <small id="totalAmountHelp" class="text-muted">
-                        @(User.IsInRole("Admin")
+                        @(canOverridePrice
                             ? "Auto-filled from the treatment type's price — adjust if needed."
                             : "Set by the treatment type. Only an administrator can change the price.")
                     </small>

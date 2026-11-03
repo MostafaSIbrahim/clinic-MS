@@ -59,7 +59,7 @@
                                 </a>
                             </li>
                     
-                        @if (User.IsInRole("Admin") && !Model.IsLocked)
+                        @if (await Can.HasAsync(Permissions.Records.Lock) && !Model.IsLocked)
                         {
                             <li>
                                 @* Lock form moved whole — NOT wrapped in another form *@
