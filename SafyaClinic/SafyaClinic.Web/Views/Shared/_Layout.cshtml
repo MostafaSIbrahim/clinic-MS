@@ -167,7 +167,7 @@
                 {
                     <li class="nav-section-label" role="presentation">Administration</li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle @(currentController is "Lookups" or "Users" or "Roles" or "PatientSources" or "Clinics" ? "active" : "")" href="#" id="lookupsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle @(currentController is "Lookups" or "Users" or "Roles" or "PermissionGroups" or "PatientSources" or "Clinics" ? "active" : "")" href="#" id="lookupsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-sliders me-1"></i>System Lookups
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="lookupsDropdown">
@@ -179,6 +179,7 @@
                             {
                                 <li><a class="dropdown-item @(currentController == "Users" ? "active" : "")" asp-controller="Users" asp-action="Index"><i class="bi bi-person-gear me-2"></i>Users</a></li>
                                 <li><a class="dropdown-item @(currentController == "Roles" ? "active" : "")" asp-controller="Roles" asp-action="Index"><i class="bi bi-shield-lock me-2"></i>Roles</a></li>
+                                <li><a class="dropdown-item @(currentController == "PermissionGroups" ? "active" : "")" asp-controller="PermissionGroups" asp-action="Index"><i class="bi bi-people-fill me-2"></i>Permission Groups</a></li>
                             }
                             <li><hr class="dropdown-divider"></li>
                             @if (canManageLookups)

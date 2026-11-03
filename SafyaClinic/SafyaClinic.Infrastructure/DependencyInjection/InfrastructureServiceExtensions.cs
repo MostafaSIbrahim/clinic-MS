@@ -23,6 +23,7 @@ public static class InfrastructureServiceExtensions
         // Register UnitOfWork
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IPermissionStore, PermissionStore>();   // F4b
+        services.AddScoped<IPermissionGroupService, PermissionGroupService>();   // F4d
 
 
         return services;

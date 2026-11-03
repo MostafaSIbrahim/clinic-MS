@@ -132,6 +132,14 @@ Payments.DashboardLineDetails GET: Admin
 Payments.PatientSummary ANY: Admin Reception ReceptionAdmin
 Payments.RecalculateAllPaidStatuses POST: Admin
 Payments.Report GET: Admin Doctor Reception ReceptionAdmin
+PermissionGroups.AddMember POST: Admin
+PermissionGroups.Create GET: Admin
+PermissionGroups.Create POST: Admin
+PermissionGroups.Delete POST: Admin
+PermissionGroups.Edit GET: Admin
+PermissionGroups.Edit POST: Admin
+PermissionGroups.Index ANY: Admin
+PermissionGroups.RemoveMember POST: Admin
 Reservations.Board GET: Admin Doctor Nutritionist Reception
 Reservations.Cancel POST: Admin Doctor Nutritionist Reception
 Reservations.CheckIn POST: Admin Reception
