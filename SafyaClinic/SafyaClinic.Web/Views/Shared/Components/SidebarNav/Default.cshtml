@@ -1,4 +1,5 @@
 @model IReadOnlyList<SafyaClinic.Web.Navigation.NavSection>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @* F7: one labelled list per workspace; headings name the groups for screen readers. *@
 @{
     var index = 0;
@@ -10,7 +11,7 @@
     <div class="app-nav-section">
         @if (navGroup.Label is not null)
         {
-            <h2 class="nav-section-label" id="@headingId">@navGroup.Label</h2>
+            <h2 class="nav-section-label" id="@headingId">@T[navGroup.Label]</h2>
         }
         <ul class="nav flex-column" aria-labelledby="@(navGroup.Label is null ? null : headingId)">
             @foreach (var link in navGroup.Links)
@@ -20,7 +21,7 @@
                        asp-controller="@link.Controller"
                        asp-action="@link.Action"
                        aria-current="@(link.IsActive ? "page" : null)">
-                        <i class="bi @link.Icon" aria-hidden="true"></i>@link.Label
+                        <i class="bi @link.Icon" aria-hidden="true"></i>@T[link.Label]
                     </a>
                 </li>
             }

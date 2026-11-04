@@ -68,6 +68,15 @@ public static class NavigationCatalogue
         .Distinct()
         .ToList();
 
+    /// <summary>Every section and link label (both label variants), for the translation tests.</summary>
+    public static IReadOnlyList<string> AllLabels { get; } = Sections
+        .SelectMany(s => s.Entries
+            .SelectMany(e => new[] { e.Label, e.AlternativeLabel })
+            .Prepend(s.Label))
+        .OfType<string>()
+        .Distinct()
+        .ToList();
+
     /// <summary>Every link destination, for tests: (controller, action).</summary>
     public static IReadOnlyList<(string Controller, string Action)> Destinations { get; } = Sections
         .SelectMany(s => s.Entries)

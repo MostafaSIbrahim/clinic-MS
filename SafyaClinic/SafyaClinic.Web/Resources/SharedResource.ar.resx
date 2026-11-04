@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Dashboard" xml:space="preserve">
+    <value>لوحة المتابعة</value>
+  </data>
+  <data name="Front desk" xml:space="preserve">
+    <value>الاستقبال</value>
+  </data>
+  <data name="Patients" xml:space="preserve">
+    <value>المرضى</value>
+  </data>
+  <data name="Appointment Board" xml:space="preserve">
+    <value>لوحة المواعيد</value>
+  </data>
+  <data name="Reservations" xml:space="preserve">
+    <value>الحجوزات</value>
+  </data>
+  <data name="My Queue" xml:space="preserve">
+    <value>قائمة انتظاري</value>
+  </data>
+  <data name="Doctor Queues" xml:space="preserve">
+    <value>قوائم انتظار الأطباء</value>
+  </data>
+  <data name="Follow-ups" xml:space="preserve">
+    <value>المتابعات</value>
+  </data>
+  <data name="Clinical" xml:space="preserve">
+    <value>الطبي</value>
+  </data>
+  <data name="Analysis" xml:space="preserve">
+    <value>التحاليل</value>
+  </data>
+  <data name="Nutrition" xml:space="preserve">
+    <value>التغذية</value>
+  </data>
+  <data name="Billing" xml:space="preserve">
+    <value>الحسابات</value>
+  </data>
+  <data name="Unpaid Payments" xml:space="preserve">
+    <value>المدفوعات غير المسددة</value>
+  </data>
+  <data name="Payment Dashboard" xml:space="preserve">
+    <value>لوحة المدفوعات</value>
+  </data>
+  <data name="Payment Reports" xml:space="preserve">
+    <value>تقارير المدفوعات</value>
+  </data>
+  <data name="Administration" xml:space="preserve">
+    <value>الإدارة</value>
+  </data>
+  <data name="Users" xml:space="preserve">
+    <value>المستخدمون</value>
+  </data>
+  <data name="Permission Groups" xml:space="preserve">
+    <value>مجموعات الصلاحيات</value>
+  </data>
+  <data name="Lookups" xml:space="preserve">
+    <value>القوائم المرجعية</value>
+  </data>
+  <data name="Patient Sources" xml:space="preserve">
+    <value>مصادر المرضى</value>
+  </data>
+  <data name="Clinics" xml:space="preserve">
+    <value>العيادات</value>
+  </data>
+  <data name="Skip to main content" xml:space="preserve">
+    <value>انتقل إلى المحتوى الرئيسي</value>
+  </data>
+  <data name="Safya Clinic navigation" xml:space="preserve">
+    <value>قائمة التنقل</value>
+  </data>
+  <data name="Close navigation" xml:space="preserve">
+    <value>إغلاق القائمة</value>
+  </data>
+  <data name="Open navigation" xml:space="preserve">
+    <value>فتح القائمة</value>
+  </data>
+  <data name="Find a patient by name or phone" xml:space="preserve">
+    <value>ابحث عن مريض بالاسم أو رقم الهاتف</value>
+  </data>
+  <data name="Find patient: name or phone" xml:space="preserve">
+    <value>ابحث عن مريض: الاسم أو الهاتف</value>
+  </data>
+  <data name="Account" xml:space="preserve">
+    <value>الحساب</value>
+  </data>
+  <data name="Account menu" xml:space="preserve">
+    <value>قائمة الحساب</value>
+  </data>
+  <data name="Signed in as" xml:space="preserve">
+    <value>مسجل الدخول باسم</value>
+  </data>
+  <data name="Change password" xml:space="preserve">
+    <value>تغيير كلمة المرور</value>
+  </data>
+  <data name="Sign out" xml:space="preserve">
+    <value>تسجيل الخروج</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>اللغة</value>
+  </data>
+</root>
