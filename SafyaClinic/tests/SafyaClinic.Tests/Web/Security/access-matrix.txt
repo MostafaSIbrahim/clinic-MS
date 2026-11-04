@@ -33,7 +33,7 @@ FollowUps.Dismiss POST: Admin Doctor Reception
 FollowUps.Index GET: Admin Doctor Reception
 Home.Error ANY: anyone
 Home.Index ANY: anyone
-Language.Set POST: signed-in
+Language.Set POST: anyone
 Lookups.AnalysisTypes ANY: Admin
 Lookups.CreateAnalysisType POST: Admin
 Lookups.CreateInjectionType POST: Admin

@@ -10,6 +10,10 @@ public sealed record PatientHeaderModel(
 {
     public bool HasAllergies => !string.IsNullOrWhiteSpace(Allergies);
 
+    /// <summary>F9: age and sex separately, so the view can show them in the page's language.</summary>
+    public int? Age { get; init; }
+    public string? Sex { get; init; }
+
     public static PatientHeaderModel From(PatientDto patient)
     {
         var ageAndSex = string.Join(" · ", new[]
@@ -27,7 +31,11 @@ public sealed record PatientHeaderModel(
             phone,
             Clean(patient.BloodType),
             Clean(patient.Allergies),
-            Clean(patient.ChronicDiseases));
+            Clean(patient.ChronicDiseases))
+        {
+            Age = patient.Age,
+            Sex = Clean(patient.Gender),
+        };
     }
 
     private static string? Clean(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();

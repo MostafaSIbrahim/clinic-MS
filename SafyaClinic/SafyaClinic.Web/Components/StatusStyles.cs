@@ -28,6 +28,9 @@ public static class StatusStyles
         ["WriteOff"] = "write-off",
     };
 
+    /// <summary>Every status with its own style, for the translation tests.</summary>
+    public static IReadOnlyCollection<string> Known => Styles.Keys;
+
     /// <summary>The CSS modifier for a status, for example "waiting"; "neutral" when unknown.</summary>
     public static string For(string? status) =>
         status is not null && Styles.TryGetValue(status.Trim(), out var style) ? style : "neutral";

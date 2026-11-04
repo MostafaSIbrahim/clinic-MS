@@ -39,21 +39,47 @@ public class LocalisationTests
     }
 
     [Fact]
-    public void Every_shell_string_has_an_Arabic_translation()
+    public void Every_translated_string_in_the_views_has_an_Arabic_translation()
     {
         var arabic = Arabic();
-        var views = new[]
-        {
-            Path.Combine(WebProject(), "Views", "Shared", "_Layout.cshtml"),
-            Path.Combine(WebProject(), "Views", "Shared", "Components", "SidebarNav", "Default.cshtml"),
-        };
+        var views = Directory.GetFiles(Path.Combine(WebProject(), "Views"), "*.cshtml", SearchOption.AllDirectories);
         var keys = views
-            .SelectMany(v => Regex.Matches(File.ReadAllText(v), "T\\[\"([^\"]+)\"\\]").Select(m => m.Groups[1].Value))
+            .SelectMany(v => Regex.Matches(File.ReadAllText(v), "T\\[\"([^\"]+)\"[\\],]").Select(m => m.Groups[1].Value))
             .Distinct()
             .ToList();
 
-        Assert.NotEmpty(keys);
+        Assert.Contains("Sign out", keys);
+        Assert.Contains("Yes, continue", keys);
+        Assert.Contains("Showing {0}–{1} of {2}", keys);
         Assert.Empty(keys.Where(k => !arabic.ContainsKey(k)));
+    }
+
+    [Fact]
+    public void Every_status_badge_has_an_Arabic_label()
+    {
+        var arabic = Arabic();
+        var missing = SafyaClinic.Web.Components.StatusStyles.Known
+            .Select(SafyaClinic.Application.Common.Labels.Humanize)
+            .Where(label => !arabic.ContainsKey(label));
+        Assert.Empty(missing);
+    }
+
+    [Fact]
+    public void Component_and_patient_header_words_have_Arabic_translations()
+    {
+        var arabic = Arabic();
+        var words = new[] { "Search", "Clear", "Male", "Female" };
+        Assert.Empty(words.Where(w => !arabic.ContainsKey(w)));
+    }
+
+    [Fact]
+    public void Arabic_text_keeps_the_same_placeholders_as_the_English()
+    {
+        var wrong = Arabic()
+            .Where(pair => !Regex.Matches(pair.Key, @"\{\d+\}").Select(m => m.Value).OrderBy(x => x)
+                .SequenceEqual(Regex.Matches(pair.Value, @"\{\d+\}").Select(m => m.Value).OrderBy(x => x)))
+            .Select(pair => pair.Key);
+        Assert.Empty(wrong);
     }
 
     [Fact]
@@ -157,6 +183,15 @@ public class LocalisationTests
         Assert.Empty(controller.Response.Headers.SetCookie.ToString());
     }
 
+    [Fact]
+    public void The_sign_in_page_has_the_language_switch_too()
+    {
+        var views = Path.Combine(WebProject(), "Views");
+        Assert.Contains("<partial name=\"_LanguageSwitch\" />", File.ReadAllText(Path.Combine(views, "Auth", "Login.cshtml")));
+        Assert.Contains("asp-controller=\"Language\" asp-action=\"Set\"",
+            File.ReadAllText(Path.Combine(views, "Shared", "_LanguageSwitch.cshtml")));
+    }
+
     // ── Right-to-left layout ────────────────────────────────────
 
     [Fact]
@@ -166,7 +201,7 @@ public class LocalisationTests
 
         Assert.Contains("<html lang=\"@pageLang\" dir=\"@pageDir\">", layout);
         Assert.Contains("bootstrap.rtl.min.css", layout);
-        Assert.Contains("asp-controller=\"Language\" asp-action=\"Set\"", layout);
+        Assert.Contains("<partial name=\"_LanguageSwitch\" />", layout);
         Assert.True(layout.IndexOf("@Url.Content(bootstrapCss)", StringComparison.Ordinal)
                     < layout.IndexOf("css/tokens.css", StringComparison.Ordinal));
     }

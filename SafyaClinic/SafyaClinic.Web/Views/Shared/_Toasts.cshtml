@@ -1,3 +1,4 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @* F7c: messages from the last action, shown as toasts in a live region.
    Success and info close by themselves; errors and warnings stay until closed. *@
 @{
@@ -16,7 +17,7 @@
             <div class="d-flex align-items-start gap-2 p-3">
                 <i class="bi @m.Icon app-toast-icon" aria-hidden="true"></i>
                 <div class="flex-grow-1">@m.Text</div>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close message"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="@T["Close message"]"></button>
             </div>
         </div>
     }

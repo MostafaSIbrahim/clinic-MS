@@ -6,10 +6,14 @@ using SafyaClinic.Web.Localization;
 
 namespace SafyaClinic.Web.Controllers;
 
-/// <summary>F9: the language switch in the top bar. Remembers the choice for a year on this browser.</summary>
+/// <summary>
+/// F9: the language switch (top bar and sign-in page). Remembers the choice for a year on this browser.
+/// Open to everyone so the sign-in page can switch too; the anti-forgery token is still required.
+/// </summary>
 [Authorize]
 public class LanguageController : BaseController
 {
+    [AllowAnonymous]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public IActionResult Set(string? culture, string? returnUrl)

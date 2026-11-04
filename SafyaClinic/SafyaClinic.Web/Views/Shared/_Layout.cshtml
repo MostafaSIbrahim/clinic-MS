@@ -6,7 +6,6 @@
     var pageLang = isArabic ? "ar" : "en";
     var pageDir = uiCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
     var bootstrapCss = pageDir == "rtl" ? "~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" : "~/lib/bootstrap/dist/css/bootstrap.min.css";
-    var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
 }
 <!DOCTYPE html>
 <html lang="@pageLang" dir="@pageDir">
@@ -108,22 +107,7 @@
 
                 <small class="text-muted text-nowrap d-none d-xl-inline">@Clock.Now.ToString("ddd, dd MMM yyyy")</small>
 
-                @* F9: language switch. Shows the other language in its own script. *@
-                <form asp-controller="Language" asp-action="Set" method="post" class="app-language-switch">
-                    <input type="hidden" name="culture" value="@(isArabic ? "en" : "ar")" />
-                    <input type="hidden" name="returnUrl" value="@returnUrl" />
-                    <button type="submit" class="btn btn-sm btn-outline-secondary">
-                        <span class="visually-hidden">@T["Language"]: </span>
-                        @if (isArabic)
-                        {
-                            <span lang="en">English</span>
-                        }
-                        else
-                        {
-                            <span lang="ar">العربية</span>
-                        }
-                    </button>
-                </form>
+                <partial name="_LanguageSwitch" />
 
                 <div class="dropdown">
                     <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"

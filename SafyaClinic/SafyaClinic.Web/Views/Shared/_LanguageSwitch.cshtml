@@ -1,0 +1,21 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@* F9: language switch. Shows the other language in its own script; returns to the same page. *@
+@{
+    var isArabic = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ar";
+    var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
+}
+<form asp-controller="Language" asp-action="Set" method="post" class="app-language-switch">
+    <input type="hidden" name="culture" value="@(isArabic ? "en" : "ar")" />
+    <input type="hidden" name="returnUrl" value="@returnUrl" />
+    <button type="submit" class="btn btn-sm btn-outline-secondary">
+        <span class="visually-hidden">@T["Language"]: </span>
+        @if (isArabic)
+        {
+            <span lang="en">English</span>
+        }
+        else
+        {
+            <span lang="ar">العربية</span>
+        }
+    </button>
+</form>

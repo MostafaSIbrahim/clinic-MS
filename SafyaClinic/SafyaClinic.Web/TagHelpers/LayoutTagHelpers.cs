@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 
 namespace SafyaClinic.Web.TagHelpers;
 
@@ -265,7 +267,8 @@ public class AppTabTagHelper : TagHelper
 public class AppFilterBarTagHelper : TagHelper
 {
     public string? Label { get; set; }
-    public string SubmitText { get; set; } = "Search";
+    /// <summary>The submit button text; "Search" (translated) when not given.</summary>
+    public string? SubmitText { get; set; }
     public string? ClearUrl { get; set; }
 
     [ViewContext]
@@ -278,6 +281,8 @@ public class AppFilterBarTagHelper : TagHelper
             throw new InvalidOperationException("<app-filter-bar> needs a label.");
 
         var request = ViewContext?.HttpContext.Request;
+        var text = ViewContext?.HttpContext.RequestServices?.GetService<IStringLocalizer<SharedResource>>();
+        string Say(string english) => text is null ? english : text[english].Value;
         var clear = ClearUrl ?? (request is null ? "?" : (request.PathBase + request.Path).ToString());
 
         output.TagName = "form";
@@ -289,9 +294,11 @@ public class AppFilterBarTagHelper : TagHelper
 
         output.PostContent.AppendHtml("<div class=\"app-filter-bar__actions\">");
         output.PostContent.AppendHtml("<button type=\"submit\" class=\"btn btn-primary\"><i class=\"bi bi-search\" aria-hidden=\"true\"></i> ");
-        output.PostContent.Append(SubmitText);
+        output.PostContent.Append(SubmitText ?? Say("Search"));
         output.PostContent.AppendHtml("</button><a class=\"btn btn-outline-secondary\" href=\"");
         output.PostContent.Append(clear);
-        output.PostContent.AppendHtml("\">Clear</a></div>");
+        output.PostContent.AppendHtml("\">");
+        output.PostContent.Append(Say("Clear"));
+        output.PostContent.AppendHtml("</a></div>");
     }
 }

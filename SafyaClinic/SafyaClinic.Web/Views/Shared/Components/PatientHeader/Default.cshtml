@@ -1,20 +1,29 @@
 @model SafyaClinic.Web.Components.PatientHeaderModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@{
+    // F9: "34 y · Female" in the page's language.
+    var ageAndSex = string.Join(" · ", new[]
+    {
+        Model.Age is int age ? T["{0} y", age].Value : null,
+        Model.Sex is null ? null : T[Model.Sex].Value,
+    }.Where(part => part is not null));
+}
 @* F8: patient header. Allergies always show, in words, with an icon and colour (never colour alone). *@
-<section class="app-patient-header mb-3" aria-label="Patient">
+<section class="app-patient-header mb-3" aria-label="@T["Patient"]">
     <div class="app-patient-header__identity">
         <a class="app-patient-header__name" asp-controller="Patients" asp-action="Details" asp-route-id="@Model.Id">@Model.Name</a>
         <dl class="app-patient-header__facts">
-            @if (Model.AgeAndSex is not null)
+            @if (ageAndSex.Length > 0)
             {
-                <div><dt class="visually-hidden">Age and sex</dt><dd>@Model.AgeAndSex</dd></div>
+                <div><dt class="visually-hidden">@T["Age and sex"]</dt><dd>@ageAndSex</dd></div>
             }
             @if (Model.Phone is not null)
             {
-                <div><dt class="visually-hidden">Phone</dt><dd><i class="bi bi-telephone" aria-hidden="true"></i> @Model.Phone</dd></div>
+                <div><dt class="visually-hidden">@T["Phone"]</dt><dd><i class="bi bi-telephone" aria-hidden="true"></i> @Model.Phone</dd></div>
             }
             @if (Model.BloodType is not null)
             {
-                <div><dt>Blood type</dt><dd>@Model.BloodType</dd></div>
+                <div><dt>@T["Blood type"]</dt><dd>@Model.BloodType</dd></div>
             }
         </dl>
     </div>
@@ -23,18 +32,18 @@
         {
             <p class="app-patient-header__allergies mb-1" role="note">
                 <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-                <strong>Allergies:</strong> <span dir="auto">@Model.Allergies</span>
+                <strong>@T["Allergies"]:</strong> <span dir="auto">@Model.Allergies</span>
             </p>
         }
         else
         {
             <p class="app-patient-header__no-allergies mb-1">
-                <strong>Allergies:</strong> none recorded
+                <strong>@T["Allergies"]:</strong> @T["none recorded"]
             </p>
         }
         <p class="mb-0 small">
-            <strong>Chronic diseases:</strong>
-            <span dir="auto">@(Model.ChronicDiseases ?? "none recorded")</span>
+            <strong>@T["Chronic diseases"]:</strong>
+            <span dir="auto">@(Model.ChronicDiseases ?? T["none recorded"].Value)</span>
         </p>
     </div>
 </section>
