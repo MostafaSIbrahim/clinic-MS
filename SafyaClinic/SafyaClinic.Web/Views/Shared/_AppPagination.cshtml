@@ -1,0 +1,81 @@
+@model SafyaClinic.Web.Components.PagerModel
+@using Microsoft.AspNetCore.Routing
+@* F8c: pagination with a "Showing 21–40 of 132" line. Keeps the current filters in every link. *@
+@{
+    string PageUrl(int number)
+    {
+        var values = new RouteValueDictionary();
+        foreach (var pair in ViewContext.HttpContext.Request.Query)
+        {
+            if (pair.Key.Equals("page", StringComparison.OrdinalIgnoreCase) ||
+                pair.Key.Equals("pageSize", StringComparison.OrdinalIgnoreCase)) continue;
+            values[pair.Key] = pair.Value.ToString();
+        }
+        values["page"] = number;
+        values["pageSize"] = Model.PageSize;
+        return Url.Action(Model.Action, values) ?? "#";
+    }
+    var window = Model.Window;
+}
+@if (Model.TotalCount > 0)
+{
+    <div class="app-pager">
+        <p class="app-pager__summary">@Model.Summary</p>
+        @if (Model.TotalPages > 1)
+        {
+            <nav aria-label="Results pages">
+                <ul class="pagination app-pager__list">
+                    <li class="page-item @(Model.HasPrev ? "" : "disabled")">
+                        @if (Model.HasPrev)
+                        {
+                            <a class="page-link" href="@PageUrl(Model.Page - 1)">Previous</a>
+                        }
+                        else
+                        {
+                            <span class="page-link" aria-disabled="true">Previous</span>
+                        }
+                    </li>
+                    @if (window.Count > 0 && window[0] > 1)
+                    {
+                        <li class="page-item"><a class="page-link" href="@PageUrl(1)" aria-label="Page 1">1</a></li>
+                        @if (window[0] > 2)
+                        {
+                            <li class="page-item disabled"><span class="page-link" aria-hidden="true">…</span></li>
+                        }
+                    }
+                    @foreach (var number in window)
+                    {
+                        <li class="page-item @(number == Model.Page ? "active" : "")">
+                            @if (number == Model.Page)
+                            {
+                                <span class="page-link" aria-current="page">@(number)</span>
+                            }
+                            else
+                            {
+                                <a class="page-link" href="@PageUrl(number)" aria-label="Page @(number)">@(number)</a>
+                            }
+                        </li>
+                    }
+                    @if (window.Count > 0 && window[^1] < Model.TotalPages)
+                    {
+                        @if (window[^1] < Model.TotalPages - 1)
+                        {
+                            <li class="page-item disabled"><span class="page-link" aria-hidden="true">…</span></li>
+                        }
+                        <li class="page-item"><a class="page-link" href="@PageUrl(Model.TotalPages)" aria-label="Page @Model.TotalPages">@Model.TotalPages</a></li>
+                    }
+                    <li class="page-item @(Model.HasNext ? "" : "disabled")">
+                        @if (Model.HasNext)
+                        {
+                            <a class="page-link" href="@PageUrl(Model.Page + 1)">Next</a>
+                        }
+                        else
+                        {
+                            <span class="page-link" aria-disabled="true">Next</span>
+                        }
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}

@@ -97,16 +97,9 @@
             </div>
         }
 
-        @if (Model != null && Model.TotalPages > 1)
+        @if (Model != null)
         {
-            ViewData["PaginationAction"] = "Index";
-            var paginationModel = new PagedResult<object>
-            {
-                TotalCount = Model.TotalCount,
-                Page = Model.Page,
-                PageSize = Model.PageSize
-            };
-            @await Html.PartialAsync("_Pagination", paginationModel)
+            <partial name="_AppPagination" model="SafyaClinic.Web.Components.PagerModel.From(Model)" />
         }
     </div>
 </div>
