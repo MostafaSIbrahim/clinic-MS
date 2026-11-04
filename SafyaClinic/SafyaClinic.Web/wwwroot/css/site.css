@@ -731,3 +731,81 @@ h1.app-topbar-title {
     font-size: 1.05rem;
     letter-spacing: normal;
 }
+
+/* ── F8: status badge (text + status tokens) ─────────────────── */
+.app-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.625rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-sunken);
+    color: var(--color-text-subtle);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-base);
+    white-space: nowrap;
+}
+
+.app-status--booked          { color: var(--status-booked-fg);          background: var(--status-booked-bg);          border-color: var(--status-booked-border); }
+.app-status--waiting         { color: var(--status-waiting-fg);         background: var(--status-waiting-bg);         border-color: var(--status-waiting-border); }
+.app-status--in-consultation { color: var(--status-in-consultation-fg); background: var(--status-in-consultation-bg); border-color: var(--status-in-consultation-border); }
+.app-status--completed       { color: var(--status-completed-fg);       background: var(--status-completed-bg);       border-color: var(--status-completed-border); }
+.app-status--cancelled       { color: var(--status-cancelled-fg);       background: var(--status-cancelled-bg);       border-color: var(--status-cancelled-border); }
+.app-status--no-show         { color: var(--status-no-show-fg);         background: var(--status-no-show-bg);         border-color: var(--status-no-show-border); }
+.app-status--paid            { color: var(--status-paid-fg);            background: var(--status-paid-bg);            border-color: var(--status-paid-border); }
+.app-status--due             { color: var(--status-due-fg);             background: var(--status-due-bg);             border-color: var(--status-due-border); }
+.app-status--write-off       { color: var(--status-write-off-fg);       background: var(--status-write-off-bg);       border-color: var(--status-write-off-border); }
+
+/* ── F8: patient header ─────────────────────────────────────── */
+.app-patient-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-6);
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.app-patient-header__name {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.app-patient-header__name:hover { color: var(--color-link-hover); text-decoration: underline; }
+
+.app-patient-header__facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.app-patient-header__facts div { display: flex; gap: var(--space-1); }
+.app-patient-header__facts dt { font-weight: var(--font-weight-medium); }
+.app-patient-header__facts dd { margin: 0; }
+
+.app-patient-header__clinical {
+    flex: 1 1 18rem;
+    max-width: 36rem;
+}
+
+.app-patient-header__allergies {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--status-allergy-border);
+    border-radius: var(--radius-md);
+    background: var(--status-allergy-bg);
+    color: var(--status-allergy-fg);
+}
+
+.app-patient-header__no-allergies {
+    color: var(--color-text-muted);
+}
