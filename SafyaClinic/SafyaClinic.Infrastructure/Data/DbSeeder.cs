@@ -16,11 +16,8 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(SafyaDbContext context, IConfiguration configuration)
     {
-        await SeedRolesAsync(context);
-        await EnsureReceptionAdminRoleAsync(context);
         await SeedPermissionsAsync(context);
         await SeedAdminAsync(context, configuration);
-        await MoveRoleMembershipsAsync(context);
         await SeedAnalysisTypesAsync(context);
         await SeedTreatmentTypesAsync(context);
         await SeedInjectionTypesAsync(context);
@@ -30,47 +27,6 @@ public static class DbSeeder
         await SeedPatientSourcesAsync(context);
 
     }
-
-    // ── Roles ───────────────────────────────────────────────
-    private static async Task SeedRolesAsync(SafyaDbContext context)
-    {
-        if (await context.Roles.AnyAsync()) return;
-
-        var roles = new[]
-        {
-            new Role { RoleName = "Admin", Description = "System administrator with full access" },
-            new Role { RoleName = "Doctor", Description = "Medical doctor with patient management access" },
-            new Role { RoleName = "Reception", Description = "Receptionist with reservation and payment access" },
-            new Role { RoleName = "Patient", Description = "Patient with self-service portal access" },
-            new Role { RoleName = "Nutritionist", Description = "Specialized nutrition doctor" }
-        };
-
-        await context.Roles.AddRangeAsync(roles);
-        await context.SaveChangesAsync();
-    }
-
-    /// <summary>Must match the role name used by the payment policies in Program.cs.</summary>
-    public const string ReceptionAdminRoleName = "ReceptionAdmin";
-
-    // F06 interim (S7): a role created as "Reception Admin" (with a space) matched no policy,
-    // so its users could not reach payment pages. Rename it once, or create the role.
-    private static async Task EnsureReceptionAdminRoleAsync(SafyaDbContext context)
-    {
-        if (await context.Roles.AnyAsync(r => r.RoleName == ReceptionAdminRoleName)) return;
-
-        var misnamed = await context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Reception Admin");
-        if (misnamed is not null)
-            misnamed.RoleName = ReceptionAdminRoleName;
-        else
-            await context.Roles.AddAsync(new Role
-            {
-                RoleName = ReceptionAdminRoleName,
-                Description = "Front-desk supervisor: payments and payment reports"
-            });
-
-        await context.SaveChangesAsync();
-    }
-
 
     // ── Permissions and system groups (F4a) ─────────────────
     /// <summary>
@@ -167,37 +123,6 @@ public static class DbSeeder
             AssignedBy = admin.Id
         });
 
-        await context.SaveChangesAsync();
-    }
-
-    // ── Role memberships become group memberships (F4d, once) ──
-    /// <summary>
-    /// Roles are no longer read. The first time this runs, each user's roles become memberships of
-    /// the matching built-in groups. It does nothing once any built-in group has a member, so later
-    /// changes made on the Permission Groups screen are never overwritten.
-    /// </summary>
-    private static async Task MoveRoleMembershipsAsync(SafyaDbContext context)
-    {
-        var builtIn = await context.PermissionGroups
-            .Where(g => g.SystemKey != null)
-            .ToDictionaryAsync(g => g.SystemKey!, g => g.Id);
-        var builtInIds = builtIn.Values.ToList();
-        if (await context.UserGroups.AnyAsync(m => builtInIds.Contains(m.GroupId))) return;
-
-        var memberships = await context.UserRoles
-            .Select(ur => new { ur.UserId, ur.Role.RoleName, ur.AssignedAt, ur.AssignedBy })
-            .ToListAsync();
-        foreach (var m in memberships)
-        {
-            if (builtIn.TryGetValue(m.RoleName, out var groupId))
-                context.UserGroups.Add(new UserGroup
-                {
-                    UserId = m.UserId,
-                    GroupId = groupId,
-                    AssignedAt = m.AssignedAt,
-                    AssignedBy = m.AssignedBy
-                });
-        }
         await context.SaveChangesAsync();
     }
 

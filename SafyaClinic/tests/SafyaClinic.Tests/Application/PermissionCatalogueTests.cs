@@ -115,13 +115,4 @@ public class PermissionCatalogueTests
         Assert.Empty(mismatches);
     }
 
-    [Theory]
-    [InlineData("Doctor", ClinicianType.Doctor)]
-    [InlineData("Nutritionist", ClinicianType.Nutritionist)]
-    [InlineData("Nutritionist,Doctor", ClinicianType.Doctor)]
-    [InlineData("Admin,Reception", ClinicianType.None)]
-    public void Clinician_type_follows_the_roles(string roles, ClinicianType expected)
-    {
-        Assert.Equal(expected, ClinicianTypes.FromRoles(roles.Split(',')));
-    }
 }

@@ -15,8 +15,6 @@ public interface IUnitOfWork : IDisposable
 {
     // ── Identity ─────────────────────────────────────────────
     IRepository<User> Users { get; }
-    IRepository<Role> Roles { get; }
-    IRepository<UserRole> UserRoles { get; }
 
     // ── Patient ──────────────────────────────────────────────
     IRepository<Patient> Patients { get; }
