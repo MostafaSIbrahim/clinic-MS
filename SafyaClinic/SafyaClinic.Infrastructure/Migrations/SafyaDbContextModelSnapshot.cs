@@ -1348,6 +1348,85 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.ToTable("ReservationStatuses", (string)null);
                 });
 
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClinicId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DoctorId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("StepMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedBy")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicId");
+
+                    b.HasIndex("DoctorId", "ClinicId")
+                        .IsUnique();
+
+                    b.ToTable("DoctorSchedules", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DoctorSchedules_Step", "[StepMinutes] BETWEEN 5 AND 60");
+                        });
+                });
+
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorScheduleTime", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time(0)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("ScheduleId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time(0)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduleId", "DayOfWeek");
+
+                    b.ToTable("DoctorScheduleTimes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DoctorScheduleTimes_Period", "[StartTime] < [EndTime]");
+                        });
+                });
+
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.Clinic", b =>
                 {
                     b.Property<int>("Id")
@@ -2078,6 +2157,36 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("TreatmentType");
                 });
 
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorSchedule", b =>
+                {
+                    b.HasOne("SafyaClinic.Domain.Entities.Settings.Clinic", "Clinic")
+                        .WithMany()
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SafyaClinic.Domain.Identity.User", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Clinic");
+
+                    b.Navigation("Doctor");
+                });
+
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorScheduleTime", b =>
+                {
+                    b.HasOne("SafyaClinic.Domain.Entities.Scheduling.DoctorSchedule", "Schedule")
+                        .WithMany("Times")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Schedule");
+                });
+
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.ClinicOpeningHours", b =>
                 {
                     b.HasOne("SafyaClinic.Domain.Entities.Settings.Clinic", "Clinic")
@@ -2243,6 +2352,11 @@ namespace SafyaClinic.Infrastructure.Migrations
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Reservation.ReservationStatus", b =>
                 {
                     b.Navigation("Reservations");
+                });
+
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorSchedule", b =>
+                {
+                    b.Navigation("Times");
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.Clinic", b =>

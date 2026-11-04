@@ -36,6 +36,10 @@ public static class NavigationCatalogue
                 AlternativeLabel: "Doctor Queues", AlternativeLabelPermission: Permissions.Reservations.ViewAllQueues,
                 OnlyActions: new[] { "Queue" }),
             new Entry("Follow-ups", "bi-calendar-check", "FollowUps", "Index", Permissions.FollowUps.View),
+            new Entry("My schedule", "bi-calendar-week", "Schedules", "Mine", Permissions.Schedule.ManageOwn,
+                OnlyActions: new[] { "Mine" }),
+            new Entry("Doctor schedules", "bi-calendar2-range", "Schedules", "Index", Permissions.Schedule.ManageAll,
+                ExceptActions: new[] { "Mine" }),
         }),
         ("Clinical", new[]
         {

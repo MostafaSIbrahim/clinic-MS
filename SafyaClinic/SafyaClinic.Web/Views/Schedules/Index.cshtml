@@ -1,0 +1,19 @@
+@model IReadOnlyList<SafyaClinic.Application.Scheduling.ScheduleSummaryDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@{
+    ViewData["Title"] = T["Doctor schedules"].Value;
+    var empty = new EmptyStateModel(T["No active clinicians or clinics yet."].Value, Icon: "bi-calendar2-range");
+}
+<h1>@T["Doctor schedules"]</h1>
+<p class="text-muted">@T["Each doctor's calendar in each clinic. A doctor without a calendar can be booked at any time the clinic is open."]</p>
+
+@if (Model.Count == 0)
+{
+    <partial name="_AppEmpty" model="empty" />
+}
+else
+{
+    ViewData["ShowDoctor"] = true;
+    <partial name="_ScheduleList" model="Model" />
+}

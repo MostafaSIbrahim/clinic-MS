@@ -158,6 +158,10 @@ Reservations.Queue GET: Admin Doctor Reception
 Reservations.StartConsultation POST: Admin Doctor
 Reservations.Today ANY: Admin Doctor Nutritionist Reception
 Reservations.UpdateStatus POST: Admin Doctor Nutritionist Reception
+Schedules.Edit GET: signed-in
+Schedules.Edit POST: signed-in
+Schedules.Index GET: Admin ReceptionAdmin
+Schedules.Mine GET: Admin Doctor Nutritionist
 Users.AddToGroup POST: Admin
 Users.Create GET: Admin
 Users.Create POST: Admin

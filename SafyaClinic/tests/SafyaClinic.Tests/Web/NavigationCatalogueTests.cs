@@ -19,15 +19,15 @@ public class NavigationCatalogueTests
 
     [Theory]
     [InlineData(SystemGroups.AdminRole,
-        "Dashboard|Patients|Appointment Board|Reservations|Doctor Queues|Follow-ups|Analysis|Nutrition|Payment Dashboard|Payment Reports|Users|Permission Groups|Lookups|Patient Sources|Clinics")]
+        "Dashboard|Patients|Appointment Board|Reservations|Doctor Queues|Follow-ups|My schedule|Doctor schedules|Analysis|Nutrition|Payment Dashboard|Payment Reports|Users|Permission Groups|Lookups|Patient Sources|Clinics")]
     [InlineData(SystemGroups.DoctorRole,
-        "Dashboard|Patients|Appointment Board|Reservations|My Queue|Follow-ups|Analysis|Payment Reports")]
+        "Dashboard|Patients|Appointment Board|Reservations|My Queue|Follow-ups|My schedule|Analysis|Payment Reports")]
     [InlineData(SystemGroups.NutritionistRole,
-        "Dashboard|Patients|Appointment Board|Reservations|Nutrition")]
+        "Dashboard|Patients|Appointment Board|Reservations|My schedule|Nutrition")]
     [InlineData(SystemGroups.ReceptionRole,
         "Dashboard|Patients|Appointment Board|Reservations|Doctor Queues|Follow-ups|Unpaid Payments|Payment Reports")]
     [InlineData(SystemGroups.ReceptionAdminRole,
-        "Dashboard|Unpaid Payments|Payment Reports")]
+        "Dashboard|Doctor schedules|Unpaid Payments|Payment Reports")]
     public void Each_group_sees_its_pages(string role, string expected)
     {
         Assert.Equal(expected, Labels(MenuFor(role)));
@@ -38,7 +38,7 @@ public class NavigationCatalogueTests
     {
         var sections = MenuFor(SystemGroups.ReceptionAdminRole).Select(s => s.Label).ToList();
 
-        Assert.Equal(new string?[] { null, "Billing" }, sections);
+        Assert.Equal(new string?[] { null, "Front desk", "Billing" }, sections);
     }
 
     [Theory]
@@ -48,6 +48,8 @@ public class NavigationCatalogueTests
     [InlineData("Payments", "Report", "Payment Reports")]
     [InlineData("Payments", "Collect", "Payment Dashboard")]
     [InlineData("Nutrition", "EnrollmentDetails", "Nutrition")]
+    [InlineData("Schedules", "Mine", "My schedule")]
+    [InlineData("Schedules", "Edit", "Doctor schedules")]
     public void Exactly_one_link_is_marked_as_the_current_page(string controller, string action, string expected)
     {
         var active = MenuFor(SystemGroups.AdminRole, controller, action)

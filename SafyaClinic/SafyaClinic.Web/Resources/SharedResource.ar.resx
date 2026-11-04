@@ -285,4 +285,118 @@
   <data name="Friday" xml:space="preserve">
     <value>الجمعة</value>
   </data>
+  <data name="My schedule" xml:space="preserve">
+    <value>جدولي</value>
+  </data>
+  <data name="Doctor schedules" xml:space="preserve">
+    <value>جداول الأطباء</value>
+  </data>
+  <data name="Calendars" xml:space="preserve">
+    <value>التقويمات</value>
+  </data>
+  <data name="Doctor" xml:space="preserve">
+    <value>الطبيب</value>
+  </data>
+  <data name="Clinic" xml:space="preserve">
+    <value>العيادة</value>
+  </data>
+  <data name="Calendar" xml:space="preserve">
+    <value>التقويم</value>
+  </data>
+  <data name="Actions" xml:space="preserve">
+    <value>الإجراءات</value>
+  </data>
+  <data name="Not set: bookable in clinic hours" xml:space="preserve">
+    <value>غير محدد: يمكن الحجز في مواعيد العيادة</value>
+  </data>
+  <data name="Open calendar" xml:space="preserve">
+    <value>تقويم مفتوح</value>
+  </data>
+  <data name="Specific slots" xml:space="preserve">
+    <value>مواعيد محددة</value>
+  </data>
+  <data name="{0}-minute step" xml:space="preserve">
+    <value>فاصل {0} دقيقة</value>
+  </data>
+  <data name="Not in use" xml:space="preserve">
+    <value>غير مستخدم</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>تعديل</value>
+  </data>
+  <data name="Set calendar" xml:space="preserve">
+    <value>تحديد التقويم</value>
+  </data>
+  <data name="No active clinicians or clinics yet." xml:space="preserve">
+    <value>لا يوجد أطباء أو عيادات نشطة بعد.</value>
+  </data>
+  <data name="Each doctor's calendar in each clinic. A doctor without a calendar can be booked at any time the clinic is open." xml:space="preserve">
+    <value>تقويم كل طبيب في كل عيادة. الطبيب الذي ليس له تقويم يمكن الحجز معه في أي وقت تكون فيه العيادة مفتوحة.</value>
+  </data>
+  <data name="Only doctors and nutritionists have a calendar." xml:space="preserve">
+    <value>التقويم للأطباء وأخصائيي التغذية فقط.</value>
+  </data>
+  <data name="No active clinics yet." xml:space="preserve">
+    <value>لا توجد عيادات نشطة بعد.</value>
+  </data>
+  <data name="Your calendar in each clinic. Without a calendar you can be booked at any time the clinic is open." xml:space="preserve">
+    <value>تقويمك في كل عيادة. بدون تقويم يمكن الحجز معك في أي وقت تكون فيه العيادة مفتوحة.</value>
+  </data>
+  <data name="Times are clinic time and must be inside the clinic's opening hours." xml:space="preserve">
+    <value>الأوقات بتوقيت العيادة ويجب أن تكون ضمن مواعيد عملها.</value>
+  </data>
+  <data name="Calendar mode" xml:space="preserve">
+    <value>نوع التقويم</value>
+  </data>
+  <data name="bookable at any step in working periods, except breaks" xml:space="preserve">
+    <value>يمكن الحجز في أي فاصل خلال فترات العمل عدا الاستراحات</value>
+  </data>
+  <data name="bookable only in the slots below" xml:space="preserve">
+    <value>يمكن الحجز فقط في المواعيد أدناه</value>
+  </data>
+  <data name="Booking step" xml:space="preserve">
+    <value>فاصل الحجز</value>
+  </data>
+  <data name="{0} minutes" xml:space="preserve">
+    <value>{0} دقيقة</value>
+  </data>
+  <data name="In use" xml:space="preserve">
+    <value>مستخدم</value>
+  </data>
+  <data name="Working periods and breaks" xml:space="preserve">
+    <value>فترات العمل والاستراحات</value>
+  </data>
+  <data name="Slots" xml:space="preserve">
+    <value>المواعيد</value>
+  </data>
+  <data name="Clinic hours" xml:space="preserve">
+    <value>مواعيد العيادة</value>
+  </data>
+  <data name="Working periods" xml:space="preserve">
+    <value>فترات العمل</value>
+  </data>
+  <data name="Breaks" xml:space="preserve">
+    <value>الاستراحات</value>
+  </data>
+  <data name="Working period" xml:space="preserve">
+    <value>فترة عمل</value>
+  </data>
+  <data name="Break" xml:space="preserve">
+    <value>استراحة</value>
+  </data>
+  <data name="Slot" xml:space="preserve">
+    <value>موعد</value>
+  </data>
+  <data name="{0}, {1} {2}, from" xml:space="preserve">
+    <value>{0}، {1} {2}، من</value>
+  </data>
+  <data name="{0}, {1} {2}, to" xml:space="preserve">
+    <value>{0}، {1} {2}، إلى</value>
+  </data>
+  <data name="Only the section for the chosen mode is saved." xml:space="preserve">
+    <value>يُحفظ فقط القسم الخاص بالنوع المختار.</value>
+  </data>
+  <data name="Save calendar" xml:space="preserve">
+    <value>حفظ التقويم</value>
+  </data>
 </root>

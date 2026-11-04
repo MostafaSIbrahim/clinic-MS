@@ -1,0 +1,44 @@
+@model IReadOnlyList<SafyaClinic.Application.Scheduling.ScheduleSummaryDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Domain.Enums
+@* P1: clinicians and clinics with their calendar. *@
+@{
+    var showDoctor = ViewData["ShowDoctor"] as bool? ?? true;
+}
+<app-table caption="@T["Calendars"].Value" caption-hidden="true" stack="true">
+    <thead>
+        <tr>
+            @if (showDoctor) { <th scope="col">@T["Doctor"]</th> }
+            <th scope="col">@T["Clinic"]</th>
+            <th scope="col">@T["Calendar"]</th>
+            <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var row in Model)
+        {
+            var name = showDoctor ? $"{row.DoctorName}, {row.ClinicName}" : row.ClinicName;
+            <tr>
+                @if (showDoctor) { <th scope="row" dir="auto">@row.DoctorName</th> }
+                <td data-label="@T["Clinic"]" dir="auto">@row.ClinicName</td>
+                <td data-label="@T["Calendar"]">
+                    @if (!row.IsSet)
+                    {
+                        <span class="text-muted">@T["Not set: bookable in clinic hours"]</span>
+                    }
+                    else
+                    {
+                        <span>@(row.Mode == ScheduleMode.Open ? T["Open calendar"] : T["Specific slots"])</span>
+                        <span class="text-muted">· @T["{0}-minute step", row.StepMinutes]</span>
+                        @if (!row.IsActive) { <span class="app-status app-status--neutral ms-1">@T["Not in use"]</span> }
+                    }
+                </td>
+                <td class="app-table__actions">
+                    <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-doctorId="@row.DoctorId" asp-route-clinicId="@row.ClinicId">
+                        @(row.IsSet ? T["Edit"] : T["Set calendar"])<span class="visually-hidden"> @name</span>
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</app-table>

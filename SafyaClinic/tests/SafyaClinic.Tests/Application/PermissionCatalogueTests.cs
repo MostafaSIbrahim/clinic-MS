@@ -47,6 +47,8 @@ public class PermissionCatalogueTests
         [Permissions.Payments.ReportAllDoctors] = "A R RA",
         [Permissions.Payments.ViewFullDashboard] = "A",
         [Permissions.Payments.Maintenance] = "A",
+        [Permissions.Schedule.ManageOwn] = "A D N",       // P1b: clinicians set their own calendar
+        [Permissions.Schedule.ManageAll] = "A RA",        // P1b: default; changeable on the Permission Groups screen
         [Permissions.Settings.Clinics] = "A",
         [Permissions.Settings.PatientSources] = "A",
         [Permissions.Settings.Lookups] = "A",

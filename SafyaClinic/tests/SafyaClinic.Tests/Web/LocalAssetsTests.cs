@@ -36,7 +36,6 @@ public class LocalAssetsTests
     [Theory]
     [InlineData("lib/bootstrap/dist/css/bootstrap.min.css")]
     [InlineData("lib/bootstrap/dist/css/bootstrap.rtl.min.css")]
-    [InlineData("lib/bootstrap/dist/css/bootstrap.rtl.min.css")]
     [InlineData("lib/bootstrap/dist/js/bootstrap.bundle.min.js")]
     [InlineData("lib/bootstrap-icons/font/bootstrap-icons.min.css")]
     [InlineData("lib/bootstrap-icons/font/fonts/bootstrap-icons.woff2")]
