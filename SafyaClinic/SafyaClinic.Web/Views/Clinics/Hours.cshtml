@@ -1,0 +1,57 @@
+@model SafyaClinic.Web.Models.ClinicHoursForm
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Application.Scheduling
+@{
+    ViewData["Title"] = T["Opening hours"].Value;
+}
+@* P1: a clinic's weekly opening hours. Up to three periods a day; an empty day is closed. *@
+<div class="app-page-header mb-3">
+    <h1 class="mb-1">@T["Opening hours"]: <span dir="auto">@Model.ClinicName</span></h1>
+    <p class="text-muted mb-0">@T["Up to three periods a day, in clinic time. Leave a day empty when the clinic is closed."]</p>
+</div>
+
+<form asp-action="Hours" asp-route-id="@Model.ClinicId" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="ClinicName" />
+
+    <app-table caption="@T["Opening hours"].Value" caption-hidden="true" stack="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Day"]</th>
+                @for (var k = 1; k <= OpeningHoursRules.MaxPeriodsPerDay; k++)
+                {
+                    <th scope="col">@T["Period {0}", k]</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @for (var d = 0; d < Model.Days.Count; d++)
+            {
+                var dayName = T[Model.Days[d].Day.ToString()].Value;
+                <tr>
+                    <th scope="row">
+                        @dayName
+                        <input type="hidden" asp-for="Days[d].Day" />
+                    </th>
+                    @for (var k = 0; k < Model.Days[d].Periods.Count; k++)
+                    {
+                        <td data-label="@T["Period {0}", k + 1]">
+                            <div class="app-period">
+                                <label class="visually-hidden" for="Days_@(d)__Periods_@(k)__Opens">@T["{0}, period {1}, opens", dayName, k + 1]</label>
+                                <input type="time" step="900" class="form-control form-control-sm" asp-for="Days[d].Periods[k].Opens" asp-format="{0:hh\:mm}" />
+                                <span aria-hidden="true">–</span>
+                                <label class="visually-hidden" for="Days_@(d)__Periods_@(k)__Closes">@T["{0}, period {1}, closes", dayName, k + 1]</label>
+                                <input type="time" step="900" class="form-control form-control-sm" asp-for="Days[d].Periods[k].Closes" asp-format="{0:hh\:mm}" />
+                            </div>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </app-table>
+
+    <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary">@T["Save opening hours"]</button>
+        <a asp-action="Details" asp-route-id="@Model.ClinicId" class="btn btn-outline-secondary">@T["Cancel"]</a>
+    </div>
+</form>
