@@ -55,7 +55,7 @@ i.bi, [class^="bi-"], [class*=" bi-"] {
     background-color: var(--brand-primary-light);
     border: none;
     box-shadow: none;
-    padding-left: 1rem;
+    padding-inline-start: 1rem;
     margin-top: 0.25rem;
     margin-bottom: 0.5rem;
     border-radius: var(--radius-md);
@@ -114,7 +114,7 @@ a:hover { color: var(--brand-primary-dark); }
     width: var(--sidebar-width);
     min-width: var(--sidebar-width);
     background: var(--surface) !important;
-    border-right: 1px solid var(--border-soft);
+    border-inline-end: 1px solid var(--border-soft);
     color: var(--brand-ink) !important;
 }
 
@@ -162,7 +162,7 @@ a:hover { color: var(--brand-primary-dark); }
 #sidebar .nav-link i {
     width: 20px;
     text-align: center;
-    margin-right: 0.65rem;
+    margin-inline-end: 0.65rem;
     font-size: 1rem;
     color: var(--color-text-muted);
     transition: color 0.15s ease;
@@ -312,12 +312,12 @@ main {
 .alert {
     border-radius: var(--radius-md);
     border: 1px solid transparent;
-    border-left: 4px solid transparent;
+    border-inline-start: 4px solid transparent;
 }
-.alert-success { border-left-color: var(--success-color); background: var(--color-success-bg); color: var(--color-success-fg); }
-.alert-danger  { border-left-color: var(--danger-color);  background: var(--color-danger-bg);  color: var(--color-danger-fg); }
-.alert-warning { border-left-color: var(--warning-color); background: var(--color-warning-bg); color: var(--color-warning-fg); }
-.alert-info    { border-left-color: var(--brand-teal);    background: var(--color-info-bg);    color: var(--color-info-fg); }
+.alert-success { border-inline-start-color: var(--success-color); background: var(--color-success-bg); color: var(--color-success-fg); }
+.alert-danger  { border-inline-start-color: var(--danger-color);  background: var(--color-danger-bg);  color: var(--color-danger-fg); }
+.alert-warning { border-inline-start-color: var(--warning-color); background: var(--color-warning-bg); color: var(--color-warning-fg); }
+.alert-info    { border-inline-start-color: var(--brand-teal);    background: var(--color-info-bg);    color: var(--color-info-fg); }
 
 /* ── Print styles ─────────────────────────────────────────── */
 @media print {
@@ -354,7 +354,7 @@ main {
     content: "";
     position: absolute;
     top: -30%;
-    right: -10%;
+    inset-inline-end: -10%;
     width: 120px;
     height: 120px;
     border-radius: 50%;
@@ -416,7 +416,7 @@ main.app-main {
 .app-skip-link {
     position: fixed;
     top: 0.75rem;
-    left: 0.75rem;
+    inset-inline-start: 0.75rem;
     z-index: 1100;
     padding: 0.75rem 1rem;
     background: var(--surface);

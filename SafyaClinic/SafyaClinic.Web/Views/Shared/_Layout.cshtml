@@ -1,12 +1,22 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@{
+    // F9: page language and direction come from the user's language choice (English by default).
+    var uiCulture = System.Globalization.CultureInfo.CurrentUICulture;
+    var isArabic = uiCulture.TwoLetterISOLanguageName == "ar";
+    var pageLang = isArabic ? "ar" : "en";
+    var pageDir = uiCulture.TextInfo.IsRightToLeft ? "rtl" : "ltr";
+    var bootstrapCss = pageDir == "rtl" ? "~/lib/bootstrap/dist/css/bootstrap.rtl.min.css" : "~/lib/bootstrap/dist/css/bootstrap.min.css";
+    var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
+}
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="@pageLang" dir="@pageDir">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(ViewData["Title"] != null ? $"{ViewData["Title"]} — " : "")Safya Clinic</title>
     @* F6: every asset is served by the app (wwwroot/lib), so screens work without internet access. *@
     <link rel="stylesheet" href="~/css/fonts.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="@Url.Content(bootstrapCss)" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" asp-append-version="true" />
     @* F6: design tokens, then the bridge that feeds them into Bootstrap, then the app styles. *@
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
@@ -21,7 +31,7 @@
 @if (User.Identity?.IsAuthenticated == true)
 {
     <a href="#mainContent" class="app-skip-link">
-        Skip to main content
+        @T["Skip to main content"]
     </a>
     <div class="d-flex" id="wrapper">
 
@@ -32,7 +42,7 @@
              aria-labelledby="sidebarTitle">
             <div class="px-3 py-4 d-flex align-items-center gap-2">
                 @* Branding: the approved logo replaces the placeholder heart on all application pages. *@
-                <span id="sidebarTitle" class="visually-hidden">Safya Clinic navigation</span>
+                <span id="sidebarTitle" class="visually-hidden">@T["Safya Clinic navigation"]</span>
                 <a asp-controller="Dashboard" asp-action="Index" class="clinic-brand-link">
                     @await Html.PartialAsync("_ClinicLogo", "clinic-logo--sidebar")
                 </a>
@@ -40,7 +50,7 @@
                         class="btn-close d-lg-none ms-auto"
                         data-bs-dismiss="offcanvas"
                         data-bs-target="#sidebar"
-                        aria-label="Close navigation"></button>
+                        aria-label="@T["Close navigation"]"></button>
             </div>
 
             @* F7: the menu is built from the navigation catalogue and the user's permissions. *@
@@ -58,7 +68,7 @@
                 // F7c: every page has exactly one h1. Pages without their own get the title as h1 in the top bar.
                 var pageBody = await RenderPageBodyAsync();
                 var pageHasHeading = pageBody.Contains("<h1", StringComparison.OrdinalIgnoreCase);
-                var displayName = User.Identity!.Name ?? "Account";
+                var displayName = User.Identity!.Name ?? T["Account"].Value;
                 var initial = displayName.Trim().FirstOrDefault().ToString().ToUpperInvariant();
             }
             <header class="topbar app-topbar d-flex align-items-center gap-3">
@@ -67,7 +77,7 @@
                         data-bs-toggle="offcanvas"
                         data-bs-target="#sidebar"
                         aria-controls="sidebar"
-                        aria-label="Open navigation">
+                        aria-label="@T["Open navigation"]">
                     <i class="bi bi-list fs-5" aria-hidden="true"></i>
                 </button>
 
@@ -83,11 +93,11 @@
                 @if (await Can.HasAsync(Permissions.Patients.View))
                 {
                     <form class="app-topbar-search ms-auto" role="search" method="get" asp-controller="Patients" asp-action="Index">
-                        <label for="topbarPatientSearch" class="visually-hidden">Find a patient by name or phone</label>
+                        <label for="topbarPatientSearch" class="visually-hidden">@T["Find a patient by name or phone"]</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text" aria-hidden="true"><i class="bi bi-search"></i></span>
                             <input id="topbarPatientSearch" type="search" name="search" class="form-control"
-                                   placeholder="Find patient: name or phone" autocomplete="off" />
+                                   placeholder="@T["Find patient: name or phone"]" autocomplete="off" />
                         </div>
                     </form>
                 }
@@ -98,26 +108,43 @@
 
                 <small class="text-muted text-nowrap d-none d-xl-inline">@Clock.Now.ToString("ddd, dd MMM yyyy")</small>
 
+                @* F9: language switch. Shows the other language in its own script. *@
+                <form asp-controller="Language" asp-action="Set" method="post" class="app-language-switch">
+                    <input type="hidden" name="culture" value="@(isArabic ? "en" : "ar")" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        <span class="visually-hidden">@T["Language"]: </span>
+                        @if (isArabic)
+                        {
+                            <span lang="en">English</span>
+                        }
+                        else
+                        {
+                            <span lang="ar">العربية</span>
+                        }
+                    </button>
+                </form>
+
                 <div class="dropdown">
                     <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
                             data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="brand-mark app-avatar" aria-hidden="true">@initial</span>
                         <span class="d-none d-md-inline text-truncate app-user-name">@displayName</span>
-                        <span class="visually-hidden">Account menu</span>
+                        <span class="visually-hidden">@T["Account menu"]</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><span class="dropdown-item-text small text-muted">Signed in as <strong class="d-block text-body">@displayName</strong></span></li>
+                        <li><span class="dropdown-item-text small text-muted">@T["Signed in as"] <strong class="d-block text-body">@displayName</strong></span></li>
                         <li><hr class="dropdown-divider" /></li>
                         <li>
                             <a class="dropdown-item" asp-controller="Auth" asp-action="ChangePassword">
-                                <i class="bi bi-key me-2" aria-hidden="true"></i>Change password
+                                <i class="bi bi-key me-2" aria-hidden="true"></i>@T["Change password"]
                             </a>
                         </li>
                         <li>
                             <form asp-controller="Auth" asp-action="Logout" method="post">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="dropdown-item">
-                                    <i class="bi bi-box-arrow-left me-2" aria-hidden="true"></i>Sign out
+                                    <i class="bi bi-box-arrow-left me-2" aria-hidden="true"></i>@T["Sign out"]
                                 </button>
                             </form>
                         </li>

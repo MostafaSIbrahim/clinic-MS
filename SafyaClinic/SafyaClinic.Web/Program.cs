@@ -41,6 +41,10 @@ builder.Host.UseSerilog((context, services, logger) => logger
 // ── MVC ──────────────────────────────────────────────────────
 builder.Services.AddControllersWithViews();
 
+// ── Language (F9): English by default, Arabic labels on request; Western digits always ──
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.Configure<RequestLocalizationOptions>(SafyaClinic.Web.Localization.AppCultures.Configure);
+
 // ── Infrastructure (DbContext + UnitOfWork) ──────────────────
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -135,6 +139,7 @@ app.UseSerilogRequestLogging(options =>
         if (userId is not null) diagnostics.Set("UserId", userId);
     };
 });
+app.UseRequestLocalization();   // F9: culture from the language cookie
 app.UseRouting();
 app.UseAuthentication();
 app.UseMiddleware<UserLogScopeMiddleware>();   // F3a: user id on every log entry
