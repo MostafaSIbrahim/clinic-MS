@@ -809,3 +809,32 @@ h1.app-topbar-title {
 .app-patient-header__no-allergies {
     color: var(--color-text-muted);
 }
+
+/* ── F8: form field, money, date-time, icon button ─────────── */
+.app-field {
+    margin-bottom: var(--space-4);
+}
+
+.app-required {
+    color: var(--color-danger);
+}
+
+.app-field-error {
+    margin-top: var(--space-1);
+    color: var(--color-danger-fg);
+    font-size: var(--font-size-sm);
+}
+
+.app-field-error.field-validation-valid {
+    display: none;
+}
+
+.app-money,
+.app-datetime {
+    font-variant-numeric: var(--numeric-tabular);
+    white-space: nowrap;
+}
+
+.app-icon-button {
+    min-width: 2rem;
+}
