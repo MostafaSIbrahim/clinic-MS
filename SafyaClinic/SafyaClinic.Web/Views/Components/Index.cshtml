@@ -1,0 +1,170 @@
+@model SafyaClinic.Web.Models.ComponentSampleModel
+@using SafyaClinic.Web.Components
+@using SafyaClinic.Web.Models
+@{
+    ViewData["Title"] = "Component samples";
+    var errors = Context.Request.Query["errors"] == "true";
+    var emptySample = new EmptyStateModel(
+        "No reservations on this day",
+        Icon: "bi-calendar-x",
+        Hint: "Pick another day or book a new appointment.",
+        ActionText: "Book appointment",
+        ActionUrl: "#sample-empty");
+}
+
+<div class="app-sample">
+    <h1>Component samples</h1>
+    <p class="text-muted">Every shared component with sample data. Nothing on this page is saved. Use it to check each component with axe, the keyboard, at phone width and in right-to-left.</p>
+
+    <nav aria-label="On this page" class="mb-4">
+        <ul class="list-inline mb-0">
+            <li class="list-inline-item"><a href="#sample-fields">Form fields</a></li>
+            <li class="list-inline-item"><a href="#sample-display">Display helpers</a></li>
+            <li class="list-inline-item"><a href="#sample-status">Status badges</a></li>
+            <li class="list-inline-item"><a href="#sample-kpi">KPI tiles</a></li>
+            <li class="list-inline-item"><a href="#sample-table">Data table</a></li>
+            <li class="list-inline-item"><a href="#sample-empty">Empty state</a></li>
+            <li class="list-inline-item"><a href="#sample-tabs">Tabs</a></li>
+            <li class="list-inline-item"><a href="#sample-feedback">Confirm dialog</a></li>
+            <li class="list-inline-item"><a href="#sample-rtl">Right-to-left</a></li>
+        </ul>
+    </nav>
+
+    <div class="d-grid gap-4">
+        <app-card id="sample-fields" title="Form fields" level="2" icon="bi-input-cursor-text">
+            <app-card-actions>
+                @if (errors)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Show without errors</a>
+                }
+                else
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-route-errors="true">Show error state</a>
+                }
+            </app-card-actions>
+            <form method="get" action="#sample-fields" novalidate>
+                <div class="row">
+                    <div class="col-md-6"><app-field asp-for="FullName" label="Full name" required="true" hint="As written on the national ID." /></div>
+                    <div class="col-md-6"><app-field asp-for="Phone" label="Mobile phone" type="tel" hint="Egyptian mobile, e.g. 0100 123 4567." /></div>
+                    <div class="col-md-6"><app-field asp-for="Email" label="Email" type="email" /></div>
+                    <div class="col-md-6"><app-field asp-for="BirthDate" label="Date of birth" type="date" /></div>
+                    <div class="col-md-6"><app-field asp-for="ClinicId" label="Clinic" type="select" asp-items="Model.Clinics" option-label="Choose a clinic" required="true" /></div>
+                    <div class="col-12"><app-field asp-for="Notes" label="Notes" type="textarea" rows="3" hint="Arabic or English." /></div>
+                </div>
+            </form>
+        </app-card>
+
+        <app-card id="sample-display" title="Display helpers" level="2" icon="bi-123">
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Money</dt>
+                <dd class="col-sm-8"><app-money value="1250.5m" /></dd>
+                <dt class="col-sm-4">Money, no value</dt>
+                <dd class="col-sm-8"><app-money value="null" /></dd>
+                <dt class="col-sm-4">Date and time (stored 22:30 UTC)</dt>
+                <dd class="col-sm-8"><app-datetime utc="new DateTime(2026, 12, 1, 22, 30, 0)" /></dd>
+                <dt class="col-sm-4">Icon buttons</dt>
+                <dd class="col-sm-8 d-flex gap-2">
+                    <app-icon-button icon="bi-pencil" label="Edit sample" />
+                    <app-icon-button icon="bi-trash" label="Delete sample" variant="outline-danger" data-confirm="Delete this sample? Nothing is really deleted." />
+                </dd>
+            </dl>
+        </app-card>
+
+        <app-card id="sample-status" title="Status badges" level="2" icon="bi-tag">
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var status in ComponentSampleModel.Statuses)
+                {
+                    <partial name="_StatusBadge" model="status" />
+                }
+            </div>
+        </app-card>
+
+        <section id="sample-kpi" aria-labelledby="sample-kpi-title">
+            <h2 id="sample-kpi-title" class="h5">KPI tiles</h2>
+            <div class="app-kpi-grid">
+                <app-kpi label="Today's appointments" value="24" icon="bi-calendar-check" tone="primary" />
+                <app-kpi label="Waiting now" value="7" icon="bi-hourglass-split" tone="warning" hint="2 waiting over 30 min" />
+                <app-kpi label="Collected today" value="12,450.00 EGP" icon="bi-cash-coin" tone="success" />
+                <app-kpi label="Unpaid balances" value="5" icon="bi-exclamation-circle" tone="danger" href="#sample-table" hint="Opens the list" />
+            </div>
+        </section>
+
+        <section id="sample-table" aria-labelledby="sample-table-title">
+            <h2 id="sample-table-title" class="h5">Data table</h2>
+            <app-filter-bar label="Filter sample visits">
+                <div class="app-filter-bar__field">
+                    <label for="sampleSearch" class="form-label">Name or phone</label>
+                    <input id="sampleSearch" name="search" class="form-control" />
+                </div>
+                <div class="app-filter-bar__field">
+                    <label for="sampleStatus" class="form-label">Status</label>
+                    <select id="sampleStatus" name="status" class="form-select">
+                        <option value="">Any status</option>
+                        <option>Waiting</option>
+                        <option>Completed</option>
+                    </select>
+                </div>
+            </app-filter-bar>
+            <app-table caption="Today's visits (sample)" stack="true">
+                <thead>
+                    <tr>
+                        <th scope="col">Patient</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="app-table__num">Arrived</th>
+                        <th scope="col" class="app-table__num">Due</th>
+                        <th scope="col" class="app-table__actions"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <th scope="row" dir="auto">@row.Name</th>
+                            <td data-label="Phone">@row.Phone</td>
+                            <td data-label="Status"><partial name="_StatusBadge" model="row.Status" /></td>
+                            <td data-label="Arrived" class="app-table__num"><app-datetime utc="row.ArrivedUtc" format="HH:mm" /></td>
+                            <td data-label="Due" class="app-table__num"><app-money value="row.Due" /></td>
+                            <td class="app-table__actions">
+                                <a href="#sample-table" class="btn btn-sm btn-outline-primary">Open <span class="visually-hidden">@row.Name</span></a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </app-table>
+            <partial name="_AppPagination" model="new PagerModel(2, 20, 132)" />
+        </section>
+
+        <app-card id="sample-empty" title="Empty state" level="2" icon="bi-inbox">
+            <partial name="_AppEmpty" model="emptySample" />
+        </app-card>
+
+        <app-card id="sample-tabs" title="Tabs" level="2" icon="bi-segmented-nav">
+            <p class="text-muted">Use the arrow keys, Home and End when a tab has focus.</p>
+            <app-tabs label="Sample patient sections" id="sample-patient">
+                <app-tab id="details" title="Details"><p>Basic details: name, phones and address.</p></app-tab>
+                <app-tab id="visits" title="Visits"><p>Previous reservations and consultations.</p></app-tab>
+                <app-tab id="billing" title="Billing"><p>Payments and balance due.</p></app-tab>
+            </app-tabs>
+        </app-card>
+
+        <app-card id="sample-feedback" title="Confirm dialog" level="2" icon="bi-question-circle">
+            <p>Destructive actions ask first, in the app's own dialog.</p>
+            <a href="#sample-feedback" class="btn btn-outline-danger" data-confirm="Cancel reservation #41 for Mona Adel? (Sample only; nothing changes.)">Cancel sample reservation</a>
+        </app-card>
+
+        <div id="sample-rtl" dir="rtl" lang="ar">
+            <app-card title="عرض من اليمين إلى اليسار" level="2" icon="bi-translate">
+                <p>نفس المكونات في صفحة من اليمين إلى اليسار. الأرقام تبقى بالأرقام الغربية.</p>
+                <div class="app-kpi-grid mb-3">
+                    <app-kpi label="مواعيد اليوم" value="24" tone="primary" />
+                    <app-kpi label="المحصل اليوم" value="12,450.00 EGP" tone="success" />
+                </div>
+                <app-tabs label="أقسام المريض" id="sample-rtl-tabs">
+                    <app-tab id="details" title="البيانات"><p>الاسم والهاتف والعنوان.</p></app-tab>
+                    <app-tab id="visits" title="الزيارات"><p>الحجوزات السابقة.</p></app-tab>
+                </app-tabs>
+            </app-card>
+        </div>
+    </div>
+</div>

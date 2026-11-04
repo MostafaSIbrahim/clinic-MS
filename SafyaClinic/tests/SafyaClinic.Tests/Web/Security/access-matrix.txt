@@ -25,6 +25,7 @@ Clinics.Edit POST: Admin
 Clinics.Index ANY: Admin
 Clinics.RemoveAgreement POST: Admin
 Clinics.SaveAgreement POST: Admin
+Components.Index GET: Admin
 Dashboard.Index ANY: signed-in
 FollowUps.Book GET: Admin Doctor Reception
 FollowUps.Book POST: Admin Doctor Reception

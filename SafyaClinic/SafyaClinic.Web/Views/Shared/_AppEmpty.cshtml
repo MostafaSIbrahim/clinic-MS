@@ -1,0 +1,14 @@
+@model SafyaClinic.Web.Components.EmptyStateModel
+@* F8c: empty state. One line saying what is empty, an optional hint and one next action. *@
+<div class="app-empty" role="status">
+    <i class="bi @Model.Icon app-empty__icon" aria-hidden="true"></i>
+    <p class="app-empty__message">@Model.Message</p>
+    @if (!string.IsNullOrWhiteSpace(Model.Hint))
+    {
+        <p class="app-empty__hint">@Model.Hint</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(Model.ActionText) && !string.IsNullOrWhiteSpace(Model.ActionUrl))
+    {
+        <a class="btn btn-primary" href="@Model.ActionUrl">@Model.ActionText</a>
+    }
+</div>

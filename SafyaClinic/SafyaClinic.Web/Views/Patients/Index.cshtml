@@ -1,6 +1,17 @@
 @model PagedResult<PatientSummaryDto>
+@using SafyaClinic.Web.Components
 @{
     ViewData["Title"] = "Patients";
+    var startHint = new EmptyStateModel(
+        "Find a patient to get started",
+        Icon: "bi-search",
+        Hint: "Enter a name, phone number or national ID, then select Search.");
+    var noMatch = new EmptyStateModel(
+        "No patients match this search",
+        Icon: "bi-person-x",
+        Hint: "Check the spelling or try the phone number.",
+        ActionText: "Register patient",
+        ActionUrl: Url.Action("Create"));
 }
 
 <div class="card">
@@ -18,19 +29,14 @@
     </div>
 
     <div class="card-body">
-        <form method="get" class="row g-3 align-items-end mb-3 filter-panel" asp-action="Index">
-            <div class="col-md-4">
+        @* F8c: filter bar, data table, empty state and pagination components. *@
+        <app-filter-bar label="Find patients" action="@Url.Action("Index")" clear-url="@Url.Action("Index")">
+            <div class="app-filter-bar__field">
                 <label for="patientSearch" class="form-label">Name, phone or national ID</label>
                 <input type="text" name="search" value="@ViewBag.Search" class="form-control"
-                       id="patientSearch" placeholder="Search by Phone Number or name or national ID..." />
+                       id="patientSearch" autocomplete="off" />
             </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-outline-primary">
-                    <i class="bi bi-search me-1"></i>Search
-                </button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-            </div>
-        </form>
+        </app-filter-bar>
 
         @* Search-first: distinguish initial guidance, invalid searches and genuine no-match results. *@
         <div asp-validation-summary="All" class="text-danger" role="alert"></div>
@@ -40,62 +46,50 @@
         }
         else if (ViewBag.HasSearch != true)
         {
-            <div class="empty-state" role="status">Enter a name, phone number or national ID, then select Search to load patients.</div>
+            <partial name="_AppEmpty" model="startHint" />
         }
         else if (Model == null || !Model.Items.Any())
         {
-            <div class="text-center text-muted py-5" tabindex="0" role="region" aria-label="Patient results">
-                <i class="bi bi-person-x fs-1 d-block mb-2 opacity-50"></i>
-                No patients match these filters.
-            </div>
+            <partial name="_AppEmpty" model="noMatch" />
         }
         else
         {
-            <div class="table-responsive" tabindex="0" role="region" aria-label="Patient results">
-                <table class="table table-hover align-middle">
-                    <thead>
+            <app-table caption="Patient results" caption-hidden="true" stack="true">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">National ID</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col" class="app-table__num">Age</th>
+                        <th scope="col">Gender</th>
+                        <th scope="col">Registered</th>
+                        <th scope="col" class="app-table__actions"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Items)
+                    {
                         <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">National ID</th>
-                            <th scope="col">Phone</th>
-                            <th scope="col">Age</th>
-                            <th scope="col">Gender</th>
-                            <th scope="col">Registered</th>
-                            <th scope="col" ><span class="visually-hidden">Actions</span></th>
+                            <th scope="row" dir="auto">@p.FullName</th>
+                            <td data-label="National ID">@(p.NationalId ?? "—")</td>
+                            <td data-label="Phone">@(p.PrimaryPhone ?? "—")</td>
+                            <td data-label="Age" class="app-table__num">@(p.Age?.ToString() ?? "—")</td>
+                            <td data-label="Gender">@(p.Gender ?? "—")</td>
+                            <td data-label="Registered">@p.CreatedAt.ToString("dd MMM yyyy")</td>
+                            <td class="app-table__actions">
+                                <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye" aria-hidden="true"></i> View<span class="visually-hidden"> @p.FullName</span>
+                                </a>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in Model.Items)
-                        {
-                            <tr>
-                                <td class="fw-semibold">@p.FullName</td>
-                                <td>@(p.NationalId ?? "—")</td>
-                                <td>@(p.PrimaryPhone ?? "—")</td>
-                                <td>@(p.Age?.ToString() ?? "—")</td>
-                                <td>@(p.Gender ?? "—")</td>
-                                <td>@p.CreatedAt.ToString("dd MMM yyyy")</td>
-                                <td class="text-end">
-                                    <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye"></i> View
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </app-table>
         }
 
-        @if (Model != null && Model.TotalPages > 1)
+        @if (Model != null && ViewBag.HasSearch == true)
         {
-            ViewData["PaginationAction"] = "Index";
-            var paginationModel = new PagedResult<object>
-            {
-                TotalCount = Model.TotalCount,
-                Page = Model.Page,
-                PageSize = Model.PageSize
-            };
-            @await Html.PartialAsync("_Pagination", paginationModel)
+            <partial name="_AppPagination" model="PagerModel.From(Model!)" />
         }
     </div>
 </div>
