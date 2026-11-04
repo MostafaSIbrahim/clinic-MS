@@ -1,0 +1,40 @@
+@model SafyaClinic.Web.Components.PatientHeaderModel
+@* F8: patient header. Allergies always show, in words, with an icon and colour (never colour alone). *@
+<section class="app-patient-header mb-3" aria-label="Patient">
+    <div class="app-patient-header__identity">
+        <a class="app-patient-header__name" asp-controller="Patients" asp-action="Details" asp-route-id="@Model.Id">@Model.Name</a>
+        <dl class="app-patient-header__facts">
+            @if (Model.AgeAndSex is not null)
+            {
+                <div><dt class="visually-hidden">Age and sex</dt><dd>@Model.AgeAndSex</dd></div>
+            }
+            @if (Model.Phone is not null)
+            {
+                <div><dt class="visually-hidden">Phone</dt><dd><i class="bi bi-telephone" aria-hidden="true"></i> @Model.Phone</dd></div>
+            }
+            @if (Model.BloodType is not null)
+            {
+                <div><dt>Blood type</dt><dd>@Model.BloodType</dd></div>
+            }
+        </dl>
+    </div>
+    <div class="app-patient-header__clinical">
+        @if (Model.HasAllergies)
+        {
+            <p class="app-patient-header__allergies mb-1" role="note">
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                <strong>Allergies:</strong> <span dir="auto">@Model.Allergies</span>
+            </p>
+        }
+        else
+        {
+            <p class="app-patient-header__no-allergies mb-1">
+                <strong>Allergies:</strong> none recorded
+            </p>
+        }
+        <p class="mb-0 small">
+            <strong>Chronic diseases:</strong>
+            <span dir="auto">@(Model.ChronicDiseases ?? "none recorded")</span>
+        </p>
+    </div>
+</section>

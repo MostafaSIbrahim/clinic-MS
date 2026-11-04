@@ -3,6 +3,8 @@
     ViewData["Title"] = "New Medical Record";
 }
 
+@await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
+
 <div class="card" style="max-width:800px;">
     <div class="card-header"><i class="bi bi-file-earmark-plus me-2"></i>Create Medical Record</div>
     <div class="card-body">

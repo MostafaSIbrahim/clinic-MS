@@ -1,7 +1,5 @@
 @model (int ReservationId, int PatientId, bool IsPaid)
-<span class="badge @(Model.IsPaid ? "bg-success" : "bg-secondary")">
-    @(Model.IsPaid ? "Covered" : "Not fully covered")
-</span>
+<partial name="_StatusBadge" model="@(Model.IsPaid ? "Covered" : "Not fully covered")" />
 @if (await Can.HasAsync(Permissions.Reservations.View) && await Can.HasAsync(Permissions.Payments.View))
 {
     <a asp-controller="Payments" asp-action="PatientSummary"
