@@ -52,42 +52,6 @@ public class DbSeederTests
     }
 
     [Fact]
-    public async Task Role_memberships_become_group_memberships_once()
-    {
-        await using var context = NewContext();
-        await DbSeeder.SeedAsync(context, Config(TestPassword));
-
-        // A database from before F4d: memberships exist only as roles.
-        context.UserGroups.RemoveRange(await context.UserGroups.ToListAsync());
-        var doctor = new User { FullName = "Doctor", PhoneNumber = "0177", PasswordHash = "x" };
-        context.Users.Add(doctor);
-        await context.SaveChangesAsync();
-        var adminId = await context.Users.Where(u => u.PhoneNumber == "0100").Select(u => u.Id).SingleAsync();
-        var doctorRoleId = await context.Roles.Where(r => r.RoleName == "Doctor").Select(r => r.Id).SingleAsync();
-        var adminRoleId = await context.Roles.Where(r => r.RoleName == "Admin").Select(r => r.Id).SingleAsync();
-        context.UserRoles.AddRange(
-            new UserRole { UserId = doctor.Id, RoleId = doctorRoleId },
-            new UserRole { UserId = adminId, RoleId = adminRoleId });
-        await context.SaveChangesAsync();
-        context.ChangeTracker.Clear();
-
-        await DbSeeder.SeedAsync(context, Config(null));
-
-        var doctorsId = await context.PermissionGroups
-            .Where(g => g.SystemKey == SystemGroups.DoctorRole).Select(g => g.Id).SingleAsync();
-        Assert.True(await context.UserGroups.AnyAsync(m => m.UserId == doctor.Id && m.GroupId == doctorsId));
-
-        // Changes made later on the groups screen are kept: the move does not run again.
-        context.UserGroups.RemoveRange(await context.UserGroups.Where(m => m.UserId == doctor.Id).ToListAsync());
-        await context.SaveChangesAsync();
-        context.ChangeTracker.Clear();
-
-        await DbSeeder.SeedAsync(context, Config(null));
-
-        Assert.False(await context.UserGroups.AnyAsync(m => m.UserId == doctor.Id));
-    }
-
-    [Fact]
     public async Task Existing_users_are_left_unchanged_and_no_password_is_needed()
     {
         await using var context = NewContext();
@@ -101,37 +65,27 @@ public class DbSeederTests
     }
 
     [Fact]
-    public async Task Misnamed_reception_admin_role_is_renamed()
+    public void Roles_tables_are_no_longer_part_of_the_model()
     {
-        await using var context = NewContext();
-        // Roles already exist, so the seeder skips its role list; the admin seed still needs "Admin".
-        context.Roles.AddRange(new Role { RoleName = "Admin" }, new Role { RoleName = "Reception Admin" });
-        await context.SaveChangesAsync();
+        var model = new SafyaDbContext(new DbContextOptionsBuilder<SafyaDbContext>()
+            .UseSqlServer("Server=model-only;Database=ModelOnly;Integrated Security=True").Options).Model;
 
-        await DbSeeder.SeedAsync(context, Config(TestPassword));
+        var tables = model.GetEntityTypes().Select(e => e.GetTableName()).ToList();
 
-        Assert.False(await context.Roles.AnyAsync(r => r.RoleName == "Reception Admin"));
-        Assert.Equal(1, await context.Roles.CountAsync(r => r.RoleName == DbSeeder.ReceptionAdminRoleName));
+        Assert.DoesNotContain("Roles", tables);
+        Assert.DoesNotContain("UserRoles", tables);
+        Assert.Contains("UserGroups", tables);
     }
 
     [Fact]
-    public async Task Reception_admin_role_is_created_when_missing()
-    {
-        await using var context = NewContext();
-
-        await DbSeeder.SeedAsync(context, Config(TestPassword));
-
-        Assert.True(await context.Roles.AnyAsync(r => r.RoleName == DbSeeder.ReceptionAdminRoleName));
-    }
-
-    [Fact]
-    public async Task Seeding_twice_keeps_a_single_reception_admin_role()
+    public async Task Seeding_twice_creates_one_admin_and_the_built_in_groups_once()
     {
         await using var context = NewContext();
 
         await DbSeeder.SeedAsync(context, Config(TestPassword));
         await DbSeeder.SeedAsync(context, Config(TestPassword));
 
-        Assert.Equal(1, await context.Roles.CountAsync(r => r.RoleName == DbSeeder.ReceptionAdminRoleName));
+        Assert.Equal(1, await context.Users.CountAsync());
+        Assert.Equal(SystemGroups.All.Count, await context.PermissionGroups.CountAsync(g => g.SystemKey != null));
     }
 }

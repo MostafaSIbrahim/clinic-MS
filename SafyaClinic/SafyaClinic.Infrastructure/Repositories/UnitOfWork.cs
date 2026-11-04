@@ -23,8 +23,6 @@ public class UnitOfWork : IUnitOfWork
 
     // ── Identity ─────────────────────────────────────────────
     private IRepository<User>? _users;
-    private IRepository<Role>? _roles;
-    private IRepository<UserRole>? _userRoles;
 
     // ── Patient ──────────────────────────────────────────────
     private IRepository<Patient>? _patients;
@@ -96,8 +94,6 @@ public class UnitOfWork : IUnitOfWork
     // ── Repository accessors (lazy-init) ──────────────────────
 
     public IRepository<User> Users => _users ??= new GenericRepository<User>(_context);
-    public IRepository<Role> Roles => _roles ??= new GenericRepository<Role>(_context);
-    public IRepository<UserRole> UserRoles => _userRoles ??= new GenericRepository<UserRole>(_context);
 
     public IRepository<Patient> Patients => _patients ??= new GenericRepository<Patient>(_context);
     public IRepository<PatientPhone> PatientPhones => _patientPhones ??= new GenericRepository<PatientPhone>(_context);

@@ -24,7 +24,6 @@ namespace SafyaClinic.Domain.Identity
         public ClinicianType ClinicianType { get; set; } = ClinicianType.None;   // F4a: doctor pickers and queues
         public string? PreferredLanguage { get; set; }        // F9c: "en" or "ar"; null = not chosen yet (English)
         // Navigation properties
-        public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public virtual ICollection<UserGroup> UserGroups { get; set; } = new List<UserGroup>();
         public virtual ICollection<Patient> CreatedPatients { get; set; } = new List<Patient>();
         public virtual ICollection<Reservation> DoctorReservations { get; set; } = new List<Reservation>();

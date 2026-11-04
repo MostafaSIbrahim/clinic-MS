@@ -22,10 +22,6 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.Property(u => u.PreferredLanguage).HasMaxLength(5);                        // F9c
             builder.HasIndex(u => u.Email).IsUnique();
             builder.HasIndex(u => u.PhoneNumber).IsUnique();
-            builder.HasMany(u => u.UserRoles)
-               .WithOne(ur => ur.User)
-               .HasForeignKey(ur => ur.UserId)
-               .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

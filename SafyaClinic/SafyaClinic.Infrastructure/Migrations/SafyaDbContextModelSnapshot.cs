@@ -1559,34 +1559,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.ToTable("PermissionGroups", (string)null);
                 });
 
-            modelBuilder.Entity("SafyaClinic.Domain.Identity.Role", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("RoleName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleName")
-                        .IsUnique();
-
-                    b.ToTable("Roles", (string)null);
-                });
-
             modelBuilder.Entity("SafyaClinic.Domain.Identity.User", b =>
                 {
                     b.Property<int>("Id")
@@ -1691,36 +1663,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasIndex("GroupId");
 
                     b.ToTable("UserGroups", (string)null);
-                });
-
-            modelBuilder.Entity("SafyaClinic.Domain.Identity.UserRole", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("AssignedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("AssignedBy")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RoleId");
-
-                    b.HasIndex("UserId", "RoleId")
-                        .IsUnique();
-
-                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Analysis.AnalysisAttachment", b =>
@@ -2163,25 +2105,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("SafyaClinic.Domain.Identity.UserRole", b =>
-                {
-                    b.HasOne("SafyaClinic.Domain.Identity.Role", "Role")
-                        .WithMany("UserRoles")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SafyaClinic.Domain.Identity.User", "User")
-                        .WithMany("UserRoles")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Role");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Analysis.AnalysisType", b =>
                 {
                     b.Navigation("Analyses");
@@ -2311,11 +2234,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("Members");
                 });
 
-            modelBuilder.Entity("SafyaClinic.Domain.Identity.Role", b =>
-                {
-                    b.Navigation("UserRoles");
-                });
-
             modelBuilder.Entity("SafyaClinic.Domain.Identity.User", b =>
                 {
                     b.Navigation("CreatedPatients");
@@ -2327,8 +2245,6 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("DoctorReservations");
 
                     b.Navigation("UserGroups");
-
-                    b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618
         }

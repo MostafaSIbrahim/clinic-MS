@@ -153,9 +153,8 @@ public static class PermissionCatalogue
 public sealed record SystemGroupDefinition(string RoleName, string Name, string Description, IReadOnlyList<string> Permissions);
 
 /// <summary>
-/// F4a: one group per role in use, granting exactly what that role can do today (Program.cs
-/// policies, [Authorize] attributes and the role checks in controllers). Until F4d retires
-/// roles, a user belongs to a system group through the role named in <see cref="SystemGroupDefinition.RoleName"/>.
+/// F4a: the built-in groups, one per former role, granting what that role could do. Roles are gone (F4d);
+/// <see cref="SystemGroupDefinition.RoleName"/> survives only as each group's fixed <c>SystemKey</c>.
 /// </summary>
 public static class SystemGroups
 {
