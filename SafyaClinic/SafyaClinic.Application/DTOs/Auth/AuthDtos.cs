@@ -16,6 +16,7 @@ public class LoginResponse
     public bool MustChangePassword { get; init; }
     public string SecurityStamp { get; init; } = string.Empty;
     public ClinicianType ClinicianType { get; init; }   // F4c: whose day the dashboard shows
+    public string? PreferredLanguage { get; init; }     // F9c: the user's saved language, if any
 }
 
 public class ChangePasswordRequest

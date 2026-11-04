@@ -16,6 +16,7 @@ public static class ApplicationServiceExtensions
     {
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IUserPreferenceService, UserPreferenceService>();   // F9c
         services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<IPatientRecordService, PatientRecordService>();

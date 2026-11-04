@@ -158,11 +158,11 @@ public class LocalisationTests
     // ── Language switch ─────────────────────────────────────────
 
     [Fact]
-    public void Switching_to_Arabic_sets_the_culture_cookie_and_returns_to_the_page()
+    public async Task Switching_to_Arabic_sets_the_culture_cookie_and_returns_to_the_page()
     {
-        var controller = new LanguageController { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+        var controller = PreferredLanguageTests.Controller(new PreferredLanguageTests.RecordingPreferences(), signedInUserId: null);
 
-        var result = controller.Set("ar", "/Patients?search=mona");
+        var result = await controller.Set("ar", "/Patients?search=mona");
 
         Assert.Equal("/Patients?search=mona", Assert.IsType<LocalRedirectResult>(result).Url);
         var cookie = controller.Response.Headers.SetCookie.ToString();
@@ -175,11 +175,13 @@ public class LocalisationTests
     [InlineData("fr")]
     [InlineData("")]
     [InlineData(null)]
-    public void Unsupported_language_is_refused(string? culture)
+    public async Task Unsupported_language_is_refused(string? culture)
     {
-        var controller = new LanguageController { ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() } };
+        var preferences = new PreferredLanguageTests.RecordingPreferences();
+        var controller = PreferredLanguageTests.Controller(preferences, signedInUserId: 7);
 
-        Assert.IsType<BadRequestResult>(controller.Set(culture, "/"));
+        Assert.IsType<BadRequestResult>(await controller.Set(culture, "/"));
+        Assert.Empty(preferences.Saved);
         Assert.Empty(controller.Response.Headers.SetCookie.ToString());
     }
 
