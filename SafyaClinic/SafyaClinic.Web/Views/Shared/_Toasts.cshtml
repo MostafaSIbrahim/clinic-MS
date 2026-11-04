@@ -1,0 +1,23 @@
+@* F7c: messages from the last action, shown as toasts in a live region.
+   Success and info close by themselves; errors and warnings stay until closed. *@
+@{
+    var messages = new List<(string Text, string Kind, string Icon, bool Urgent)>();
+    if (TempData["Success"] is string success) messages.Add((success, "success", "bi-check-circle-fill", false));
+    if (TempData["Warning"] is string warning) messages.Add((warning, "warning", "bi-exclamation-circle-fill", true));
+    if (TempData["Error"] is string error) messages.Add((error, "danger", "bi-exclamation-triangle-fill", true));
+}
+<div class="toast-container app-toasts position-fixed top-0 end-0 p-3" aria-live="polite" aria-atomic="false">
+    @foreach (var m in messages)
+    {
+        <div class="toast show app-toast app-toast--@m.Kind"
+             role="@(m.Urgent ? "alert" : "status")"
+             data-bs-autohide="@(m.Urgent ? "false" : "true")"
+             data-bs-delay="6000">
+            <div class="d-flex align-items-start gap-2 p-3">
+                <i class="bi @m.Icon app-toast-icon" aria-hidden="true"></i>
+                <div class="flex-grow-1">@m.Text</div>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close message"></button>
+            </div>
+        </div>
+    }
+</div>

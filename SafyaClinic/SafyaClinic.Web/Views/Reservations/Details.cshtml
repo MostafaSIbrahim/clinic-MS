@@ -62,7 +62,7 @@
                   asp-route-id="@Model.Id"
                   method="post"
                   class="d-inline"
-                  onsubmit="return confirm('Cancel this reservation?')">
+                  data-confirm="Cancel this reservation?">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-sm btn-outline-danger">
                     <i class="bi bi-x-circle me-1"></i>Cancel

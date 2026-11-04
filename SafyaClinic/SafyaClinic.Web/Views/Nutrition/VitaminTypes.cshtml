@@ -50,7 +50,7 @@
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <form asp-action="DeleteVitaminType" asp-route-id="@v.Id" method="post" class="d-inline"
-                                      onsubmit="return confirm('Delete this vitamin type?');">
+                                      data-confirm="Delete this vitamin type?">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm btn-outline-danger">
                                         <i class="bi bi-trash"></i>

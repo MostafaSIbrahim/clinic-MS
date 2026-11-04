@@ -699,3 +699,35 @@ main.app-main {
 .app-user-name {
     max-width: 12rem;
 }
+
+/* ── F7c: validation summary, toasts, top-bar heading ──────── */
+/* A validation summary with no errors renders nothing (no empty red box). */
+.validation-summary-valid {
+    display: none !important;
+}
+
+.app-toasts {
+    z-index: var(--z-toast);
+}
+
+.app-toast {
+    border: 1px solid var(--color-border);
+    border-inline-start-width: 4px;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.app-toast--success { border-inline-start-color: var(--color-success-icon); }
+.app-toast--warning { border-inline-start-color: var(--color-warning-icon); }
+.app-toast--danger  { border-inline-start-color: var(--color-danger); }
+
+.app-toast--success .app-toast-icon { color: var(--color-success-icon); }
+.app-toast--warning .app-toast-icon { color: var(--color-warning-icon); }
+.app-toast--danger .app-toast-icon  { color: var(--color-danger); }
+
+h1.app-topbar-title {
+    font-size: 1.05rem;
+    letter-spacing: normal;
+}

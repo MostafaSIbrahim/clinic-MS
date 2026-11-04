@@ -112,7 +112,7 @@
                                     <span class="badge bg-secondary">Inactive</span>
                                 }
                                 <form asp-action="RemoveMember" asp-route-id="@group.Id" method="post" class="ms-auto"
-                                          onsubmit="return confirm('Remove this member from the group?');">
+                                          data-confirm="Remove this member from the group?">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="userId" value="@m.UserId" />
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
@@ -145,7 +145,7 @@
                 <div class="card-body">
                     <p class="small text-muted">Members lose the permissions this group gives them. Their other groups are not affected.</p>
                     <form asp-action="Delete" asp-route-id="@group.Id" method="post"
-                          onsubmit="return confirm('Delete this group?');">
+                          data-confirm="Delete this group?">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="btn btn-outline-danger w-100">Delete group</button>
                     </form>

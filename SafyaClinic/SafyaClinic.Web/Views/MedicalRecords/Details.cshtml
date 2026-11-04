@@ -35,7 +35,7 @@
         {
         
             <form asp-action="CompleteConsultation" method="post" class="d-inline"
-                  onsubmit="return confirm('Complete this consultation? The reservation will be marked completed.');">
+                  data-confirm="Complete this consultation? The reservation will be marked completed.">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="recordId" value="@Model.Id" />
                 <button type="submit" class="btn btn-sm btn-success">
@@ -64,7 +64,7 @@
                             <li>
                                 @* Lock form moved whole — NOT wrapped in another form *@
                                 <form asp-action="Lock" asp-route-id="@Model.Id" method="post"
-                                      onsubmit="return confirm('Lock this record? It cannot be edited afterwards.');">
+                                      data-confirm="Lock this record? It cannot be edited afterwards.">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="dropdown-item text-danger">
                                         <i class="bi bi-lock me-1"></i>Lock Record
@@ -141,7 +141,7 @@
                                 </div>
                                 @if (!Model.IsLocked)
                                 {
-                                    <form asp-action="RemoveTreatment" method="post" onsubmit="return confirm('Remove this treatment?')">
+                                    <form asp-action="RemoveTreatment" method="post" data-confirm="Remove this treatment?">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="treatmentId" value="@t.Id" />
                                         <input type="hidden" name="recordId" value="@Model.Id" />

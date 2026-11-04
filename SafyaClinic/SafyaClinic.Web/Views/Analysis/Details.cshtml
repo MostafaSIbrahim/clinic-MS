@@ -60,7 +60,7 @@
                                 </a>
                                 @if (await Can.HasAsync(Permissions.Attachments.Delete))
                                 {
-                                    <form asp-action="DeleteAttachment" method="post" onsubmit="return confirm('Delete this attachment?')">
+                                    <form asp-action="DeleteAttachment" method="post" data-confirm="Delete this attachment?">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="attachmentId" value="@a.Id" />
                                         <input type="hidden" name="analysisId" value="@Model.Id" />

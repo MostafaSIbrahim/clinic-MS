@@ -55,6 +55,9 @@
 
             <!-- Top bar (F7b): menu toggle, page title, patient search, account menu -->
             @{
+                // F7c: every page has exactly one h1. Pages without their own get the title as h1 in the top bar.
+                var pageBody = await RenderPageBodyAsync();
+                var pageHasHeading = pageBody.Contains("<h1", StringComparison.OrdinalIgnoreCase);
                 var displayName = User.Identity!.Name ?? "Account";
                 var initial = displayName.Trim().FirstOrDefault().ToString().ToUpperInvariant();
             }
@@ -68,7 +71,14 @@
                     <i class="bi bi-list fs-5" aria-hidden="true"></i>
                 </button>
 
-                <span class="app-topbar-title text-truncate d-none d-sm-inline">@ViewData["Title"]</span>
+                @if (pageHasHeading)
+                {
+                    <span class="app-topbar-title text-truncate d-none d-sm-inline">@ViewData["Title"]</span>
+                }
+                else
+                {
+                    <h1 class="app-topbar-title text-truncate mb-0">@ViewData["Title"]</h1>
+                }
 
                 @if (await Can.HasAsync(Permissions.Patients.View))
                 {
@@ -117,31 +127,11 @@
 
             <main id="mainContent" class="app-main flex-grow-1" tabindex="-1">
 
-                <!-- Alert toasts -->
-                @if (TempData["Success"] != null)
-                {
-                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
-                        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Success"]
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                }
-                @if (TempData["Error"] != null)
-                {
-                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                }
-                @if (TempData["Warning"] != null)
-                {
-                    <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center" role="alert">
-                        <i class="bi bi-exclamation-circle-fill me-2"></i>@TempData["Warning"]
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                }
-
-                @RenderBody()
+                @Html.Raw(pageBody)
             </main>
+
+            <partial name="_Toasts" />
+            <partial name="_ConfirmDialog" />
         </div>
     </div>
 }
@@ -155,3 +145,14 @@ else
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+@functions {
+    // F7c: renders the page once so the layout can see whether it has its own h1.
+    private async Task<string> RenderPageBodyAsync()
+    {
+        await Task.CompletedTask;
+        using var writer = new System.IO.StringWriter();
+        RenderBody().WriteTo(writer, System.Text.Encodings.Web.HtmlEncoder.Default);
+        return writer.ToString();
+    }
+}

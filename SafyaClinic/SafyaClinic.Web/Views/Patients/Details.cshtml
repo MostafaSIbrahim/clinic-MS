@@ -279,7 +279,7 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="patientId" value="@patient.Id" />
                                     <input type="hidden" name="phoneId" value="@ph.Id" />
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this phone?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Remove this phone?">
                                         <i class="bi bi-trash me-1" aria-hidden="true"></i>Remove phone
                                     </button>
                                 </form>
@@ -313,7 +313,7 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="patientId" value="@patient.Id" />
                                     <input type="hidden" name="addressId" value="@a.Id" />
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this address?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Remove this address?">
                                         <i class="bi bi-trash me-1" aria-hidden="true"></i>Remove address
                                     </button>
                                 </form>
