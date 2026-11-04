@@ -16,6 +16,7 @@ namespace SafyaClinic.Domain.Entities.Settings
         // Navigation properties
         public virtual ICollection<Reservation.Reservation> Reservations { get; set; } = new List<Reservation.Reservation>();
         public virtual ICollection<ClinicSourceAgreement> SourceAgreements { get; set; } = new List<ClinicSourceAgreement>();
+        public virtual ICollection<ClinicOpeningHours> OpeningHours { get; set; } = new List<ClinicOpeningHours>();   // P1
         public virtual ICollection<Payment.Payment> Payments { get; set; } = new List<Payment.Payment>();
     }
 }

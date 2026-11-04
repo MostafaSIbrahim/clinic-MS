@@ -25,6 +25,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<INutritionService, NutritionService>();
         services.AddScoped<IPatientSourceService, PatientSourceService>();
         services.AddScoped<IClinicService, ClinicService>();
+        services.AddScoped<IClinicHoursService, ClinicHoursService>();   // P1
 
         // ── Egyptian Drug Index (medication autocomplete) ─────────
         services.AddMemoryCache();

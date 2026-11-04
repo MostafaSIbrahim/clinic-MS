@@ -1389,6 +1389,36 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.ToTable("Clinics", (string)null);
                 });
 
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.ClinicOpeningHours", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClinicId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("ClosesAt")
+                        .HasColumnType("time(0)");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("OpensAt")
+                        .HasColumnType("time(0)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicId", "DayOfWeek");
+
+                    b.ToTable("ClinicOpeningHours", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ClinicOpeningHours_Period", "[OpensAt] < [ClosesAt]");
+                        });
+                });
+
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.ClinicSourceAgreement", b =>
                 {
                     b.Property<int>("Id")
@@ -2048,6 +2078,17 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("TreatmentType");
                 });
 
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.ClinicOpeningHours", b =>
+                {
+                    b.HasOne("SafyaClinic.Domain.Entities.Settings.Clinic", "Clinic")
+                        .WithMany("OpeningHours")
+                        .HasForeignKey("ClinicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Clinic");
+                });
+
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.ClinicSourceAgreement", b =>
                 {
                     b.HasOne("SafyaClinic.Domain.Entities.Settings.Clinic", "Clinic")
@@ -2206,6 +2247,8 @@ namespace SafyaClinic.Infrastructure.Migrations
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Settings.Clinic", b =>
                 {
+                    b.Navigation("OpeningHours");
+
                     b.Navigation("Payments");
 
                     b.Navigation("Reservations");

@@ -22,6 +22,8 @@ Clinics.Delete POST: Admin
 Clinics.Details ANY: Admin
 Clinics.Edit GET: Admin
 Clinics.Edit POST: Admin
+Clinics.Hours GET: Admin
+Clinics.Hours POST: Admin
 Clinics.Index ANY: Admin
 Clinics.RemoveAgreement POST: Admin
 Clinics.SaveAgreement POST: Admin

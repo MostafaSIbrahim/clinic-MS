@@ -234,4 +234,55 @@
   <data name="Write Off" xml:space="preserve">
     <value>مشطوب</value>
   </data>
+  <data name="Opening hours" xml:space="preserve">
+    <value>مواعيد العمل</value>
+  </data>
+  <data name="Edit opening hours" xml:space="preserve">
+    <value>تعديل مواعيد العمل</value>
+  </data>
+  <data name="Save opening hours" xml:space="preserve">
+    <value>حفظ مواعيد العمل</value>
+  </data>
+  <data name="No opening hours set yet." xml:space="preserve">
+    <value>لم تُحدَّد مواعيد العمل بعد.</value>
+  </data>
+  <data name="Closed" xml:space="preserve">
+    <value>مغلق</value>
+  </data>
+  <data name="Day" xml:space="preserve">
+    <value>اليوم</value>
+  </data>
+  <data name="Period {0}" xml:space="preserve">
+    <value>الفترة {0}</value>
+  </data>
+  <data name="{0}, period {1}, opens" xml:space="preserve">
+    <value>{0}، الفترة {1}، من</value>
+  </data>
+  <data name="{0}, period {1}, closes" xml:space="preserve">
+    <value>{0}، الفترة {1}، إلى</value>
+  </data>
+  <data name="Up to three periods a day, in clinic time. Leave a day empty when the clinic is closed." xml:space="preserve">
+    <value>حتى ثلاث فترات في اليوم بتوقيت العيادة. اترك اليوم فارغًا إذا كانت العيادة مغلقة.</value>
+  </data>
+  <data name="Saturday" xml:space="preserve">
+    <value>السبت</value>
+  </data>
+  <data name="Sunday" xml:space="preserve">
+    <value>الأحد</value>
+  </data>
+  <data name="Monday" xml:space="preserve">
+    <value>الاثنين</value>
+  </data>
+  <data name="Tuesday" xml:space="preserve">
+    <value>الثلاثاء</value>
+  </data>
+  <data name="Wednesday" xml:space="preserve">
+    <value>الأربعاء</value>
+  </data>
+  <data name="Thursday" xml:space="preserve">
+    <value>الخميس</value>
+  </data>
+  <data name="Friday" xml:space="preserve">
+    <value>الجمعة</value>
+  </data>
 </root>

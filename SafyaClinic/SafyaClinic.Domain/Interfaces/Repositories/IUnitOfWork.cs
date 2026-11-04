@@ -61,6 +61,7 @@ public interface IUnitOfWork : IDisposable
     // ── Settings (Sources / Clinics) ────────────────────────────
     IRepository<PatientSource> PatientSources { get; }
     IRepository<Clinic> Clinics { get; }
+    IRepository<ClinicOpeningHours> ClinicOpeningHours { get; }   // P1
     IRepository<ClinicSourceAgreement> ClinicSourceAgreements { get; }
 
     // ── Nutrition ─────────────────────────────────────────────

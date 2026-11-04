@@ -4,6 +4,7 @@ using SafyaClinic.Application.DTOs.Settings;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Security;
 using SafyaClinic.Application.Security;
+using SafyaClinic.Web.Models;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -12,11 +13,13 @@ public class ClinicsController : BaseController
 {
     private readonly IClinicService _clinicService;
     private readonly IPatientSourceService _sourceService;
+    private readonly IClinicHoursService _hoursService;
 
-    public ClinicsController(IClinicService clinicService, IPatientSourceService sourceService)
+    public ClinicsController(IClinicService clinicService, IPatientSourceService sourceService, IClinicHoursService hoursService)
     {
         _clinicService = clinicService;
         _sourceService = sourceService;
+        _hoursService = hoursService;
     }
 
     public async Task<IActionResult> Index()
@@ -83,8 +86,43 @@ public class ClinicsController : BaseController
 
         var sourcesResult = await _sourceService.GetAllAsync(includeInactive: false);
         ViewBag.Sources = sourcesResult.Data ?? Enumerable.Empty<PatientSourceDto>();
+        var hours = await _hoursService.GetAsync(id);
+        ViewBag.OpeningHours = hours.Data ?? Array.Empty<SafyaClinic.Application.Scheduling.OpeningPeriodDto>();
 
         return View(clinicResult.Data);
+    }
+
+    // ── Opening hours (P1) ────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> Hours(int id)
+    {
+        var clinic = await _clinicService.GetByIdAsync(id);
+        var hours = await _hoursService.GetAsync(id);
+        if (!clinic.IsSuccess || !hours.IsSuccess) { Error("Clinic not found."); return RedirectToAction(nameof(Index)); }
+        return View(ClinicHoursForm.From(id, clinic.Data!.Name, hours.Data!));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Hours(int id, ClinicHoursForm form)
+    {
+        form.ClinicId = id;
+        var periods = form.ToPeriods(out var formErrors);
+        foreach (var error in formErrors) ModelState.AddModelError(string.Empty, error);
+
+        if (ModelState.IsValid)
+        {
+            var result = await _hoursService.SaveAsync(id, periods, CurrentUserId);
+            if (result.IsSuccess)
+                return RedirectWithSuccess(result.Message, nameof(Details), routeValues: new { id });
+            ApplyErrors(result);
+        }
+
+        var clinic = await _clinicService.GetByIdAsync(id);
+        if (!clinic.IsSuccess) { Error("Clinic not found."); return RedirectToAction(nameof(Index)); }
+        form.ClinicName = clinic.Data!.Name;
+        return View(form);
     }
 
     [HttpPost]

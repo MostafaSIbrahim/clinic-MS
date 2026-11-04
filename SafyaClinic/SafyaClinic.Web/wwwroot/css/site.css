@@ -1165,3 +1165,35 @@ a.app-kpi:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
 }
+
+/* ── P1: opening hours ─────────────────────────────────────── */
+.app-period {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 13rem;
+}
+
+.app-period input[type="time"] {
+    font-variant-numeric: var(--numeric-tabular);
+}
+
+.app-hours {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.app-hours__day {
+    display: grid;
+    grid-template-columns: 8rem 1fr;
+    gap: var(--space-3);
+}
+
+.app-hours__day dt {
+    font-weight: var(--font-weight-medium);
+}
+
+.app-hours__day dd {
+    margin: 0;
+    font-variant-numeric: var(--numeric-tabular);
+}
