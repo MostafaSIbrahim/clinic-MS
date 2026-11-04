@@ -6,6 +6,8 @@ using SafyaClinic.Application.DTOs.Auth;
 using SafyaClinic.Application.Interfaces.Services;
 using System.Security.Claims;
 using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Common;
+using SafyaClinic.Web.Localization;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -67,6 +69,10 @@ public class AuthController : BaseController
                 IsPersistent = true,
                 ExpiresUtc = data.ExpiresAt
             });
+
+        // F9c: the user's saved language follows them to this browser.
+        if (UserLanguages.Normalize(data.PreferredLanguage) is { } language)
+            AppCultures.AppendCookie(Response, language);
 
         if (data.MustChangePassword)
             return RedirectToAction(nameof(ChangePassword));

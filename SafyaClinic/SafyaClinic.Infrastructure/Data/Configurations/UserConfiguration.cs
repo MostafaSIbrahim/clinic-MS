@@ -19,6 +19,7 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.Property(u => u.Specialization).HasMaxLength(100);
             builder.Property(u => u.LicenseNumber).HasMaxLength(50);
             builder.Property(u => u.ClinicianType).HasConversion<string>().HasMaxLength(20);   // F4a
+            builder.Property(u => u.PreferredLanguage).HasMaxLength(5);                        // F9c
             builder.HasIndex(u => u.Email).IsUnique();
             builder.HasIndex(u => u.PhoneNumber).IsUnique();
             builder.HasMany(u => u.UserRoles)

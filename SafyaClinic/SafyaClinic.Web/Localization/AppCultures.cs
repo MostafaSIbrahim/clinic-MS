@@ -1,6 +1,8 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Localization;
+using SafyaClinic.Application.Common;
 
 namespace SafyaClinic.Web.Localization;
 
@@ -11,13 +13,13 @@ namespace SafyaClinic.Web.Localization;
 /// </summary>
 public static class AppCultures
 {
-    public const string English = "en";
-    public const string Arabic = "ar";
+    public const string English = UserLanguages.English;
+    public const string Arabic = UserLanguages.Arabic;
 
     /// <summary>The one culture used for formatting and for reading form values.</summary>
     public const string FormattingCulture = "en-US";
 
-    public static IReadOnlyList<string> UiCultures { get; } = new[] { English, Arabic };
+    public static IReadOnlyList<string> UiCultures => UserLanguages.All;
 
     public static bool IsSupported(string? uiCulture) =>
         uiCulture is not null && UiCultures.Contains(uiCulture, StringComparer.OrdinalIgnoreCase);
@@ -35,6 +37,20 @@ public static class AppCultures
     /// <summary>The culture cookie value for a UI language.</summary>
     public static string CookieValue(string uiCulture) =>
         CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(FormattingCulture, uiCulture.ToLowerInvariant()));
+
+    /// <summary>Remembers the language on this browser for a year (the standard culture cookie).</summary>
+    public static void AppendCookie(HttpResponse response, string uiCulture) =>
+        response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            CookieValue(uiCulture),
+            new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddYears(1),
+                IsEssential = true,
+                HttpOnly = true,
+                Secure = response.HttpContext.Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+            });
 
     /// <summary>A return address on this site, or "/" (never an address on another site).</summary>
     public static string SafeReturnUrl(string? returnUrl) =>
