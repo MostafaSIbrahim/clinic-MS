@@ -1,4 +1,5 @@
 @model string
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @using SafyaClinic.Web.Components
 @* F8: status badge. The text is the status; the colour (status tokens) only supports it. *@
-<span class="app-status app-status--@StatusStyles.For(Model)">@Labels.Humanize(Model)</span>
+<span class="app-status app-status--@StatusStyles.For(Model)">@T[Labels.Humanize(Model)]</span>

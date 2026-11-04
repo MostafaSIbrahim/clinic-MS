@@ -1,4 +1,5 @@
 @model SafyaClinic.Application.DTOs.Auth.LoginRequest
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
     Layout = "_Layout";
     ViewData["Title"] = "Login";
@@ -8,13 +9,14 @@
      style="background: radial-gradient(circle at 15% 15%, #7C3AED 0%, #5B21B6 42%, #171223 100%); padding: 2rem;">
     <div class="card shadow-lg border-0" style="width: 100%; max-width: 400px; border-radius: 20px;">
         <div class="card-body p-4 p-md-5">
+            <div class="d-flex justify-content-end mb-2"><partial name="_LanguageSwitch" /></div>
             <div class="text-center mb-4">
                 @* Branding: keep the colored logo on the white login card for contrast. *@
                 <a asp-controller="Home" asp-action="Index" class="clinic-brand-link">
                     @await Html.PartialAsync("_ClinicLogo", "clinic-logo--login")
                 </a>
-                <h1 class="visually-hidden">Safya Clinic sign in</h1>
-                <small class="text-muted">Sign in to your account</small>
+                <h1 class="visually-hidden">@T["Safya Clinic sign in"]</h1>
+                <small class="text-muted">@T["Sign in to your account"]</small>
             </div>
             @if (TempData["Success"] is string signInMessage)
             {
@@ -34,19 +36,19 @@
                 }
 
                 <div class="mb-3">
-                    <label asp-for="PhoneNumber" class="form-label">Phone Number</label>
+                    <label asp-for="PhoneNumber" class="form-label">@T["Phone Number"]</label>
                     <input asp-for="PhoneNumber" class="form-control" placeholder="01xxxxxxxxx" autofocus />
                     <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                 </div>
 
                 <div class="mb-4">
-                    <label asp-for="Password" class="form-label">Password</label>
+                    <label asp-for="Password" class="form-label">@T["Password"]</label>
                     <input asp-for="Password" type="password" class="form-control" />
                     <span asp-validation-for="Password" class="text-danger small"></span>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 py-2">
-                    <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
+                    <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>@T["Sign In"]
                 </button>
             </form>
         </div>

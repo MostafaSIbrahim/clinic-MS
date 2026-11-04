@@ -1,4 +1,5 @@
 @model SafyaClinic.Web.Components.PagerModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @using Microsoft.AspNetCore.Routing
 @* F8c: pagination with a "Showing 21–40 of 132" line. Keeps the current filters in every link. *@
 @{
@@ -16,28 +17,29 @@
         return Url.Action(Model.Action, values) ?? "#";
     }
     var window = Model.Window;
+    string N(int value) => value.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
 }
 @if (Model.TotalCount > 0)
 {
     <div class="app-pager">
-        <p class="app-pager__summary">@Model.Summary</p>
+        <p class="app-pager__summary">@T["Showing {0}–{1} of {2}", N(Model.First), N(Model.Last), N(Model.TotalCount)]</p>
         @if (Model.TotalPages > 1)
         {
-            <nav aria-label="Results pages">
+            <nav aria-label="@T["Results pages"]">
                 <ul class="pagination app-pager__list">
                     <li class="page-item @(Model.HasPrev ? "" : "disabled")">
                         @if (Model.HasPrev)
                         {
-                            <a class="page-link" href="@PageUrl(Model.Page - 1)">Previous</a>
+                            <a class="page-link" href="@PageUrl(Model.Page - 1)">@T["Previous"]</a>
                         }
                         else
                         {
-                            <span class="page-link" aria-disabled="true">Previous</span>
+                            <span class="page-link" aria-disabled="true">@T["Previous"]</span>
                         }
                     </li>
                     @if (window.Count > 0 && window[0] > 1)
                     {
-                        <li class="page-item"><a class="page-link" href="@PageUrl(1)" aria-label="Page 1">1</a></li>
+                        <li class="page-item"><a class="page-link" href="@PageUrl(1)" aria-label="@T["Page {0}", 1]">1</a></li>
                         @if (window[0] > 2)
                         {
                             <li class="page-item disabled"><span class="page-link" aria-hidden="true">…</span></li>
@@ -52,7 +54,7 @@
                             }
                             else
                             {
-                                <a class="page-link" href="@PageUrl(number)" aria-label="Page @(number)">@(number)</a>
+                                <a class="page-link" href="@PageUrl(number)" aria-label="@T["Page {0}", number]">@(number)</a>
                             }
                         </li>
                     }
@@ -62,16 +64,16 @@
                         {
                             <li class="page-item disabled"><span class="page-link" aria-hidden="true">…</span></li>
                         }
-                        <li class="page-item"><a class="page-link" href="@PageUrl(Model.TotalPages)" aria-label="Page @Model.TotalPages">@Model.TotalPages</a></li>
+                        <li class="page-item"><a class="page-link" href="@PageUrl(Model.TotalPages)" aria-label="@T["Page {0}", Model.TotalPages]">@Model.TotalPages</a></li>
                     }
                     <li class="page-item @(Model.HasNext ? "" : "disabled")">
                         @if (Model.HasNext)
                         {
-                            <a class="page-link" href="@PageUrl(Model.Page + 1)">Next</a>
+                            <a class="page-link" href="@PageUrl(Model.Page + 1)">@T["Next"]</a>
                         }
                         else
                         {
-                            <span class="page-link" aria-disabled="true">Next</span>
+                            <span class="page-link" aria-disabled="true">@T["Next"]</span>
                         }
                     </li>
                 </ul>
