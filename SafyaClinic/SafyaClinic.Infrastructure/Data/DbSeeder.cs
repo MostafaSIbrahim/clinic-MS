@@ -37,12 +37,14 @@ public static class DbSeeder
     private static async Task SeedPermissionsAsync(SafyaDbContext context)
     {
         var existing = await context.Permissions.ToDictionaryAsync(p => p.Code);
+        var added = new HashSet<string>();
         foreach (var definition in PermissionCatalogue.All)
         {
             if (!existing.TryGetValue(definition.Code, out var permission))
             {
                 permission = new Permission { Code = definition.Code };
                 context.Permissions.Add(permission);
+                added.Add(definition.Code);
             }
             permission.Area = definition.Area;
             permission.Description = definition.Description;
@@ -68,7 +70,12 @@ public static class DbSeeder
             }
             else if (definition.RoleName != SystemGroups.AdminRole)
             {
-                continue;   // an existing group keeps the grants an admin gave it
+                // An existing group keeps the grants an admin gave it. A permission that is new to the
+                // catalogue (P1b: Schedule.*) is granted once, as defined; no admin can have removed it yet.
+                var has = group.GroupPermissions.Select(p => p.PermissionCode).ToHashSet();
+                foreach (var code in definition.Permissions.Where(c => added.Contains(c) && !has.Contains(c)))
+                    group.GroupPermissions.Add(new GroupPermission { PermissionCode = code });
+                continue;
             }
 
             var granted = group.GroupPermissions.Select(p => p.PermissionCode).ToHashSet();

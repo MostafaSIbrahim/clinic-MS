@@ -5,6 +5,7 @@ using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Entities.Prescription;
 using SafyaClinic.Domain.Entities.Reservation;
+using SafyaClinic.Domain.Entities.Scheduling;
 using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Entities.Audit;
@@ -62,6 +63,8 @@ public interface IUnitOfWork : IDisposable
     IRepository<PatientSource> PatientSources { get; }
     IRepository<Clinic> Clinics { get; }
     IRepository<ClinicOpeningHours> ClinicOpeningHours { get; }   // P1
+    IRepository<DoctorSchedule> DoctorSchedules { get; }           // P1
+    IRepository<DoctorScheduleTime> DoctorScheduleTimes { get; }   // P1
     IRepository<ClinicSourceAgreement> ClinicSourceAgreements { get; }
 
     // ── Nutrition ─────────────────────────────────────────────

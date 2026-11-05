@@ -1,0 +1,122 @@
+@model SafyaClinic.Web.Models.DoctorScheduleForm
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Application.Scheduling
+@using SafyaClinic.Domain.Enums
+@{
+    ViewData["Title"] = T["Calendar"].Value;
+}
+@* P1: one doctor's calendar in one clinic. Only the section for the chosen mode is saved. *@
+<h1 class="mb-1">@T["Calendar"]: <span dir="auto">@Model.DoctorName</span>, <span dir="auto">@Model.ClinicName</span></h1>
+<p class="text-muted">@T["Times are clinic time and must be inside the clinic's opening hours."]</p>
+
+<form asp-action="Edit" asp-route-doctorId="@Model.DoctorId" asp-route-clinicId="@Model.ClinicId" method="post" novalidate data-schedule-form>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="row g-3 mb-3">
+        <fieldset class="col-md-6">
+            <legend class="form-label fs-6">@T["Calendar mode"]</legend>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="Mode" value="@ScheduleMode.Open" id="modeOpen" />
+                <label class="form-check-label" for="modeOpen">@T["Open calendar"]: <span class="text-muted">@T["bookable at any step in working periods, except breaks"]</span></label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="Mode" value="@ScheduleMode.SpecificSlots" id="modeSlots" />
+                <label class="form-check-label" for="modeSlots">@T["Specific slots"]: <span class="text-muted">@T["bookable only in the slots below"]</span></label>
+            </div>
+        </fieldset>
+        <div class="col-sm-6 col-md-3">
+            <label asp-for="StepMinutes" class="form-label">@T["Booking step"]</label>
+            <select asp-for="StepMinutes" class="form-select">
+                @foreach (var step in DoctorScheduleRules.Steps)
+                {
+                    <option value="@step">@T["{0} minutes", step]</option>
+                }
+            </select>
+        </div>
+        <div class="col-sm-6 col-md-3 d-flex align-items-end">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" asp-for="IsActive" />
+                <label class="form-check-label" asp-for="IsActive">@T["In use"]</label>
+            </div>
+        </div>
+    </div>
+
+    @foreach (var calendarMode in new[] { ScheduleMode.Open, ScheduleMode.SpecificSlots })
+    {
+        var kinds = calendarMode == ScheduleMode.Open
+            ? new[] { ScheduleTimeKind.Working, ScheduleTimeKind.Break }
+            : new[] { ScheduleTimeKind.Slot };
+        var sectionTitle = calendarMode == ScheduleMode.Open ? T["Working periods and breaks"].Value : T["Slots"].Value;
+        <section class="mb-4" data-mode-section="@calendarMode" aria-labelledby="mode-@calendarMode">
+            <h2 class="h5" id="mode-@calendarMode">@sectionTitle</h2>
+            <app-table caption="@sectionTitle" caption-hidden="true" stack="true">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Day"]</th>
+                        <th scope="col">@T["Clinic hours"]</th>
+                        @foreach (var kind in kinds)
+                        {
+                            <th scope="col">@KindTitle(kind)</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var d = 0; d < Model.Days.Count; d++)
+                    {
+                        var day = Model.Days[d];
+                        var dayName = T[day.Day.ToString()].Value;
+                        <tr>
+                            <th scope="row">@dayName<input type="hidden" asp-for="Days[d].Day" /></th>
+                            <td data-label="@T["Clinic hours"]" class="app-table__num">@(day.ClinicHours.Count > 0 ? string.Join(", ", day.ClinicHours) : T["Closed"].Value)</td>
+                            @foreach (var kind in kinds)
+                            {
+                                var kindName = KindName(kind);
+                                var rows = kind == ScheduleTimeKind.Working ? day.Working : kind == ScheduleTimeKind.Break ? day.Breaks : day.Slots;
+                                var field = kind == ScheduleTimeKind.Working ? "Working" : kind == ScheduleTimeKind.Break ? "Breaks" : "Slots";
+                                <td data-label="@KindTitle(kind)">
+                                    @for (var k = 0; k < rows.Count; k++)
+                                    {
+                                        var id = $"Days_{d}__{field}_{k}_";
+                                        <div class="app-period mb-1">
+                                            <label class="visually-hidden" for="@(id)_Opens">@T["{0}, {1} {2}, from", dayName, kindName, k + 1]</label>
+                                            <input type="time" class="form-control form-control-sm" id="@(id)_Opens" name="Days[@d].@(field)[@k].Opens" value="@(rows[k].Opens?.ToString("hh\\:mm"))" />
+                                            <span aria-hidden="true">–</span>
+                                            <label class="visually-hidden" for="@(id)_Closes">@T["{0}, {1} {2}, to", dayName, kindName, k + 1]</label>
+                                            <input type="time" class="form-control form-control-sm" id="@(id)_Closes" name="Days[@d].@(field)[@k].Closes" value="@(rows[k].Closes?.ToString("hh\\:mm"))" />
+                                        </div>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </app-table>
+        </section>
+    }
+
+    <p class="text-muted small">@T["Only the section for the chosen mode is saved."]</p>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">@T["Save calendar"]</button>
+        <a asp-action="@(ViewBag.Back as string ?? "Mine")" class="btn btn-outline-secondary">@T["Cancel"]</a>
+    </div>
+</form>
+
+@functions {
+    private string KindTitle(ScheduleTimeKind kind) => kind switch
+    {
+        ScheduleTimeKind.Working => T["Working periods"].Value,
+        ScheduleTimeKind.Break => T["Breaks"].Value,
+        _ => T["Slots"].Value,
+    };
+
+    private string KindName(ScheduleTimeKind kind) => kind switch
+    {
+        ScheduleTimeKind.Working => T["Working period"].Value,
+        ScheduleTimeKind.Break => T["Break"].Value,
+        _ => T["Slot"].Value,
+    };
+}
+
+@section Scripts {
+    <script src="~/js/schedule-form.js" asp-append-version="true"></script>
+}

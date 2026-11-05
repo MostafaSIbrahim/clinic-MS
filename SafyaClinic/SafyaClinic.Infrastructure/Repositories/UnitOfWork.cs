@@ -7,6 +7,7 @@ using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Entities.Prescription;
 using SafyaClinic.Domain.Entities.Reservation;
+using SafyaClinic.Domain.Entities.Scheduling;
 using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Identity;
 using SafyaClinic.Domain.Interfaces.Repositories;
@@ -78,6 +79,8 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<PatientSource>? _patientSources;
     private IRepository<Clinic>? _clinics;
     private IRepository<ClinicOpeningHours>? _clinicOpeningHours;
+    private IRepository<DoctorSchedule>? _doctorSchedules;
+    private IRepository<DoctorScheduleTime>? _doctorScheduleTimes;
     private IRepository<ClinicSourceAgreement>? _clinicSourceAgreements;
 
     // ── Nutrition ─────────────────────────────────────────────
@@ -121,6 +124,8 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<PatientSource> PatientSources => _patientSources ??= new GenericRepository<PatientSource>(_context);
     public IRepository<Clinic> Clinics => _clinics ??= new GenericRepository<Clinic>(_context);
     public IRepository<ClinicOpeningHours> ClinicOpeningHours => _clinicOpeningHours ??= new GenericRepository<ClinicOpeningHours>(_context);
+    public IRepository<DoctorSchedule> DoctorSchedules => _doctorSchedules ??= new GenericRepository<DoctorSchedule>(_context);
+    public IRepository<DoctorScheduleTime> DoctorScheduleTimes => _doctorScheduleTimes ??= new GenericRepository<DoctorScheduleTime>(_context);
     public IRepository<ClinicSourceAgreement> ClinicSourceAgreements => _clinicSourceAgreements ??= new GenericRepository<ClinicSourceAgreement>(_context);
 
     public IRepository<InjectionType> InjectionTypes => _injectionTypes ??= new GenericRepository<InjectionType>(_context);

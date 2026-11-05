@@ -65,6 +65,32 @@ public class DbSeederTests
     }
 
     [Fact]
+    public async Task A_permission_new_to_the_catalogue_is_granted_once_to_its_built_in_groups()
+    {
+        await using var context = NewContext();
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+
+        // A database from before P1b: the permission and its grants don't exist yet.
+        var doctorsId = await context.PermissionGroups.Where(g => g.SystemKey == SystemGroups.DoctorRole).Select(g => g.Id).SingleAsync();
+        context.GroupPermissions.RemoveRange(await context.GroupPermissions.Where(p => p.PermissionCode == Permissions.Schedule.ManageOwn).ToListAsync());
+        context.Permissions.Remove(await context.Permissions.SingleAsync(p => p.Code == Permissions.Schedule.ManageOwn));
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        await DbSeeder.SeedAsync(context, Config(null));
+        Assert.True(await context.GroupPermissions.AnyAsync(p => p.GroupId == doctorsId && p.PermissionCode == Permissions.Schedule.ManageOwn));
+
+        // An admin removes it later: the next start-up leaves it removed.
+        context.GroupPermissions.RemoveRange(await context.GroupPermissions
+            .Where(p => p.GroupId == doctorsId && p.PermissionCode == Permissions.Schedule.ManageOwn).ToListAsync());
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        await DbSeeder.SeedAsync(context, Config(null));
+        Assert.False(await context.GroupPermissions.AnyAsync(p => p.GroupId == doctorsId && p.PermissionCode == Permissions.Schedule.ManageOwn));
+    }
+
+    [Fact]
     public void Roles_tables_are_no_longer_part_of_the_model()
     {
         var model = new SafyaDbContext(new DbContextOptionsBuilder<SafyaDbContext>()

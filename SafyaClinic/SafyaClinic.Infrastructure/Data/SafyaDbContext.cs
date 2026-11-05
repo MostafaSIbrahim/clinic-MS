@@ -7,6 +7,7 @@ using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Entities.Payment;
 using SafyaClinic.Domain.Entities.Prescription;
 using SafyaClinic.Domain.Entities.Reservation;
+using SafyaClinic.Domain.Entities.Scheduling;
 using SafyaClinic.Domain.Entities.Settings;
 using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Identity;
@@ -59,6 +60,8 @@ namespace SafyaClinic.Infrastructure.Data
         public DbSet<PatientSource> PatientSources { get; set; }
         public DbSet<Clinic> Clinics { get; set; }
         public DbSet<ClinicOpeningHours> ClinicOpeningHours { get; set; }   // P1
+        public DbSet<DoctorSchedule> DoctorSchedules { get; set; }           // P1
+        public DbSet<DoctorScheduleTime> DoctorScheduleTimes { get; set; }   // P1
         public DbSet<ClinicSourceAgreement> ClinicSourceAgreements { get; set; }
 
         // Nutrition

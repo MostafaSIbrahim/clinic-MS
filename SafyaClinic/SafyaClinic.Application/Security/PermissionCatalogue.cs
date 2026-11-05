@@ -88,6 +88,12 @@ public static class Permissions
         public const string Lookups = "Settings.Lookups";
     }
 
+    public static class Schedule
+    {
+        public const string ManageOwn = "Schedule.ManageOwn";
+        public const string ManageAll = "Schedule.ManageAll";
+    }
+
     public static class Users
     {
         public const string Manage = "Users.Manage";
@@ -143,6 +149,9 @@ public static class PermissionCatalogue
         new(Permissions.Payments.ViewFullDashboard, "Payments", "See the full payment dashboard and its details"),
         new(Permissions.Payments.Maintenance, "Payments", "Run payment maintenance (recalculate statuses, backfill)", IsSensitive: true),
 
+        new(Permissions.Schedule.ManageOwn, "Scheduling", "Set their own calendar: mode, step, working periods, breaks and slots"),
+        new(Permissions.Schedule.ManageAll, "Scheduling", "Set any doctor's calendar"),
+
         new(Permissions.Settings.Clinics, "Administration", "Manage clinics and their agreements"),
         new(Permissions.Settings.PatientSources, "Administration", "Manage patient sources"),
         new(Permissions.Settings.Lookups, "Administration", "Manage analysis, treatment, injection and vitamin types"),
@@ -177,6 +186,7 @@ public static class SystemGroups
             Permissions.Analyses.View, Permissions.Analyses.Manage,
             Permissions.FollowUps.View, Permissions.FollowUps.Manage,
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAnyDate,
+            Permissions.Schedule.ManageOwn,
         }),
 
         new(NutritionistRole, "Nutritionists", "Nutrition enrollments and weekly follow-ups", new[]
@@ -185,6 +195,7 @@ public static class SystemGroups
             Permissions.Reservations.View, Permissions.Reservations.Manage,
             Permissions.Medicines.Search,
             Permissions.Nutrition.View, Permissions.Nutrition.Manage,
+            Permissions.Schedule.ManageOwn,
         }),
 
         new(ReceptionRole, "Reception", "Front desk: patients, reservations, check-in, follow-ups and payments", new[]
@@ -198,10 +209,11 @@ public static class SystemGroups
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
         }),
 
-        new(ReceptionAdminRole, "Reception supervisors", "Payments and payment reports", new[]
+        new(ReceptionAdminRole, "Reception supervisors", "Payments, payment reports and doctors' calendars", new[]
         {
             Permissions.Payments.View, Permissions.Payments.Collect, Permissions.Payments.Adjust,
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
+            Permissions.Schedule.ManageAll,
         }),
     };
 }
