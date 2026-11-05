@@ -20,7 +20,11 @@ public class DoctorScheduleForm
 
     public static DoctorScheduleForm From(DoctorScheduleView view)
     {
-        var times = view.Schedule.Times.ToLookup(t => (t.Day, t.Kind));
+        // A new calendar starts with the clinic's hours as working periods: add breaks or trim from there.
+        var source = view.Exists
+            ? view.Schedule.Times
+            : view.ClinicHours.Select(h => new ScheduleTimeDto(h.Day, ScheduleTimeKind.Working, h.Opens, h.Closes)).ToList();
+        var times = source.ToLookup(t => (t.Day, t.Kind));
         List<PeriodInput> Rows(DayOfWeek day, ScheduleTimeKind kind) =>
             times[(day, kind)].OrderBy(t => t.Start)
                 .Select(t => new PeriodInput { Opens = t.Start, Closes = t.End })

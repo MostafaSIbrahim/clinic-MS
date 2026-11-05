@@ -68,6 +68,22 @@ public class DoctorScheduleTests
     }
 
     [Fact]
+    public void A_break_on_a_day_without_working_periods_says_so()
+    {
+        Assert.Contains(Check(Open(Working(10, 14), Break(12, 13, DayOfWeek.Sunday))), e => e.Contains("none is set that day"));
+    }
+
+    [Fact]
+    public void A_new_calendar_starts_with_the_clinic_hours_as_working_periods()
+    {
+        var form = DoctorScheduleForm.From(new DoctorScheduleView("Dr Karim", "Main", Exists: false, Open(), ClinicHours));
+
+        Assert.Equal(At(10), form.Days[0].Working[0].Opens);
+        Assert.Equal(At(21), form.Days[0].Working[1].Closes);
+        Assert.Null(form.Days[2].Working[0].Opens);   // Monday: clinic closed
+    }
+
+    [Fact]
     public void Overlapping_working_periods_are_refused()
     {
         Assert.Contains(Check(Open(Working(10, 13), Working(12, 14))), e => e.Contains("overlap"));
@@ -118,7 +134,7 @@ public class DoctorScheduleTests
     [Fact]
     public void Form_saves_only_the_chosen_modes_rows()
     {
-        var view = new DoctorScheduleView("Dr Karim", "Main", false, Open(), ClinicHours);
+        var view = new DoctorScheduleView("Dr Karim", "Main", Exists: true, Open(), ClinicHours);
         var form = DoctorScheduleForm.From(view);
         form.Days[0].Working[0] = new PeriodInput { Opens = At(10), Closes = At(14) };
         form.Days[0].Slots[0] = new PeriodInput { Opens = At(10), Closes = At(11) };

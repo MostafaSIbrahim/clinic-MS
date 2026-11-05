@@ -93,8 +93,11 @@ public static class DoctorScheduleRules
                 }
                 switch (t.Kind)
                 {
+                    case ScheduleTimeKind.Break when working.Count == 0:
+                        errors.Add($"{day.Key}: the break {t.Period} must be inside a working period, and none is set that day. Add the doctor's working period (for example the clinic's hours) first.");
+                        break;
                     case ScheduleTimeKind.Break when !working.Any(w => Inside(t.Period, w.Period)):
-                        errors.Add($"{day.Key}: the break {t.Period} must be inside a working period.");
+                        errors.Add($"{day.Key}: the break {t.Period} must be inside a working period ({string.Join(", ", working.OrderBy(w => w.Start).Select(w => w.Period.ToString()))}).");
                         break;
                     case ScheduleTimeKind.Working or ScheduleTimeKind.Slot when !hours[day.Key].Any():
                         errors.Add($"{day.Key}: the clinic is closed that day.");
