@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.Common;
 using SafyaClinic.Application.Common.Auditing;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.Interfaces.Services;
@@ -16,11 +17,13 @@ public class DoctorScheduleService : IDoctorScheduleService
 
     private readonly IUnitOfWork _uow;
     private readonly IAuditTrail? _audit;
+    private readonly IClinicClock _clock;
 
-    public DoctorScheduleService(IUnitOfWork uow, IAuditTrail? audit = null)
+    public DoctorScheduleService(IUnitOfWork uow, IAuditTrail? audit = null, IClinicClock? clock = null)
     {
         _uow = uow;
         _audit = audit;
+        _clock = clock ?? new ClinicClock(ClinicClock.FindZone(ClinicClock.DefaultTimeZoneId));
     }
 
     public async Task<ServiceResult<IReadOnlyList<ScheduleSummaryDto>>> ListAsync(int? doctorId = null)
@@ -63,15 +66,13 @@ public class DoctorScheduleService : IDoctorScheduleService
         if (clinic is null)
             return ServiceResult<DoctorScheduleView>.Failure("Clinic not found.");
 
-        var hours = await ClinicHoursAsync(clinicId);
-        var schedule = await _uow.DoctorSchedules.Query()
-            .Include(s => s.Times)
-            .FirstOrDefaultAsync(s => s.DoctorId == doctorId && s.ClinicId == clinicId);
+        var hours = await CalendarData.ClinicHoursAsync(_uow, clinicId);
+        var (schedule, changes) = await CalendarData.ScheduleAsync(_uow, doctorId, clinicId, _clock.Today);
 
-        var dto = schedule is null
-            ? new DoctorScheduleDto(doctorId, clinicId, ScheduleMode.Open, DefaultStepMinutes, true, Array.Empty<ScheduleTimeDto>())
-            : ToDto(schedule);
-        return ServiceResult<DoctorScheduleView>.Success(new DoctorScheduleView(doctor, clinic, schedule is not null, dto, hours));
+        var dto = schedule
+            ?? new DoctorScheduleDto(doctorId, clinicId, ScheduleMode.Open, DefaultStepMinutes, true, Array.Empty<ScheduleTimeDto>());
+        return ServiceResult<DoctorScheduleView>.Success(
+            new DoctorScheduleView(doctor, clinic, schedule is not null, dto, hours) { DateChanges = changes });
     }
 
     public async Task<ServiceResult> SaveAsync(DoctorScheduleDto dto, int actingUserId)
@@ -98,6 +99,12 @@ public class DoctorScheduleService : IDoctorScheduleService
         var errors = DoctorScheduleRules.Validate(dto, view.Data!.ClinicHours, otherTimes);
         if (errors.Count > 0)
             return ServiceResult.Failure(errors);
+
+        // P1c: never strand a future booking.
+        var stranded = await StrandedAsync(dto.DoctorId, dto.ClinicId, view.Data.Exists ? view.Data.Schedule : null, dto,
+            view.Data.DateChanges, view.Data.DateChanges, view.Data.ClinicHours);
+        if (stranded.Count > 0)
+            return ServiceResult.Failure(CalendarData.StrandedMessage(stranded));
 
         var before = view.Data.Exists ? Describe(view.Data.Schedule) : "not set";
         var after = Describe(dto);
@@ -133,20 +140,134 @@ public class DoctorScheduleService : IDoctorScheduleService
         return ServiceResult.Success("Calendar saved.");
     }
 
-    private async Task<IReadOnlyList<OpeningPeriodDto>> ClinicHoursAsync(int clinicId)
+    // ── Date changes (P1c) ──────────────────────────────────────
+
+    public async Task<ServiceResult> SetDateChangeAsync(int doctorId, int clinicId, DateChangeDto change, int actingUserId)
     {
-        var rows = await _uow.ClinicOpeningHours.Query()
-            .Where(h => h.ClinicId == clinicId)
-            .Select(h => new OpeningPeriodDto(h.DayOfWeek, h.OpensAt, h.ClosesAt))
-            .ToListAsync();
-        return OpeningHoursRules.Sorted(rows);
+        var view = await GetAsync(doctorId, clinicId);
+        if (!view.IsSuccess)
+            return ServiceResult.Failure(view.Errors);
+        if (!view.Data!.Exists)
+            return ServiceResult.Failure("Save the weekly calendar first, then add date changes.");
+
+        var date = change.Date.Date;
+        if (date < _clock.Today)
+            return ServiceResult.Failure("Choose today or a later date.");
+
+        var schedule = view.Data.Schedule;
+        var keep = schedule.Mode == ScheduleMode.Open
+            ? new[] { ScheduleTimeKind.Working, ScheduleTimeKind.Break }
+            : new[] { ScheduleTimeKind.Slot };
+        IReadOnlyList<ScheduleTimeDto> times = change.IsDayOff
+            ? Array.Empty<ScheduleTimeDto>()
+            : change.Times.Where(t => keep.Contains(t.Kind)).Select(t => t with { Day = date.DayOfWeek }).ToList();
+        if (!change.IsDayOff && times.Count == 0)
+            return ServiceResult.Failure(schedule.Mode == ScheduleMode.Open
+                ? "Enter that date's working periods, or choose a day off."
+                : "Enter that date's slots, or choose a day off.");
+
+        if (!change.IsDayOff)
+        {
+            // The date's own periods follow the same rules as a weekday, against the doctor's other clinics on that date.
+            var others = await OtherClinicsOnAsync(doctorId, clinicId, date);
+            var errors = DoctorScheduleRules.Validate(schedule with { IsActive = true, Times = times }, view.Data.ClinicHours, others);
+            if (errors.Count > 0)
+                return ServiceResult.Failure(errors);
+        }
+
+        var newChange = new DateChangeDto(date, change.IsDayOff, times);
+        var after = view.Data.DateChanges.Where(c => c.Date != date).Append(newChange).OrderBy(c => c.Date).ToList();
+        var stranded = await StrandedAsync(doctorId, clinicId, schedule, schedule, view.Data.DateChanges, after, view.Data.ClinicHours);
+        if (stranded.Count > 0)
+            return ServiceResult.Failure(CalendarData.StrandedMessage(stranded));
+
+        var entity = await _uow.DoctorSchedules.Query(asNoTracking: false)
+            .Include(s => s.Changes)
+            .FirstAsync(s => s.DoctorId == doctorId && s.ClinicId == clinicId);
+        _uow.DoctorScheduleChanges.DeleteRange(entity.Changes.Where(c => c.Date.Date == date).ToList());
+        if (change.IsDayOff)
+            entity.Changes.Add(new DoctorScheduleChange { Date = date, IsDayOff = true });
+        else
+            foreach (var t in times)
+                entity.Changes.Add(new DoctorScheduleChange { Date = date, Kind = t.Kind, StartTime = t.Start, EndTime = t.End });
+
+        if (_audit is not null)
+            await _audit.RecordAsync(AuditActions.ScheduleDateChanged, "DoctorSchedule", entity.Id,
+                new { doctorId, clinicId, date = date.ToString("yyyy-MM-dd"), change = Describe(newChange) }, actingUserId);
+        await _uow.SaveChangesAsync();
+        return ServiceResult.Success(change.IsDayOff ? "Day off saved." : "Date change saved.");
     }
 
-    private static DoctorScheduleDto ToDto(DoctorSchedule s) =>
-        new(s.DoctorId, s.ClinicId, s.Mode, s.StepMinutes, s.IsActive,
-            s.Times.Select(t => new ScheduleTimeDto(t.DayOfWeek, t.Kind, t.StartTime, t.EndTime))
-                .OrderBy(t => ClinicWeek.Position(t.Day)).ThenBy(t => t.Kind).ThenBy(t => t.Start)
-                .ToList());
+    public async Task<ServiceResult> RemoveDateChangeAsync(int doctorId, int clinicId, DateTime date, int actingUserId)
+    {
+        var view = await GetAsync(doctorId, clinicId);
+        if (!view.IsSuccess)
+            return ServiceResult.Failure(view.Errors);
+
+        date = date.Date;
+        var existing = view.Data!.DateChanges.FirstOrDefault(c => c.Date == date);
+        if (existing is null)
+            return ServiceResult.Success("Nothing to remove.");
+
+        var after = view.Data.DateChanges.Where(c => c.Date != date).ToList();
+        var schedule = view.Data.Schedule;
+        var stranded = await StrandedAsync(doctorId, clinicId, schedule, schedule, view.Data.DateChanges, after, view.Data.ClinicHours);
+        if (stranded.Count > 0)
+            return ServiceResult.Failure(CalendarData.StrandedMessage(stranded));
+
+        var rows = await _uow.DoctorScheduleChanges.Query(asNoTracking: false)
+            .Where(c => c.Schedule.DoctorId == doctorId && c.Schedule.ClinicId == clinicId && c.Date == date)
+            .ToListAsync();
+        _uow.DoctorScheduleChanges.DeleteRange(rows);
+        if (_audit is not null)
+            await _audit.RecordAsync(AuditActions.ScheduleDateChanged, "DoctorSchedule", rows.FirstOrDefault()?.ScheduleId,
+                new { doctorId, clinicId, date = date.ToString("yyyy-MM-dd"), change = "removed" }, actingUserId);
+        await _uow.SaveChangesAsync();
+        return ServiceResult.Success("Date change removed; the weekly calendar applies again.");
+    }
+
+    // ── Free times (P1c preview; P2 booking) ────────────────────
+
+    public async Task<ServiceResult<IReadOnlyList<TimeSpan>>> FreeStartsAsync(int doctorId, int clinicId, DateTime date, int visitMinutes)
+    {
+        var inputs = await CalendarData.InputsAsync(_uow, doctorId, clinicId, date);
+        var bookings = await CalendarData.BookingsAsync(_uow, date, doctorId, clinicId: null, toDate: date);
+        return ServiceResult<IReadOnlyList<TimeSpan>>.Success(
+            Availability.FreeStarts(date, visitMinutes, inputs, bookings, _clock.Now));
+    }
+
+    // ── helpers ─────────────────────────────────────────────────
+
+    private async Task<IReadOnlyList<BookingSlot>> StrandedAsync(
+        int doctorId, int clinicId, DoctorScheduleDto? scheduleBefore, DoctorScheduleDto scheduleAfter,
+        IReadOnlyList<DateChangeDto> changesBefore, IReadOnlyList<DateChangeDto> changesAfter, IReadOnlyList<OpeningPeriodDto> hours)
+    {
+        var bookings = CalendarData.Upcoming(await CalendarData.BookingsAsync(_uow, _clock.Today, doctorId, clinicId), _clock.Now);
+        return Availability.Stranded(
+            new CalendarInputs(hours, scheduleBefore, changesBefore),
+            new CalendarInputs(hours, scheduleAfter, changesAfter),
+            bookings);
+    }
+
+    /// <summary>The doctor's bookable periods in their other clinics on a date (for the overlap check).</summary>
+    private async Task<IReadOnlyList<OtherClinicTime>> OtherClinicsOnAsync(int doctorId, int clinicId, DateTime date)
+    {
+        var others = await _uow.DoctorSchedules.Query()
+            .Where(s => s.DoctorId == doctorId && s.ClinicId != clinicId && s.IsActive)
+            .Select(s => new { s.ClinicId, ClinicName = s.Clinic.Name })
+            .ToListAsync();
+        var result = new List<OtherClinicTime>();
+        foreach (var other in others)
+        {
+            var inputs = await CalendarData.InputsAsync(_uow, doctorId, other.ClinicId, date);
+            result.AddRange(Availability.For(date, inputs).Periods
+                .Select(p => new OtherClinicTime(other.ClinicName, new ScheduleTimeDto(date.DayOfWeek, ScheduleTimeKind.Working, p.Start, p.End))));
+        }
+        return result;
+    }
+
+    private static string Describe(DateChangeDto c) =>
+        c.IsDayOff ? "day off" : string.Join(", ", c.Times.Select(t => $"{t.Kind.ToString().ToLowerInvariant()} {t.Period}"));
 
     /// <summary>"Open, 15 min, in use; Saturday working 10:00–14:00, break 12:00–12:30; …" (for the audit log).</summary>
     private static string Describe(DoctorScheduleDto s)

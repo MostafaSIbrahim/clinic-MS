@@ -81,6 +81,7 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<ClinicOpeningHours>? _clinicOpeningHours;
     private IRepository<DoctorSchedule>? _doctorSchedules;
     private IRepository<DoctorScheduleTime>? _doctorScheduleTimes;
+    private IRepository<DoctorScheduleChange>? _doctorScheduleChanges;
     private IRepository<ClinicSourceAgreement>? _clinicSourceAgreements;
 
     // ── Nutrition ─────────────────────────────────────────────
@@ -126,6 +127,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<ClinicOpeningHours> ClinicOpeningHours => _clinicOpeningHours ??= new GenericRepository<ClinicOpeningHours>(_context);
     public IRepository<DoctorSchedule> DoctorSchedules => _doctorSchedules ??= new GenericRepository<DoctorSchedule>(_context);
     public IRepository<DoctorScheduleTime> DoctorScheduleTimes => _doctorScheduleTimes ??= new GenericRepository<DoctorScheduleTime>(_context);
+    public IRepository<DoctorScheduleChange> DoctorScheduleChanges => _doctorScheduleChanges ??= new GenericRepository<DoctorScheduleChange>(_context);
     public IRepository<ClinicSourceAgreement> ClinicSourceAgreements => _clinicSourceAgreements ??= new GenericRepository<ClinicSourceAgreement>(_context);
 
     public IRepository<InjectionType> InjectionTypes => _injectionTypes ??= new GenericRepository<InjectionType>(_context);

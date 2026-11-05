@@ -22,6 +22,23 @@ public class DoctorSchedule : BaseEntity
     public virtual User Doctor { get; set; } = null!;
     public virtual Clinic Clinic { get; set; } = null!;
     public virtual ICollection<DoctorScheduleTime> Times { get; set; } = new List<DoctorScheduleTime>();
+    public virtual ICollection<DoctorScheduleChange> Changes { get; set; } = new List<DoctorScheduleChange>();
+}
+
+/// <summary>
+/// P1c: a date that differs from the weekly pattern. The rows of one date replace that weekday's pattern:
+/// either one day-off row, or that date's own working periods and breaks (open) or slots (specific slots).
+/// </summary>
+public class DoctorScheduleChange : BaseEntity
+{
+    public int ScheduleId { get; set; }
+    public DateTime Date { get; set; }
+    public bool IsDayOff { get; set; }
+    public ScheduleTimeKind? Kind { get; set; }
+    public TimeSpan? StartTime { get; set; }
+    public TimeSpan? EndTime { get; set; }
+
+    public virtual DoctorSchedule Schedule { get; set; } = null!;
 }
 
 /// <summary>P1: one period of a doctor's weekly pattern: a working period, a break or a slot.</summary>

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.Common;
 using SafyaClinic.Application.Common.Auditing;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.Interfaces.Services;
@@ -13,11 +14,13 @@ public class ClinicHoursService : IClinicHoursService
 {
     private readonly IUnitOfWork _uow;
     private readonly IAuditTrail? _audit;
+    private readonly IClinicClock _clock;
 
-    public ClinicHoursService(IUnitOfWork uow, IAuditTrail? audit = null)
+    public ClinicHoursService(IUnitOfWork uow, IAuditTrail? audit = null, IClinicClock? clock = null)
     {
         _uow = uow;
         _audit = audit;
+        _clock = clock ?? new ClinicClock(ClinicClock.FindZone(ClinicClock.DefaultTimeZoneId));
     }
 
     public async Task<ServiceResult<IReadOnlyList<OpeningPeriodDto>>> GetAsync(int clinicId)
@@ -46,6 +49,20 @@ public class ClinicHoursService : IClinicHoursService
         var after = Describe(periods);
         if (before == after)
             return ServiceResult.Success("Opening hours unchanged.");
+
+        // P1c: never strand a future booking (each doctor's calendar, or the clinic hours for doctors without one).
+        var oldHours = OpeningHoursRules.Sorted(existing.Select(h => new OpeningPeriodDto(h.DayOfWeek, h.OpensAt, h.ClosesAt)));
+        var newHours = OpeningHoursRules.Sorted(periods);
+        var bookings = CalendarData.Upcoming(await CalendarData.BookingsAsync(_uow, _clock.Today, doctorId: null, clinicId), _clock.Now).ToList();
+        var stranded = new List<BookingSlot>();
+        foreach (var doctor in bookings.GroupBy(b => b.DoctorId))
+        {
+            var (schedule, changes) = await CalendarData.ScheduleAsync(_uow, doctor.Key, clinicId, _clock.Today);
+            stranded.AddRange(Availability.Stranded(
+                new CalendarInputs(oldHours, schedule, changes), new CalendarInputs(newHours, schedule, changes), doctor));
+        }
+        if (stranded.Count > 0)
+            return ServiceResult.Failure(CalendarData.StrandedMessage(stranded.OrderBy(b => b.Date).ThenBy(b => b.Start)));
 
         _uow.ClinicOpeningHours.DeleteRange(existing);
         await _uow.ClinicOpeningHours.AddRangeAsync(periods.Select(p => new ClinicOpeningHours
