@@ -17,6 +17,8 @@ public sealed record CalendarInputs(
 /// P1c: when a doctor can be booked. One pure calculation used by the schedule screens now and by booking (P2).
 /// <list type="bullet">
 /// <item>No calendar: the clinic's opening hours, with a 15-minute step (decision S4).</item>
+/// <item>A clinic that hasn't set any opening hours yet isn't restricted (P2 transition): its doctors without a
+/// calendar can be booked at any time of the day.</item>
 /// <item>Calendar not in use: not bookable in that clinic.</item>
 /// <item>A date change replaces that day's weekly pattern; a day off means not bookable.</item>
 /// <item>Open calendar: working periods minus breaks. Specific slots: the slots. Always clipped to the clinic's hours.</item>
@@ -28,10 +30,15 @@ public static class Availability
 {
     public const int FallbackStepMinutes = 15;
 
+    /// <summary>The bookable day of a clinic that hasn't set its opening hours yet.</summary>
+    public static readonly TimePeriod WholeDay = new(TimeSpan.Zero, TimeSpan.FromDays(1));
+
     /// <summary>The bookable periods on a date and the booking step.</summary>
     public static (IReadOnlyList<TimePeriod> Periods, int StepMinutes) For(DateTime date, CalendarInputs inputs)
     {
-        var open = inputs.ClinicHours.Where(h => h.Day == date.DayOfWeek).Select(h => h.Period).OrderBy(p => p.Start).ToList();
+        var open = inputs.ClinicHours.Count == 0
+            ? new List<TimePeriod> { WholeDay }
+            : inputs.ClinicHours.Where(h => h.Day == date.DayOfWeek).Select(h => h.Period).OrderBy(p => p.Start).ToList();
         var schedule = inputs.Schedule;
         if (schedule is null)
             return (open, FallbackStepMinutes);

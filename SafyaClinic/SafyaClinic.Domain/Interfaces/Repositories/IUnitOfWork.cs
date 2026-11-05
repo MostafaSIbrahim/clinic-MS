@@ -34,6 +34,12 @@ public interface IUnitOfWork : IDisposable
     Func<Task<T>> operation,
     Func<T, bool> shouldCommit);
 
+    /// <summary>P2: one booking change at a time per doctor, so two people can't book the same time.</summary>
+    Task<T> ExecuteDoctorBookingAsync<T>(
+        int doctorId,
+        Func<Task<T>> operation,
+        Func<T, bool> shouldCommit);
+
     // ── Medical Record ────────────────────────────────────────
     IRepository<PatientRecord> PatientRecords { get; }
     IRepository<Treatment> Treatments { get; }

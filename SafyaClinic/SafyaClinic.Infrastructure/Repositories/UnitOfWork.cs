@@ -165,16 +165,65 @@ public class UnitOfWork : IUnitOfWork
             shouldCommit);
     }
 
+    public Task<T> ExecuteDoctorBookingAsync<T>(
+        int doctorId,
+        Func<Task<T>> operation,
+        Func<T, bool> shouldCommit)
+    {
+        return ExecuteLockedAsync(
+            $"SafyaClinic:DoctorBooking:{doctorId}",
+            operation,
+            shouldCommit);
+    }
+
     private async Task<T> ExecuteLockedAsync<T>(
         string resourceName,
         Func<Task<T>> operation,
         Func<T, bool> shouldCommit)
     {
+        // P2: the in-memory test database has no transactions or application locks.
+        if (!_context.Database.IsRelational())
+            return await operation();
+
+        // P2: already inside another locked operation (e.g. booking a follow-up books a reservation):
+        // take this lock in the same transaction; the outer operation commits or rolls back.
+        if (_context.Database.CurrentTransaction is not null)
+        {
+            await AcquireLockAsync(resourceName);
+            return await operation();
+        }
+
         await using var transaction = await _context.Database
             .BeginTransactionAsync(IsolationLevel.ReadCommitted);
 
         try
         {
+            await AcquireLockAsync(resourceName);
+
+            var result = await operation();
+
+            if (shouldCommit(result))
+            {
+                await transaction.CommitAsync();
+            }
+            else
+            {
+                await transaction.RollbackAsync();
+                _context.ChangeTracker.Clear();
+            }
+
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            _context.ChangeTracker.Clear();
+            throw;
+        }
+    }
+
+    private async Task AcquireLockAsync(string resourceName)
+    {
             var resource = new SqlParameter(
                 "@resource",
                 SqlDbType.NVarChar,
@@ -206,27 +255,6 @@ public class UnitOfWork : IUnitOfWork
                 throw new TimeoutException(
                     "Could not acquire the operation lock.");
             }
-
-            var result = await operation();
-
-            if (shouldCommit(result))
-            {
-                await transaction.CommitAsync();
-            }
-            else
-            {
-                await transaction.RollbackAsync();
-                _context.ChangeTracker.Clear();
-            }
-
-            return result;
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            _context.ChangeTracker.Clear();
-            throw;
-        }
     }
 
     // ── Disposal ──────────────────────────────────────────────

@@ -10,6 +10,7 @@ using SafyaClinic.Domain.Enums;
 using SafyaClinic.Domain.Interfaces.Repositories;
 using SafyaClinic.Application.Common;
 using SafyaClinic.Application.Security;
+using SafyaClinic.Application.Scheduling;
 
 namespace SafyaClinic.Application.Services;
 
@@ -44,6 +45,33 @@ public class ReservationService : IReservationService
             await PermissionsAsync(actingUserId), actingUserId, doctorId.Value, targetStatus);
     }
     public async Task<ServiceResult<ReservationDto>> CreateReservationAsync(
+        CreateReservationRequest request, int createdBy)
+    {
+        // P2: one booking at a time per doctor, so the time can't be taken twice.
+        try
+        {
+            return await _uow.ExecuteDoctorBookingAsync(
+                request.DoctorId,
+                () => CreateReservationCoreAsync(request, createdBy),
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult<ReservationDto>.Failure(
+                "Another booking for this doctor is being saved. Try again in a moment.");
+        }
+    }
+
+    /// <summary>P2: why this time can't be booked for the doctor in the clinic, or null.</summary>
+    private async Task<string?> BookingProblemAsync(
+        int doctorId, int clinicId, DateTime date, TimeSpan time, int minutes, int? excludeReservationId)
+    {
+        var inputs = await CalendarData.InputsAsync(_uow, doctorId, clinicId, date);
+        var bookings = await CalendarData.BookingsAsync(_uow, date, doctorId, clinicId: null, toDate: date);
+        return BookingRules.Problem(date, time, minutes, inputs, bookings, _clock.Now, excludeReservationId);
+    }
+
+    private async Task<ServiceResult<ReservationDto>> CreateReservationCoreAsync(
         CreateReservationRequest request, int createdBy)
     {
         var users = _uow.Users.Query();
@@ -81,6 +109,12 @@ public class ReservationService : IReservationService
 
         if (treatmentType is null)
             return ServiceResult<ReservationDto>.Failure("Treatment type not found.");
+
+        // P2 (D7): not in the past, inside the doctor's hours, no double booking.
+        var problem = await BookingProblemAsync(request.DoctorId, request.ClinicId,
+            request.ReservationDate.Date, request.ReservationTime, request.DurationMinutes, excludeReservationId: null);
+        if (problem is not null)
+            return ServiceResult<ReservationDto>.Failure(problem);
 
         // The treatment type carries the price for this reservation; use the
         // caller-supplied amount only if they explicitly overrode it.
@@ -693,6 +727,37 @@ public class ReservationService : IReservationService
         var totalAmount = requestedAmount
             ?? (request.TreatmentTypeId != r.TreatmentTypeId ? treatmentType.DefaultCost : r.TotalAmount);
 
+        // P2 (D7): a new doctor, clinic, date, time or length must be a bookable time. An unchanged
+        // reservation stays editable even if it was booked before calendars existed.
+        var timeChanged = r.DoctorId != request.DoctorId || r.ClinicId != request.ClinicId
+            || r.ReservationDate.Date != request.ReservationDate.Date || r.ReservationTime != request.ReservationTime
+            || r.DurationMinutes != request.DurationMinutes;
+        if (!timeChanged)
+            return await ApplyReservationUpdateAsync(r, request, totalAmount);
+
+        try
+        {
+            return await _uow.ExecuteDoctorBookingAsync(
+                request.DoctorId,
+                async () =>
+                {
+                    var problem = await BookingProblemAsync(request.DoctorId, request.ClinicId,
+                        request.ReservationDate.Date, request.ReservationTime, request.DurationMinutes, excludeReservationId: r.Id);
+                    return problem is not null
+                        ? ServiceResult.Failure(problem)
+                        : await ApplyReservationUpdateAsync(r, request, totalAmount);
+                },
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult.Failure("Another booking for this doctor is being saved. Try again in a moment.");
+        }
+    }
+
+    private async Task<ServiceResult> ApplyReservationUpdateAsync(Reservation r, UpdateReservationRequest request, decimal? totalAmount)
+    {
+        var reservationId = r.Id;
         var updatedAtUtc = DateTime.UtcNow;
         var reason = request.Reason?.Trim();
         var notes = request.Notes?.Trim();
