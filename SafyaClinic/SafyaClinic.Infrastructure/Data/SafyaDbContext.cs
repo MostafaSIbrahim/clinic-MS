@@ -62,6 +62,7 @@ namespace SafyaClinic.Infrastructure.Data
         public DbSet<ClinicOpeningHours> ClinicOpeningHours { get; set; }   // P1
         public DbSet<DoctorSchedule> DoctorSchedules { get; set; }           // P1
         public DbSet<DoctorScheduleTime> DoctorScheduleTimes { get; set; }   // P1
+        public DbSet<DoctorScheduleChange> DoctorScheduleChanges { get; set; }   // P1c
         public DbSet<ClinicSourceAgreement> ClinicSourceAgreements { get; set; }
 
         // Nutrition

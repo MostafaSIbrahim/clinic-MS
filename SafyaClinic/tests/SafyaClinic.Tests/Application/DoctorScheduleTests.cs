@@ -257,6 +257,15 @@ public class DoctorScheduleTests
 
         public Task<SafyaClinic.Application.DTOs.Common.ServiceResult> SaveAsync(DoctorScheduleDto schedule, int actingUserId) =>
             Task.FromResult(SafyaClinic.Application.DTOs.Common.ServiceResult.Success());
+
+        public Task<SafyaClinic.Application.DTOs.Common.ServiceResult> SetDateChangeAsync(int doctorId, int clinicId, DateChangeDto change, int actingUserId) =>
+            Task.FromResult(SafyaClinic.Application.DTOs.Common.ServiceResult.Success());
+
+        public Task<SafyaClinic.Application.DTOs.Common.ServiceResult> RemoveDateChangeAsync(int doctorId, int clinicId, DateTime date, int actingUserId) =>
+            Task.FromResult(SafyaClinic.Application.DTOs.Common.ServiceResult.Success());
+
+        public Task<SafyaClinic.Application.DTOs.Common.ServiceResult<IReadOnlyList<TimeSpan>>> FreeStartsAsync(int doctorId, int clinicId, DateTime date, int visitMinutes) =>
+            Task.FromResult(SafyaClinic.Application.DTOs.Common.ServiceResult<IReadOnlyList<TimeSpan>>.Success(Array.Empty<TimeSpan>()));
     }
 
     private sealed class NoTempDataProvider : ITempDataProvider

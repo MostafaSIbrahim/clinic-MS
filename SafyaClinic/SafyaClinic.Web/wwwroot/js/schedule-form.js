@@ -16,3 +16,21 @@
     });
     update();
 })();
+
+// P1c: on the date-change form, show the time rows only for "Different times that day".
+(function () {
+    'use strict';
+    var form = document.querySelector('[data-date-change]');
+    if (!form) return;
+    var times = form.querySelector('[data-change-times]');
+
+    function update() {
+        var dayOff = form.querySelector('input[name="IsDayOff"]:checked');
+        if (times) times.hidden = !!dayOff && dayOff.value === 'true';
+    }
+
+    form.addEventListener('change', function (e) {
+        if (e.target.name === 'IsDayOff') update();
+    });
+    update();
+})();

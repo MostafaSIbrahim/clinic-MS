@@ -4,6 +4,13 @@
 @using SafyaClinic.Domain.Enums
 @{
     ViewData["Title"] = T["Calendar"].Value;
+    var dateChanges = ViewBag.DateChanges as IReadOnlyList<DateChangeDto> ?? Array.Empty<DateChangeDto>();
+    var exists = ViewBag.Exists == true;
+    var today = Clock.Today;
+    var previewDate = ViewBag.PreviewDate as DateTime?;
+    var previewMinutes = ViewBag.PreviewMinutes as int? ?? 30;
+    var freeStarts = ViewBag.FreeStarts as IReadOnlyList<TimeSpan>;
+    string Day(DateTime d) => $"{T[d.DayOfWeek.ToString()].Value} {d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}";
 }
 @* P1: one doctor's calendar in one clinic. Only the section for the chosen mode is saved. *@
 <h1 class="mb-1">@T["Calendar"]: <span dir="auto">@Model.DoctorName</span>, <span dir="auto">@Model.ClinicName</span></h1>
@@ -100,6 +107,126 @@
         <a asp-action="@(ViewBag.Back as string ?? "Mine")" class="btn btn-outline-secondary">@T["Cancel"]</a>
     </div>
 </form>
+
+@* P1c: dates that differ from the weekly pattern. *@
+<div class="mt-4">
+<app-card id="date-changes" title="@T["Date changes"].Value" level="2" icon="bi-calendar-event">
+    @if (!exists)
+    {
+        <p class="text-muted mb-0">@T["Save the weekly calendar first, then add date changes."]</p>
+    }
+    else
+    {
+        <p class="text-muted">@T["A date change replaces that day's weekly pattern: a day off, or that date's own times."]</p>
+        @if (dateChanges.Count == 0)
+        {
+            <p class="mb-3">@T["No upcoming date changes."]</p>
+        }
+        else
+        {
+            <ul class="list-unstyled mb-3">
+                @foreach (var change in dateChanges)
+                {
+                    <li class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <strong>@Day(change.Date)</strong>
+                        <span>@(change.IsDayOff ? T["Day off"].Value : string.Join(", ", change.Times.Select(t => $"{KindName(t.Kind)} {t.Period}")))</span>
+                        <form asp-action="RemoveDate" method="post" class="d-inline">
+                            <input type="hidden" name="doctorId" value="@Model.DoctorId" />
+                            <input type="hidden" name="clinicId" value="@Model.ClinicId" />
+                            <input type="hidden" name="date" value="@change.Date.ToString("yyyy-MM-dd")" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="@T["Remove this date change? The weekly calendar applies again."]">@T["Remove"]<span class="visually-hidden"> @Day(change.Date)</span></button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        }
+
+        <form asp-action="AddDate" method="post" class="app-date-change" data-date-change>
+            <input type="hidden" name="doctorId" value="@Model.DoctorId" />
+            <input type="hidden" name="clinicId" value="@Model.ClinicId" />
+            <h3 class="h6">@T["Add a date change"]</h3>
+            <div class="row g-3 align-items-end mb-2">
+                <div class="col-sm-4 col-md-3">
+                    <label for="changeDate" class="form-label">@T["Date"]</label>
+                    <input type="date" id="changeDate" name="Date" class="form-control" required min="@today.ToString("yyyy-MM-dd")" />
+                </div>
+                <fieldset class="col-sm-8 col-md-9">
+                    <legend class="visually-hidden">@T["Change"]</legend>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="IsDayOff" id="changeDayOff" value="true" checked />
+                        <label class="form-check-label" for="changeDayOff">@T["Day off"]</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="IsDayOff" id="changeHours" value="false" />
+                        <label class="form-check-label" for="changeHours">@T["Different times that day"]</label>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="mb-2" data-change-times>
+                @foreach (var kind in Model.Mode == ScheduleMode.Open ? new[] { ScheduleTimeKind.Working, ScheduleTimeKind.Break } : new[] { ScheduleTimeKind.Slot })
+                {
+                    var field = kind == ScheduleTimeKind.Working ? "Working" : kind == ScheduleTimeKind.Break ? "Breaks" : "Slots";
+                    <div class="mb-2">
+                        <span class="form-label d-block">@KindTitle(kind)</span>
+                        <div class="d-flex flex-wrap gap-3">
+                            @for (var k = 0; k < DoctorScheduleRules.MaxPerDay(kind); k++)
+                            {
+                                <div class="app-period">
+                                    <label class="visually-hidden" for="change_@(field)_@(k)_from">@T["{0} {1}, from", KindName(kind), k + 1]</label>
+                                    <input type="time" class="form-control form-control-sm" id="change_@(field)_@(k)_from" name="@(field)[@k].Opens" />
+                                    <span aria-hidden="true">–</span>
+                                    <label class="visually-hidden" for="change_@(field)_@(k)_to">@T["{0} {1}, to", KindName(kind), k + 1]</label>
+                                    <input type="time" class="form-control form-control-sm" id="change_@(field)_@(k)_to" name="@(field)[@k].Closes" />
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <button type="submit" class="btn btn-outline-primary">@T["Save date change"]</button>
+        </form>
+    }
+</app-card>
+
+@* P1c: check the result: free start times on a date, as booking will offer them (P2). *@
+</div>
+
+<div class="mt-4">
+<app-card id="free-times" title="@T["Free times"].Value" level="2" icon="bi-clock-history">
+    <form method="get" asp-action="Edit" class="row g-3 align-items-end mb-3">
+        <input type="hidden" name="doctorId" value="@Model.DoctorId" />
+        <input type="hidden" name="clinicId" value="@Model.ClinicId" />
+        <div class="col-sm-4 col-md-3">
+            <label for="previewDate" class="form-label">@T["Date"]</label>
+            <input type="date" id="previewDate" name="previewDate" class="form-control" required min="@today.ToString("yyyy-MM-dd")" value="@(previewDate?.ToString("yyyy-MM-dd") ?? today.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-sm-4 col-md-3">
+            <label for="previewMinutes" class="form-label">@T["Visit length (minutes)"]</label>
+            <input type="number" id="previewMinutes" name="previewMinutes" class="form-control" min="5" max="240" step="5" value="@previewMinutes" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-outline-primary">@T["Show free times"]</button>
+        </div>
+    </form>
+    @if (previewDate is DateTime shown && freeStarts is not null)
+    {
+        <p class="mb-2"><strong>@Day(shown)</strong>, @T["{0} minutes", previewMinutes]:</p>
+        @if (freeStarts.Count == 0)
+        {
+            <p class="text-muted mb-0" role="status">@T["No free times that day."]</p>
+        }
+        else
+        {
+            <ul class="app-free-times list-unstyled mb-0" role="status">
+                @foreach (var start in freeStarts)
+                {
+                    <li>@(start.ToString("hh\\:mm"))</li>
+                }
+            </ul>
+        }
+    }
+</app-card>
+</div>
 
 @functions {
     private string KindTitle(ScheduleTimeKind kind) => kind switch

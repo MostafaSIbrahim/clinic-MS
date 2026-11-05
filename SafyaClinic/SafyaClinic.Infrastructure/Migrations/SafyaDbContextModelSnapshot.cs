@@ -1392,6 +1392,43 @@ namespace SafyaClinic.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorScheduleChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<TimeSpan?>("EndTime")
+                        .HasColumnType("time(0)");
+
+                    b.Property<bool>("IsDayOff")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("ScheduleId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan?>("StartTime")
+                        .HasColumnType("time(0)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduleId", "Date");
+
+                    b.ToTable("DoctorScheduleChanges", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DoctorScheduleChanges_Period", "([IsDayOff] = 1 AND [Kind] IS NULL AND [StartTime] IS NULL AND [EndTime] IS NULL) OR ([IsDayOff] = 0 AND [Kind] IS NOT NULL AND [StartTime] < [EndTime])");
+                        });
+                });
+
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorScheduleTime", b =>
                 {
                     b.Property<int>("Id")
@@ -2176,6 +2213,17 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("Doctor");
                 });
 
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorScheduleChange", b =>
+                {
+                    b.HasOne("SafyaClinic.Domain.Entities.Scheduling.DoctorSchedule", "Schedule")
+                        .WithMany("Changes")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Schedule");
+                });
+
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorScheduleTime", b =>
                 {
                     b.HasOne("SafyaClinic.Domain.Entities.Scheduling.DoctorSchedule", "Schedule")
@@ -2356,6 +2404,8 @@ namespace SafyaClinic.Infrastructure.Migrations
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Scheduling.DoctorSchedule", b =>
                 {
+                    b.Navigation("Changes");
+
                     b.Navigation("Times");
                 });
 

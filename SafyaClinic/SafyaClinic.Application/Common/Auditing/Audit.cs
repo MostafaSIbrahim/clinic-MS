@@ -31,6 +31,7 @@ public static class AuditActions
     public const string GroupMemberRemoved = "Group.MemberRemoved";
     public const string ClinicHoursChanged = "Clinic.HoursChanged";   // P1
     public const string ScheduleChanged = "Schedule.Changed";         // P1
+    public const string ScheduleDateChanged = "Schedule.DateChanged"; // P1c
 }
 
 /// <summary>Who is acting and from where — supplied by the web layer.</summary>

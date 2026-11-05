@@ -399,4 +399,58 @@
   <data name="Save calendar" xml:space="preserve">
     <value>حفظ التقويم</value>
   </data>
+  <data name="Date changes" xml:space="preserve">
+    <value>تغييرات بتواريخ محددة</value>
+  </data>
+  <data name="Save the weekly calendar first, then add date changes." xml:space="preserve">
+    <value>احفظ التقويم الأسبوعي أولًا ثم أضف تغييرات التواريخ.</value>
+  </data>
+  <data name="A date change replaces that day's weekly pattern: a day off, or that date's own times." xml:space="preserve">
+    <value>تغيير التاريخ يحل محل جدول ذلك اليوم: إجازة، أو أوقات خاصة بذلك التاريخ.</value>
+  </data>
+  <data name="No upcoming date changes." xml:space="preserve">
+    <value>لا توجد تغييرات قادمة.</value>
+  </data>
+  <data name="Day off" xml:space="preserve">
+    <value>إجازة</value>
+  </data>
+  <data name="Remove this date change? The weekly calendar applies again." xml:space="preserve">
+    <value>حذف هذا التغيير؟ سيُطبَّق التقويم الأسبوعي مرة أخرى.</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>حذف</value>
+  </data>
+  <data name="Add a date change" xml:space="preserve">
+    <value>إضافة تغيير لتاريخ</value>
+  </data>
+  <data name="Date" xml:space="preserve">
+    <value>التاريخ</value>
+  </data>
+  <data name="Change" xml:space="preserve">
+    <value>التغيير</value>
+  </data>
+  <data name="Different times that day" xml:space="preserve">
+    <value>أوقات مختلفة في ذلك اليوم</value>
+  </data>
+  <data name="{0} {1}, from" xml:space="preserve">
+    <value>{0} {1}، من</value>
+  </data>
+  <data name="{0} {1}, to" xml:space="preserve">
+    <value>{0} {1}، إلى</value>
+  </data>
+  <data name="Save date change" xml:space="preserve">
+    <value>حفظ التغيير</value>
+  </data>
+  <data name="Free times" xml:space="preserve">
+    <value>الأوقات المتاحة</value>
+  </data>
+  <data name="Visit length (minutes)" xml:space="preserve">
+    <value>مدة الزيارة (بالدقائق)</value>
+  </data>
+  <data name="Show free times" xml:space="preserve">
+    <value>عرض الأوقات المتاحة</value>
+  </data>
+  <data name="No free times that day." xml:space="preserve">
+    <value>لا توجد أوقات متاحة في ذلك اليوم.</value>
+  </data>
 </root>

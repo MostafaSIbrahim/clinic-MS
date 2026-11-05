@@ -65,6 +65,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<ClinicOpeningHours> ClinicOpeningHours { get; }   // P1
     IRepository<DoctorSchedule> DoctorSchedules { get; }           // P1
     IRepository<DoctorScheduleTime> DoctorScheduleTimes { get; }   // P1
+    IRepository<DoctorScheduleChange> DoctorScheduleChanges { get; }   // P1c
     IRepository<ClinicSourceAgreement> ClinicSourceAgreements { get; }
 
     // ── Nutrition ─────────────────────────────────────────────

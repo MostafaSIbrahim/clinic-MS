@@ -22,7 +22,11 @@ public sealed record OtherClinicTime(string ClinicName, ScheduleTimeDto Time);
 
 /// <summary>P1: what the schedule screen needs.</summary>
 public sealed record DoctorScheduleView(
-    string DoctorName, string ClinicName, bool Exists, DoctorScheduleDto Schedule, IReadOnlyList<OpeningPeriodDto> ClinicHours);
+    string DoctorName, string ClinicName, bool Exists, DoctorScheduleDto Schedule, IReadOnlyList<OpeningPeriodDto> ClinicHours)
+{
+    /// <summary>P1c: date changes from today on.</summary>
+    public IReadOnlyList<DateChangeDto> DateChanges { get; init; } = Array.Empty<DateChangeDto>();
+}
 
 /// <summary>P1: one row of the schedules list (a clinician in a clinic).</summary>
 public sealed record ScheduleSummaryDto(

@@ -34,3 +34,21 @@ public class DoctorScheduleTimeConfiguration : IEntityTypeConfiguration<DoctorSc
         builder.HasOne(t => t.Schedule).WithMany(s => s.Times).HasForeignKey(t => t.ScheduleId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+/// <summary>P1c: date changes of a schedule. Removed with their schedule.</summary>
+public class DoctorScheduleChangeConfiguration : IEntityTypeConfiguration<DoctorScheduleChange>
+{
+    public void Configure(EntityTypeBuilder<DoctorScheduleChange> builder)
+    {
+        builder.ToTable("DoctorScheduleChanges", table => table.HasCheckConstraint("CK_DoctorScheduleChanges_Period",
+            "([IsDayOff] = 1 AND [Kind] IS NULL AND [StartTime] IS NULL AND [EndTime] IS NULL) OR " +
+            "([IsDayOff] = 0 AND [Kind] IS NOT NULL AND [StartTime] < [EndTime])"));
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Date).HasColumnType("date");
+        builder.Property(c => c.Kind).HasConversion<string>().HasMaxLength(10);
+        builder.Property(c => c.StartTime).HasColumnType("time(0)");
+        builder.Property(c => c.EndTime).HasColumnType("time(0)");
+        builder.HasIndex(c => new { c.ScheduleId, c.Date });
+        builder.HasOne(c => c.Schedule).WithMany(s => s.Changes).HasForeignKey(c => c.ScheduleId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
