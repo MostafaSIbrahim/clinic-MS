@@ -48,6 +48,7 @@ public class AppointmentsService : IAppointmentsService
                 {
                     PatientId = r.PatientId,
                     IsPaid = r.IsPaid,
+                    QueueStatus = r.QueueStatus,
                 },
             })
             .ToListAsync();

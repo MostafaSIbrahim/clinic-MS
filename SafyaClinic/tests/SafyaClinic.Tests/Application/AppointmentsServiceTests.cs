@@ -203,6 +203,8 @@ public class AppointmentsServiceTests
 
         Assert.False((await Reservations(w).MoveReservationAsync(await w.Db.Reservations.Where(r => r.DoctorId == w.Karim).Select(r => r.Id).SingleAsync(), w.Main, Sat, At(11), 1)).IsSuccess);
         Assert.False((await Reservations(w).MoveReservationAsync(checkedIn.Id, w.Main, Sat, At(11), 1)).IsSuccess);
+        var monaToday = (await Service(w).GetDayAsync(Sat, w.Main, 30)).Data!.Doctors.Single(d => d.DoctorId == w.Mona);
+        Assert.Equal(PatientQueueStatus.Waiting, Assert.Single(monaToday.Bookings).QueueStatus);   // P4: shown instead of Check in
         Assert.NotNull((await Service(w).GetMoveAsync(checkedIn.Id, null, null)).Data!.NotMovable);
     }
 }
