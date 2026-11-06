@@ -128,6 +128,7 @@ Patients.Index ANY: Admin Doctor Nutritionist Reception
 Patients.RemoveAddress POST: Admin Doctor Nutritionist Reception
 Patients.RemovePhone POST: Admin Doctor Nutritionist Reception
 Patients.Timeline GET: Admin Doctor
+Patients.UseExisting GET: Admin Doctor Nutritionist Reception
 PatientsApi.Search GET: Admin Doctor Nutritionist Reception
 Payments.Audit GET: Admin Reception ReceptionAdmin
 Payments.BackfillZeroCostPayments POST: Admin

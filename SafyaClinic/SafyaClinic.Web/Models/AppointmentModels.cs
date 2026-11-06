@@ -14,6 +14,10 @@ public class AppointmentsPageModel
     public int? ClinicId { get; init; }
     public int? TreatmentTypeId { get; init; }
     public bool CanBook { get; init; }
+
+    /// <summary>P3: booking for this patient (from the patient's page); carried into the booking form.</summary>
+    public int? PatientId { get; init; }
+    public string? PatientName { get; init; }
 }
 
 /// <summary>P2b: booking a free time: doctor, clinic, date and time come from the clicked time.</summary>

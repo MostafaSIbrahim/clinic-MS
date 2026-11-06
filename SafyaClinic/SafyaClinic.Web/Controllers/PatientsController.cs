@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using SafyaClinic.Web.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Patient;
@@ -37,6 +38,11 @@ public class PatientsController : BaseController
         // Keep a failed search distinct from an empty set of matching patients.
         if (!result.IsSuccess)
             ModelState.AddModelError("", "Could not load patients. Please try the search again.");
+
+        // P3: one match (e.g. a phone number from the top bar) opens that patient straight away.
+        if (result.IsSuccess && result.Data is { TotalCount: 1 } one && request.Page == 1 && one.Items.FirstOrDefault() is { } only)
+            return RedirectToAction(nameof(Details), new { id = only.Id });
+
         return View(result.IsSuccess ? result.Data : null);
     }
 
@@ -109,6 +115,7 @@ public class PatientsController : BaseController
         if (!result.IsSuccess)
         {
             ApplyErrors(result);
+            ViewBag.DuplicateOfPatientId = DuplicatePatient.FindId(result.Errors);   // P3: offer the existing patient
             ViewBag.Sources = (await _patientSourceService.GetAllAsync(includeInactive: false)).Data;
             ViewBag.Popup = popup;
             return View(model);
@@ -124,6 +131,22 @@ public class PatientsController : BaseController
             return View("CreateSuccessPopup");
         }
         return RedirectWithSuccess("Patient registered.", nameof(Details), routeValues: new { id = result.Data!.Id });
+    }
+
+    // ── Use an existing patient from the booking pop-up (P3) ──
+
+    [HttpGet]
+    [RequirePermission(Permissions.Patients.View)]
+    public async Task<IActionResult> UseExisting(int id)
+    {
+        var result = await _patientService.GetPatientByIdAsync(id);
+        if (!result.IsSuccess || result.Data is null) return NotFound();
+        var patient = result.Data;
+        ViewBag.NewPatientId = patient.Id;
+        ViewBag.NewPatientName = patient.FullName;
+        ViewBag.NewPatientPhone = (patient.Phones.FirstOrDefault(p => p.IsPrimary) ?? patient.Phones.FirstOrDefault())?.PhoneNumber ?? "";
+        ViewBag.ExistingPatient = true;
+        return View("CreateSuccessPopup");
     }
 
     // ── Edit Basic (Reception + above) ───────────────────────

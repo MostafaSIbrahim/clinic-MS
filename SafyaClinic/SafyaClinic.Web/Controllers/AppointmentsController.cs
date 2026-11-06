@@ -38,8 +38,9 @@ public class AppointmentsController : BaseController
 
     [HttpGet]
     [RequirePermission(Permissions.Reservations.View)]
-    public async Task<IActionResult> Index(DateTime? date, int? clinicId, int? treatmentTypeId)
+    public async Task<IActionResult> Index(DateTime? date, int? clinicId, int? treatmentTypeId, int? patientId)
     {
+        var patientName = patientId is int pid ? (await _patients.GetPatientByIdAsync(pid)).Data?.FullName : null;
         var clinics = (await _clinics.GetAllAsync(includeInactive: false)).Data?.ToList() ?? new();
         var types = (await _reservations.GetTreatmentTypesAsync()).Data?.ToList() ?? new();
         var day = (date ?? _clock.Today).Date;
@@ -54,6 +55,8 @@ public class AppointmentsController : BaseController
             ClinicId = clinic?.Id,
             TreatmentTypeId = type?.Id,
             CanBook = await CanAsync(Permissions.Reservations.Manage),
+            PatientId = patientName is null ? null : patientId,
+            PatientName = patientName,
             Day = clinic is null ? null : (await _appointments.GetDayAsync(day, clinic.Id, VisitMinutes(type?.DurationMinutes))).Data,
         };
         return View(model);
