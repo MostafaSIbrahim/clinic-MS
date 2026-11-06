@@ -74,7 +74,10 @@ public class AppointmentsServiceTests
         var day = (await Service(w).GetDayAsync(Sat, w.Main, 30)).Data!;
 
         var karim = day.Doctors.Single(d => d.DoctorId == w.Karim);
-        Assert.Equal("Mona Adel", Assert.Single(karim.Bookings).PatientName);
+        var booking = Assert.Single(karim.Bookings);
+        Assert.Equal("Mona Adel", booking.PatientName);
+        Assert.Equal(w.Patient, booking.PatientId);   // P2d: coverage badge and payment summary link
+        Assert.False(booking.IsPaid);
         Assert.Equal("10:00 11:00 11:15 11:30", Times(karim.FreeStarts));
         Assert.Equal(2, day.Doctors.Count);
         Assert.Empty(day.NotHere);

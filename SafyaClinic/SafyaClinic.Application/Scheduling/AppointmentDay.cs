@@ -3,6 +3,10 @@ namespace SafyaClinic.Application.Scheduling;
 /// <summary>P2b: one booking on the appointments screen.</summary>
 public sealed record AppointmentDto(int ReservationId, TimeSpan Start, int DurationMinutes, string PatientName, string Status)
 {
+    /// <summary>P2d: for the coverage badge and the payment summary link.</summary>
+    public int PatientId { get; init; }
+    public bool IsPaid { get; init; }
+
     public TimeSpan End => Start + TimeSpan.FromMinutes(DurationMinutes);
 }
 

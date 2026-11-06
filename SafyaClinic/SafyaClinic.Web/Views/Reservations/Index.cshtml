@@ -12,11 +12,9 @@
             <p class="text-muted mb-2">Find a reservation or register a new reservation.</p>
         </div>
         <div class="page-actions">
-            <a asp-action="Today" class="btn btn-sm btn-outline-secondary"><i class="bi bi-calendar-day me-1"></i>Today</a>
-            <a asp-action="Create" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Reservation</a>
-            <a asp-action="Board" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-kanban me-1"></i>Appointment Board
-            </a>
+            @* P2d: booking and today's list live on the Appointments screen; this page finds reservations. *@
+            <a asp-controller="Appointments" asp-action="Index" class="btn btn-sm btn-primary"><i class="bi bi-calendar-plus me-1" aria-hidden="true"></i>Appointments</a>
+            <a asp-action="Create" class="btn btn-sm btn-outline-secondary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New Reservation (full form)</a>
         </div>
     </div>
     <div class="card-body">
