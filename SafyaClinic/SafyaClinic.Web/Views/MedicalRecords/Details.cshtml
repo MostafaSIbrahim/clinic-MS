@@ -1,305 +1,233 @@
 @model PatientRecordDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
     ViewData["Title"] = "Medical Record";
+    // P5b: the consultation workspace. One page with tabs (Notes · Treatments · Prescriptions · Lab);
+    // the visit bar with Complete visit stays visible on every tab.
+    var tab = ViewBag.Tab as string ?? SafyaClinic.Web.Models.VisitTabs.Notes;
+    var canWrite = !Model.IsLocked && await Can.HasAsync(Permissions.Records.Write);
+    var canComplete = ViewBag.CanCompleteConsultation is bool complete && complete;
+    var prescriptions = (ViewBag.Prescriptions as IEnumerable<PrescriptionListDto> ?? Enumerable.Empty<PrescriptionListDto>()).ToList();
+    var analyses = (ViewBag.Analyses as IEnumerable<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>
+        ?? Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>()).ToList();
+    var treatments = Model.Treatments.ToList();
+    var treatmentsTitle = $"{T["Treatments"].Value} ({treatments.Count})";
+    var prescriptionsTitle = $"{T["Prescriptions"].Value} ({prescriptions.Count})";
+    var labTitle = $"{T["Lab"].Value} ({analyses.Count})";
 }
 
 @await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
 
-<div class="page-toolbar d-flex justify-content-between align-items-start mb-3">
-    <div>
-        <h1 class="mb-0">Medical record #@Model.Id</h1>
-        <span class="badge @(Model.IsLocked ? "bg-secondary" : "bg-success")">
-            @(Model.IsLocked ? "Locked" : "Editable")
-        </span>
-
-      
-        <small class="text-muted">@Model.PatientName • @Model.CreatedAt.ToString("dd MMM yyyy")</small>
+<div class="visit-bar" role="region" aria-label="@T["Visit"]">
+    <div class="visit-bar__title">
+        <h1 class="h4 mb-0">@T["Medical record #{0}", Model.Id]</h1>
+        <span class="badge @(Model.IsLocked ? "bg-secondary" : "bg-success")">@(Model.IsLocked ? T["Locked"] : T["Editable"])</span>
+        <small class="text-muted">@Model.CreatedAt.ToString("dd MMM yyyy")</small>
     </div>
-    <div class="page-actions d-flex flex-wrap gap-2 align-items-start">
-        <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId"
-               class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>Back to Patient
-            </a>
-            <a asp-controller="Reservations" asp-action="Queue"
-               class="btn btn-outline-secondary">Back to Queue</a>
-
-    
-        @if (Model.ReservationId.HasValue)
+    <div class="visit-bar__actions">
+        @if (canComplete)
         {
-            <a asp-controller="Reservations" asp-action="Details"
-               asp-route-id="@Model.ReservationId.Value"
-               class="btn btn-sm btn-outline-primary">
-                View Reservation
-            </a>
-        }
-
-        @if (ViewBag.CanCompleteConsultation is bool canComplete && canComplete)
-        {
-        
             <form asp-action="CompleteConsultation" method="post" class="d-inline"
-                  data-confirm="Complete this consultation? The reservation will be marked completed.">
+                  data-confirm="@T["Complete this visit? The reservation will be marked completed."]">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="recordId" value="@Model.Id" />
-                <button type="submit" class="btn btn-sm btn-success">
-                    <i class="bi bi-check-circle me-1"></i>Complete Consultation
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>@T["Complete visit"]
                 </button>
             </form>
         }
-
-            @if(!Model.IsLocked)
-            {
-                <div class="dropdown">
-                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                        More Actions
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                    
-                            <li>
-                                <a class="dropdown-item" asp-action="Edit" asp-route-id="@Model.Id">
-                                    <i class="bi bi-pencil me-1"></i>Edit
-                                </a>
-                            </li>
-                    
-                        @if (await Can.HasAsync(Permissions.Records.Lock) && !Model.IsLocked)
-                        {
-                            <li>
-                                @* Lock form moved whole — NOT wrapped in another form *@
-                                <form asp-action="Lock" asp-route-id="@Model.Id" method="post"
-                                      data-confirm="Lock this record? It cannot be edited afterwards.">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="dropdown-item text-danger">
-                                        <i class="bi bi-lock me-1"></i>Lock Record
-                                    </button>
-                                </form>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
-            @* Review fix: close only the Razor condition; do not render a stray parenthesis. *@
-    
+        <a asp-controller="Reservations" asp-action="Queue" class="btn btn-outline-secondary">
+            <i class="bi bi-list-ol me-1" aria-hidden="true"></i>@T["Back to queue"]
+        </a>
+        <div class="dropdown">
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                @T["More actions"]
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId">
+                        <i class="bi bi-person me-1" aria-hidden="true"></i>@T["Back to patient"]
+                    </a>
+                </li>
+                @if (Model.ReservationId.HasValue)
+                {
+                    <li>
+                        <a class="dropdown-item" asp-controller="Reservations" asp-action="Details" asp-route-id="@Model.ReservationId.Value">
+                            <i class="bi bi-calendar-event me-1" aria-hidden="true"></i>@T["View reservation"]
+                        </a>
+                    </li>
+                }
+                @if (!Model.IsLocked && await Can.HasAsync(Permissions.Records.Lock))
+                {
+                    <li>
+                        <form asp-action="Lock" asp-route-id="@Model.Id" method="post"
+                              data-confirm="@T["Lock this record? It cannot be edited afterwards."]">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="bi bi-lock me-1" aria-hidden="true"></i>@T["Lock record"]
+                            </button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        </div>
     </div>
 </div>
 
-<nav class="workspace-shortcuts" aria-label="Record sections">
-    <a href="#record-clinical" class="btn btn-outline-secondary">
-        <i class="bi bi-clipboard2-data me-1"></i>Clinical notes
-    </a>
-    <a href="#record-treatments" class="btn btn-outline-secondary">
-        <i class="bi bi-bandaid me-1"></i>Treatments
-    </a>
-    <a href="#record-prescriptions" class="btn btn-outline-secondary">
-        <i class="bi bi-capsule-pill me-1"></i>Prescriptions
-    </a>
-    <a href="#record-analyses" class="btn btn-outline-secondary">
-        <i class="bi bi-clipboard2-pulse me-1"></i>Analyses
-    </a>
-</nav>
-
-<div class="row g-3">
-    <div class="col-md-7">
-        <div class="card mb-3">
-            <div class="card-header" id="record-clinical"><h2 class="h5 mb-0"><i class="bi bi-clipboard2-data me-2"></i>Clinical Notes</h2></div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-4 text-muted">Category</dt>
-                    <dd class="col-8"><span class="badge bg-secondary">@Labels.Humanize(Model.Category)</span></dd>
-                    <dt class="col-4 text-muted">Chief Complaint</dt>
-                    <dd class="col-8 clinical-text">@(Model.ChiefComplaint ?? "—")</dd>
-                    <dt class="col-4 text-muted">History</dt>
-                    <dd class="col-8 clinical-text">@(Model.PresentIllnessHistory ?? "—")</dd>
-                    <dt class="col-4 text-muted">Diagnosis</dt>
-                    <dd class="col-8 clinical-text">@(Model.Diagnosis ?? "—")</dd>
-                    <dt class="col-4 text-muted">Differential Dx</dt>
-                    <dd class="col-8 clinical-text">@(Model.DifferentialDiagnosis ?? "—")</dd>
-                    <dt class="col-4 text-muted">Treatment Plan</dt>
-                    <dd class="col-8 clinical-text">@(Model.TreatmentPlan ?? "—")</dd>
-                    <dt class="col-4 text-muted">Notes</dt>
-                    <dd class="col-8 clinical-text">@(Model.Notes ?? "—")</dd>
-                    <dt class="col-4 text-muted">Follow-up Date</dt>
-                    <dd class="col-8">@(Model.FollowUpDate?.ToString("dd MMM yyyy") ?? "—")</dd>
-                </dl>
-            </div>
+<app-tabs label="@T["Visit sections"]" id="visit" selected="@tab" data-tab-param="tab">
+    <app-tab id="notes" title="@T["Notes"]">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <span class="badge bg-secondary">@Labels.Humanize(Model.Category)</span>
+            @if (canWrite)
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil me-1" aria-hidden="true"></i>@T["Edit notes"]
+                </a>
+            }
         </div>
+        <dl class="visit-notes">
+            <dt>@T["Chief complaint"]</dt>
+            <dd class="clinical-text" dir="auto">@(Model.ChiefComplaint ?? "—")</dd>
+            <dt>@T["History"]</dt>
+            <dd class="clinical-text" dir="auto">@(Model.PresentIllnessHistory ?? "—")</dd>
+            <dt>@T["Diagnosis"]</dt>
+            <dd class="clinical-text" dir="auto">@(Model.Diagnosis ?? "—")</dd>
+            <dt>@T["Differential diagnosis"]</dt>
+            <dd class="clinical-text" dir="auto">@(Model.DifferentialDiagnosis ?? "—")</dd>
+            <dt>@T["Treatment plan"]</dt>
+            <dd class="clinical-text" dir="auto">@(Model.TreatmentPlan ?? "—")</dd>
+            <dt>@T["Notes"]</dt>
+            <dd class="clinical-text" dir="auto">@(Model.Notes ?? "—")</dd>
+            <dt>@T["Follow-up date"]</dt>
+            <dd>@(Model.FollowUpDate?.ToString("dd MMM yyyy") ?? "—")</dd>
+        </dl>
+    </app-tab>
 
-        <!-- ── Treatments ── -->
-        <div class="card mb-3" id="record-treatments">
-            <div class="card-header"><h2 class="h5 mb-0"><i class="bi bi-bandaid me-2"></i>Treatments</h2></div>
-            <div class="card-body">
-                @if (!Model.Treatments.Any())
+    <app-tab id="treatments" title="@treatmentsTitle">
+        @if (treatments.Count == 0)
+        {
+            <p class="text-muted mb-3">@T["No treatments recorded."]</p>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush mb-3">
+                @foreach (var t in treatments)
                 {
-                    <p class="text-muted small mb-3">No treatments recorded.</p>
-                }
-                else
-                {
-                    <ul class="list-group list-group-flush mb-3">
-                        @foreach (var t in Model.Treatments)
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center gap-2">
+                        <div>
+                            <strong dir="auto">@t.Description</strong>
+                            <div class="small text-muted">@t.PerformedDate.ToString("dd MMM yyyy") @(t.Cost != null ? $"• {t.Cost.Value.ToMoney()}" : "")</div>
+                        </div>
+                        @if (canWrite)
                         {
-                            <li class="list-group-item px-0 d-flex justify-content-between">
-                                <div>
-                                    <strong>@t.Description</strong>
-                                    <div class="small text-muted">@t.PerformedDate.ToString("dd MMM yyyy") @(t.Cost != null ? $"• {t.Cost.Value.ToMoney()}" : "")</div>
-                                </div>
-                                @if (!Model.IsLocked)
+                            <form asp-action="RemoveTreatment" method="post" data-confirm="@T["Remove this treatment?"]">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="treatmentId" value="@t.Id" />
+                                <input type="hidden" name="recordId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-link text-danger" aria-label="@T["Remove"]"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                            </form>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        @if (canWrite)
+        {
+            <form asp-action="AddTreatment" method="post" class="visit-add-row">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="recordId" value="@Model.Id" />
+                <label class="visually-hidden" for="treatment-description">@T["Description"]</label>
+                <input id="treatment-description" type="text" name="Description" class="form-control" placeholder="@T["Description"]" required />
+                <label class="visually-hidden" for="treatment-cost">@T["Cost"]</label>
+                <input id="treatment-cost" type="number" step="0.01" min="0" name="Cost" class="form-control" placeholder="@T["Cost"]" />
+                <button type="submit" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>@T["Add treatment"]</button>
+            </form>
+        }
+    </app-tab>
+
+    <app-tab id="prescriptions" title="@prescriptionsTitle">
+        @if (canWrite)
+        {
+            <a asp-action="CreatePrescription" asp-route-recordId="@Model.Id" class="btn btn-primary mb-3">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>@T["New prescription"]
+            </a>
+        }
+        @if (prescriptions.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["No prescriptions yet."]</p>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var p in prescriptions)
+                {
+                    <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0">
+                        <div>
+                            <div class="fw-bold">@T["Prescription #{0}", p.Id]</div>
+                            <div class="small text-muted">
+                                @p.PrescriptionDate.ToString("dd MMM yyyy") • @T["{0} drug(s)", p.DrugCount]
+                                @if (!string.IsNullOrWhiteSpace(p.Notes))
                                 {
-                                    <form asp-action="RemoveTreatment" method="post" data-confirm="Remove this treatment?">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="treatmentId" value="@t.Id" />
-                                        <input type="hidden" name="recordId" value="@Model.Id" />
-                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
-                                    </form>
+                                    <span dir="auto">• @p.Notes</span>
                                 }
-                            </li>
-                        }
-                    </ul>
-                }
-                @if (!Model.IsLocked)
-                {
-                    <form asp-action="AddTreatment" method="post" class="row g-2">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="recordId" value="@Model.Id" />
-                        <div class="col-md-7">
-                            <input type="text" name="Description" class="form-control form-control-sm" placeholder="Description" required />
-                        </div>
-                        <div class="col-md-3">
-                            <input type="number" step="0.01" name="Cost" class="form-control form-control-sm" placeholder="Cost" />
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus"></i></button>
-                        </div>
-                    </form>
-                }
-            </div>
-        </div>
-        <!-- ── Prescriptions ── -->
-        <div class="card mb-3" id="record-prescriptions">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h2 class="h5 mb-0"><i class="bi bi-capsule-pill me-2"></i>Prescriptions</h2>
-                @if (!Model.IsLocked)
-                {
-                    <a asp-action="CreatePrescription" asp-route-recordId="@Model.Id" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-plus-lg me-1"></i>New Prescription
-                    </a>
-                }
-            </div>
-            <div class="card-body">
-                @{
-                    var prescriptions = ViewBag.Prescriptions as IEnumerable<PrescriptionListDto>
-                        ?? Enumerable.Empty<PrescriptionListDto>();
-                }
-                @if (!prescriptions.Any())
-                {
-                    <p class="text-muted small mb-0">No prescriptions added.</p>
-                }
-                else
-                {
-                    <div class="list-group list-group-flush">
-                        @foreach (var p in prescriptions)
-                        {
-                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <div>
-                                    <div class="fw-bold">Prescription #@p.Id</div>
-                                    <div class="small text-muted">
-                                        @p.PrescriptionDate.ToString("dd MMM yyyy") • @p.DrugCount drug(s)
-                                        @if (!string.IsNullOrWhiteSpace(p.Notes))
-                                        {
-                                            <span>• @p.Notes</span>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-2 align-items-center">
-                                    <a asp-action="PrescriptionDetails" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-eye me-1"></i>Details
-                                    </a>
-                                    <a asp-action="PrintPrescription" asp-route-prescriptionId="@p.Id" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-printer me-1"></i>Print
-                                    </a>
-                                    @if (p.IsPrinted)
-                                    {
-                                        <span class="badge bg-success">Printed</span>
-                                    }
-                                    else
-                                    {
-                                        <form asp-action="MarkPrescriptionPrinted" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="prescriptionId" value="@p.Id" />
-                                            <input type="hidden" name="recordId" value="@Model.Id" />
-                                            <button type="submit" class="btn btn-sm btn-link p-0"><i class="bi bi-check2"></i> Mark Printed</button>
-                                        </form>
-                                    }
-                                </div>
                             </div>
-                        }
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <a asp-action="PrescriptionDetails" asp-route-id="@p.Id" class="btn btn-outline-secondary">
+                                <i class="bi bi-eye me-1" aria-hidden="true"></i>@T["Details"]
+                            </a>
+                            <a asp-action="PrintPrescription" asp-route-prescriptionId="@p.Id" target="_blank" class="btn btn-outline-primary">
+                                <i class="bi bi-printer me-1" aria-hidden="true"></i>@T["Print"]
+                            </a>
+                            @if (p.IsPrinted)
+                            {
+                                <span class="badge bg-success">@T["Printed"]</span>
+                            }
+                            else
+                            {
+                                <form asp-action="MarkPrescriptionPrinted" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="prescriptionId" value="@p.Id" />
+                                    <input type="hidden" name="recordId" value="@Model.Id" />
+                                    <button type="submit" class="btn btn-link"><i class="bi bi-check2" aria-hidden="true"></i> @T["Mark printed"]</button>
+                                </form>
+                            }
+                        </div>
                     </div>
                 }
             </div>
-        </div>
-    </div>
+        }
+    </app-tab>
 
-    <div class="col-md-5">
-        <div class="card mb-3">
-            <div class="card-header"><h2 class="h5 mb-0"><i class="bi bi-clipboard2-data me-2"></i>Order Analyses</h2></div>
-            <div class="card-body">
-                <a asp-controller="Analysis" asp-action="Request"
-                   asp-route-patientId="@Model.PatientId" asp-route-recordId="@Model.Id"
-                   class="btn btn-sm btn-outline-info w-100">
-                   <i class="bi bi-plus-lg me-1"></i>Request Medical Analysis
-                </a>
-            </div>
-        </div>
-
-        @* Review fix: match the Analyses shortcut's fragment exactly. *@
-        <div class="card" id="record-analyses">
-            <div class="card-header"><i class="bi bi-clipboard2-data me-2"></i>Analyses from this Record</div>
-            <div class="card-body">
-                @{
-                    var recordAnalyses = ViewBag.Analyses as IEnumerable<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>
-                        ?? Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>();
-                }
-                @if (!recordAnalyses.Any())
+    <app-tab id="lab" title="@labTitle">
+        @if (await Can.HasAsync(Permissions.Analyses.Manage))
+        {
+            <p class="text-muted small mb-2">@T["Lab tests open on their own page; when you finish, you come back to this visit."]</p>
+            <a asp-controller="Analysis" asp-action="Request"
+               asp-route-patientId="@Model.PatientId" asp-route-recordId="@Model.Id"
+               class="btn btn-primary mb-3">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>@T["Request lab tests"]
+            </a>
+        }
+        @if (analyses.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["No lab tests requested from this visit yet."]</p>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var a in analyses)
                 {
-                    <p class="text-muted small mb-0">No analyses requested from this record yet.</p>
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center gap-2">
+                        <span>@a.AnalysisTypeName <span class="badge bg-secondary ms-1">@a.Status</span></span>
+                        <a asp-controller="Analysis" asp-action="Details" asp-route-id="@a.Id" class="btn btn-outline-primary">
+                            <i class="bi bi-eye me-1" aria-hidden="true"></i>@T["Open"]
+                        </a>
+                    </li>
                 }
-                else
-                {
-                    <ul class="list-group list-group-flush">
-                        @foreach (var a in recordAnalyses)
-                        {
-                            <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                                <span>@a.AnalysisTypeName <span class="badge bg-secondary ms-1">@a.Status</span></span>
-                                <a asp-controller="Analysis" asp-action="Details" asp-route-id="@a.Id" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i>Open Analysis
-                                </a>
-                            </li>
-                        }
-                    </ul>
-                }
-            </div>
-        </div>
-    </div>
-</div>
+            </ul>
+        }
+    </app-tab>
+</app-tabs>
 
 @await Html.PartialAsync("_AttachmentPreviewModal")
-
-@section Scripts {
-    <script src="~/js/medicine-autocomplete.js"></script>
-    <script>
-        (function () {
-            const medInput = document.getElementById('medicationNameInput');
-            const dosageInput = document.getElementById('dosageInput');
-            if (medInput) {
-                attachMedicineAutocomplete(medInput, {
-                    minLength: 2,
-                    onSelect: function (med) {
-                        medInput.value = med.tradeName;
-                        // Only prefill dosage if the doctor hasn't already typed one.
-                        if (dosageInput && !dosageInput.value) {
-                            dosageInput.value = med.strength || '';
-                        }
-                    }
-                });
-            }
-        })();
-    </script>
-}
