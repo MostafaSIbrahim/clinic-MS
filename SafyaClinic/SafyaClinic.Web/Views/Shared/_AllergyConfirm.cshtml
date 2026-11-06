@@ -1,0 +1,27 @@
+@model IReadOnlyList<SafyaClinic.Application.Clinical.AllergyMatch>?
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@{
+    // P5a: shown inside a prescribing form when a medicine matches the patient's recorded allergies.
+    // The server shows it after refusing; allergy-check.js shows it while the doctor types. The server decides.
+    var matches = Model ?? Array.Empty<SafyaClinic.Application.Clinical.AllergyMatch>();
+}
+<div class="alert alert-danger app-allergy-confirm" role="alert" data-allergy-confirm
+     data-template="@T["{0} matches the recorded allergy: {1}"]" hidden="@(matches.Count == 0)">
+    <p class="mb-1">
+        <i class="bi bi-exclamation-octagon-fill" aria-hidden="true"></i>
+        <strong>@T["Allergy warning"]</strong>
+    </p>
+    <ul class="mb-2" data-allergy-list>
+        @foreach (var match in matches)
+        {
+            <li dir="auto">@T["{0} matches the recorded allergy: {1}", match.Medication, match.Allergy]</li>
+        }
+    </ul>
+    <p class="mb-2 small">@T["Check with the patient before prescribing. To prescribe it anyway, tick the box; this is recorded."]</p>
+    <div class="form-check">
+        <label class="form-check-label">
+            <input class="form-check-input" type="checkbox" name="ConfirmAllergyOverride" value="true" data-allergy-override />
+            @T["Prescribe anyway"]
+        </label>
+    </div>
+</div>

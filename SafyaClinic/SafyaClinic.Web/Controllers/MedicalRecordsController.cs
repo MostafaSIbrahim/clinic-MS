@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SafyaClinic.Application.Clinical;
 using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Services.Files;
@@ -201,16 +202,35 @@ namespace SafyaClinic.Web.Controllers
         [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> CreatePrescription(CreatePrescriptionRequest model)
         {
-            if (!ModelState.IsValid) return View(model);
+            if (!ModelState.IsValid) return await PrescriptionFormAsync(model, refused: false);
             var result = await _recordService.CreatePrescriptionAsync(model, CurrentUserId);
-            if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+            if (!result.IsSuccess)
+            {
+                // P5a: an allergy match is shown as the translated warning with "Prescribe anyway", not as a raw error.
+                var refused = AllergyCheck.IsWarning(result.Errors.FirstOrDefault());
+                if (!refused) ApplyErrors(result);
+                return await PrescriptionFormAsync(model, refused);
+            }
             return RedirectWithSuccess("Prescription created.", nameof(Details), routeValues: new { id = model.RecordId });
         }
         [HttpGet]
         [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> CreatePrescription(int recordId)
         {
-            return View(new CreatePrescriptionRequest { RecordId = recordId });
+            return await PrescriptionFormAsync(new CreatePrescriptionRequest { RecordId = recordId }, refused: false);
+        }
+
+        /// <summary>P5a: the prescription form with the patient header (allergies) and, after a refusal, the matches.</summary>
+        private async Task<IActionResult> PrescriptionFormAsync(CreatePrescriptionRequest model, bool refused)
+        {
+            var record = await _recordService.GetRecordByIdAsync(model.RecordId);
+            if (record.IsSuccess && record.Data is not null)
+            {
+                ViewData["PatientId"] = record.Data.PatientId;
+                if (refused)
+                    ViewData["AllergyMatches"] = AllergyCheck.Matches(record.Data.PatientAllergies, model.Items.Select(i => i.MedicationName));
+            }
+            return View(nameof(CreatePrescription), model);
         }
 
         [HttpGet]
@@ -227,6 +247,17 @@ namespace SafyaClinic.Web.Controllers
         public async Task<IActionResult> AddPrescriptionItem(int prescriptionId, AddPrescriptionItemRequest model)
         {
             var result = await _recordService.AddPrescriptionItemAsync(prescriptionId, model);
+            if (!result.IsSuccess && AllergyCheck.IsWarning(result.Errors.FirstOrDefault()))
+            {
+                // P5a: show the page again with the drug still filled in, the matches and "Prescribe anyway".
+                var prescription = await _recordService.GetPrescriptionByIdAsync(prescriptionId);
+                if (prescription.IsSuccess && prescription.Data is not null)
+                {
+                    ViewData["AllergyMatches"] = AllergyCheck.Matches(prescription.Data.PatientAllergies, new[] { model.MedicationName });
+                    ViewData["PendingItem"] = model;
+                    return View(nameof(PrescriptionDetails), prescription.Data);
+                }
+            }
             if (!result.IsSuccess) Error(result.Errors.First());
             return RedirectToAction(nameof(PrescriptionDetails), new { id = prescriptionId });
         }

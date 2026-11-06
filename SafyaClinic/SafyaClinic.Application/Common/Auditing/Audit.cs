@@ -33,6 +33,7 @@ public static class AuditActions
     public const string ScheduleChanged = "Schedule.Changed";         // P1
     public const string ScheduleDateChanged = "Schedule.DateChanged"; // P1c
     public const string ReservationMoved = "Reservation.Moved";       // P2c
+    public const string AllergyOverride = "Prescription.AllergyOverride"; // P5a
 }
 
 /// <summary>Who is acting and from where — supplied by the web layer.</summary>
