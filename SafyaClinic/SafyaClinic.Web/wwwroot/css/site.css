@@ -1212,3 +1212,80 @@ a.app-kpi:focus-visible {
     background: var(--color-surface-subtle);
     font-variant-numeric: var(--numeric-tabular);
 }
+
+/* ── P2b: appointments day ─────────────────────────────────── */
+.app-day {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+    gap: var(--space-4);
+    align-items: start;
+}
+
+.app-day__bookings li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+    border-bottom: 1px solid var(--grid-line);
+}
+
+.app-day__time {
+    min-width: 7.5rem;
+    font-variant-numeric: var(--numeric-tabular);
+    font-weight: var(--font-weight-medium);
+}
+
+.app-free-times li:has(> .app-slot) {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.app-slot {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--color-primary-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-variant-numeric: var(--numeric-tabular);
+    text-decoration: none;
+}
+
+.app-slot:hover {
+    background: var(--color-primary-subtle);
+    color: var(--color-primary-hover);
+}
+
+.app-slot:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.app-form-narrow {
+    max-width: 40rem;
+}
+
+.app-booking-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-subtle);
+}
+
+.app-booking-summary dt {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+.app-booking-summary dd {
+    margin: 0;
+    font-variant-numeric: var(--numeric-tabular);
+}

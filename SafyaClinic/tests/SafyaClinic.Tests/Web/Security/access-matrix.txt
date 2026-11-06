@@ -10,6 +10,9 @@ Analysis.PrintRequestSlip GET: Admin Doctor
 Analysis.UpdateStatus POST: Admin Doctor
 Analysis.UploadAttachment POST: Admin Doctor
 Analysis.ViewAttachment GET: Admin Doctor
+Appointments.Book GET: Admin Doctor Nutritionist Reception
+Appointments.Book POST: Admin Doctor Nutritionist Reception
+Appointments.Index GET: Admin Doctor Nutritionist Reception
 Auth.AccessDenied GET: anyone
 Auth.ChangePassword GET: signed-in
 Auth.ChangePassword POST: signed-in

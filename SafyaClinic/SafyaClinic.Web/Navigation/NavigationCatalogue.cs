@@ -28,6 +28,7 @@ public static class NavigationCatalogue
         ("Front desk", new[]
         {
             new Entry("Patients", "bi-people", "Patients", "Index", Permissions.Patients.View),
+            new Entry("Appointments", "bi-calendar-plus", "Appointments", "Index", Permissions.Reservations.View),
             new Entry("Appointment Board", "bi-calendar3", "Reservations", "Board", Permissions.Reservations.View,
                 OnlyActions: new[] { "Board" }),
             new Entry("Reservations", "bi-calendar2-week", "Reservations", "Index", Permissions.Reservations.View,

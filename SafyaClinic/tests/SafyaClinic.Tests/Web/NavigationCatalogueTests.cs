@@ -19,13 +19,13 @@ public class NavigationCatalogueTests
 
     [Theory]
     [InlineData(SystemGroups.AdminRole,
-        "Dashboard|Patients|Appointment Board|Reservations|Doctor Queues|Follow-ups|My schedule|Doctor schedules|Analysis|Nutrition|Payment Dashboard|Payment Reports|Users|Permission Groups|Lookups|Patient Sources|Clinics")]
+        "Dashboard|Patients|Appointments|Appointment Board|Reservations|Doctor Queues|Follow-ups|My schedule|Doctor schedules|Analysis|Nutrition|Payment Dashboard|Payment Reports|Users|Permission Groups|Lookups|Patient Sources|Clinics")]
     [InlineData(SystemGroups.DoctorRole,
-        "Dashboard|Patients|Appointment Board|Reservations|My Queue|Follow-ups|My schedule|Analysis|Payment Reports")]
+        "Dashboard|Patients|Appointments|Appointment Board|Reservations|My Queue|Follow-ups|My schedule|Analysis|Payment Reports")]
     [InlineData(SystemGroups.NutritionistRole,
-        "Dashboard|Patients|Appointment Board|Reservations|My schedule|Nutrition")]
+        "Dashboard|Patients|Appointments|Appointment Board|Reservations|My schedule|Nutrition")]
     [InlineData(SystemGroups.ReceptionRole,
-        "Dashboard|Patients|Appointment Board|Reservations|Doctor Queues|Follow-ups|Unpaid Payments|Payment Reports")]
+        "Dashboard|Patients|Appointments|Appointment Board|Reservations|Doctor Queues|Follow-ups|Unpaid Payments|Payment Reports")]
     [InlineData(SystemGroups.ReceptionAdminRole,
         "Dashboard|Doctor schedules|Unpaid Payments|Payment Reports")]
     public void Each_group_sees_its_pages(string role, string expected)
@@ -49,6 +49,7 @@ public class NavigationCatalogueTests
     [InlineData("Payments", "Collect", "Payment Dashboard")]
     [InlineData("Nutrition", "EnrollmentDetails", "Nutrition")]
     [InlineData("Schedules", "Mine", "My schedule")]
+    [InlineData("Appointments", "Book", "Appointments")]
     [InlineData("Schedules", "Edit", "Doctor schedules")]
     public void Exactly_one_link_is_marked_as_the_current_page(string controller, string action, string expected)
     {
