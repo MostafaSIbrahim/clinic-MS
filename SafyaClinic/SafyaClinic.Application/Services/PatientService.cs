@@ -337,15 +337,28 @@ public class PatientService : IPatientService
     {
         var all = _uow.Patients.Query();
         var search = request.Search?.Trim();
-        var phoneSearch = PhoneNumbers.Normalize(search);   // "+20 100…" finds "0100…"
         if (!string.IsNullOrWhiteSpace(search))
         {
-            all = all.Where(p =>
-               p.FirstName.Contains(search) ||
-               p.LastName.Contains(search) ||
-               (p.NationalId != null && p.NationalId.Contains(search)) ||
-               p.Phones.Any(ph => ph.PhoneNumber.Contains(search)) ||
-               (phoneSearch.Length >= 3 && p.Phones.Any(ph => ph.PhoneNumber.Contains(phoneSearch))));
+            // P3: every word must match something ("mona adel", "adel 0100"); a phone typed with spaces or +20
+            // is also tried as one number.
+            var whole = PhoneNumbers.Normalize(search);   // "+20 100…" finds "0100…"
+            var words = search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (words.Length > 1 && whole.Length >= PhoneNumbers.MinimumDigits
+                && words.All(w => w.All(ch => char.IsDigit(ch) || ch is '+' or '-' or '(' or ')')))
+                words = new[] { search };   // "0100 123 4567" is one phone number, not three words
+
+            foreach (var word in words)
+            {
+                var term = word;
+                var lower = word.ToLowerInvariant();
+                var phone = PhoneNumbers.Normalize(term);
+                all = all.Where(p =>
+                   p.FirstName.ToLower().Contains(lower) ||
+                   p.LastName.ToLower().Contains(lower) ||
+                   (p.NationalId != null && p.NationalId.Contains(term)) ||
+                   p.Phones.Any(ph => ph.PhoneNumber.Contains(term)) ||
+                   (phone.Length >= 3 && p.Phones.Any(ph => ph.PhoneNumber.Contains(phone))));
+            }
         }
         var totalCount = await all.CountAsync();
         var patients = await all

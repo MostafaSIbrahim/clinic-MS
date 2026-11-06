@@ -603,4 +603,10 @@
   <data name="Move" xml:space="preserve">
     <value>نقل</value>
   </data>
+  <data name="Booking for {0}: choose a free time." xml:space="preserve">
+    <value>الحجز لـ {0}: اختر وقتًا متاحًا.</value>
+  </data>
+  <data name="Book for someone else" xml:space="preserve">
+    <value>الحجز لشخص آخر</value>
+  </data>
 </root>

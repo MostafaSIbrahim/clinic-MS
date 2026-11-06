@@ -6,7 +6,7 @@
     var day = Model.Day;
     string Hm(TimeSpan t) => t.ToString("hh\\:mm");
     string DayName(DateTime d) => $"{T[d.DayOfWeek.ToString()].Value} {d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}";
-    object Route(DateTime d) => new { date = d.ToString("yyyy-MM-dd"), clinicId = Model.ClinicId, treatmentTypeId = Model.TreatmentTypeId };
+    object Route(DateTime d) => new { date = d.ToString("yyyy-MM-dd"), clinicId = Model.ClinicId, treatmentTypeId = Model.TreatmentTypeId, patientId = Model.PatientId };
     var noClinics = new EmptyStateModel(T["No active clinics yet."].Value, Icon: "bi-hospital");
     var nobody = new EmptyStateModel(T["No doctor can be booked in this clinic on this day."].Value, Icon: "bi-calendar-x",
         Hint: T["Check the clinic's opening hours and the doctors' calendars."].Value);
@@ -14,7 +14,20 @@
 @* P2b: a clinic's day: each doctor's bookings and free times. Clicking a free time books it. *@
 <h1>@T["Appointments"]</h1>
 
+@* P3: booking for a patient chosen on their page. *@
+@if (Model.PatientName is not null)
+{
+    <div class="alert alert-info d-flex flex-wrap align-items-center gap-2" role="status">
+        <span>@T["Booking for {0}: choose a free time.", Model.PatientName]</span>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" asp-route-clinicId="@Model.ClinicId">@T["Book for someone else"]</a>
+    </div>
+}
+
 <app-filter-bar label="@T["Choose the day, clinic and visit"].Value" submit-text="@T["Show"].Value">
+    @if (Model.PatientId is int keepPatient)
+    {
+        <input type="hidden" name="patientId" value="@keepPatient" />
+    }
     <div class="app-filter-bar__field">
         <label for="apptDate" class="form-label">@T["Date"]</label>
         <input type="date" id="apptDate" name="date" class="form-control" value="@Model.Date.ToString("yyyy-MM-dd")" />
@@ -114,7 +127,7 @@ else
                                     @if (Model.CanBook)
                                     {
                                         <a class="app-slot" asp-action="Book" asp-route-doctorId="@doctor.DoctorId" asp-route-clinicId="@day.ClinicId"
-                                           asp-route-date="@day.Date.ToString("yyyy-MM-dd")" asp-route-time="@Hm(start)" asp-route-treatmentTypeId="@Model.TreatmentTypeId">@Hm(start)<span class="visually-hidden"> @T["with {0}", doctor.DoctorName]</span></a>
+                                           asp-route-date="@day.Date.ToString("yyyy-MM-dd")" asp-route-time="@Hm(start)" asp-route-treatmentTypeId="@Model.TreatmentTypeId" asp-route-patientId="@Model.PatientId">@Hm(start)<span class="visually-hidden"> @T["with {0}", doctor.DoctorName]</span></a>
                                     }
                                     else
                                     {
