@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SafyaClinic.Application.Common;
+using SafyaClinic.Application.Common.Auditing;
 using SafyaClinic.Application.Services;
 using SafyaClinic.Domain.Entities.Patient;
 using SafyaClinic.Domain.Entities.Reservation;
@@ -126,5 +127,79 @@ public class AppointmentsServiceTests
         var lastWeek = new DateTime(2026, 10, 31);
         var day = (await Service(w).GetDayAsync(lastWeek, w.Main, 30)).Data!;
         Assert.All(day.Doctors, d => Assert.Empty(d.FreeStarts));
+    }
+
+    // ── Move (P2c) ──────────────────────────────────────────────
+
+    private static ReservationService Reservations(World w, IAuditTrail? audit = null)
+    {
+        w.Db.ChangeTracker.Clear();
+        var clock = new ClinicClock(ClinicClock.FindZone(ClinicClock.DefaultTimeZoneId), () => new DateTime(2026, 11, 6, 10, 0, 0, DateTimeKind.Utc));
+        return new ReservationService(new UnitOfWork(w.Db), new SafyaClinic.Infrastructure.Security.PermissionStore(w.Db), clock, audit);
+    }
+
+    private static Task<int> IdAtAsync(World w, TimeSpan at) =>
+        w.Db.Reservations.Where(r => r.ReservationTime == at).Select(r => r.Id).SingleAsync();
+
+    private sealed class NoContext : IAuditContext
+    {
+        public int? UserId => 1;
+        public string? IpAddress => null;
+        public string? RequestId => null;
+    }
+
+    [Fact]
+    public async Task Moving_offers_the_doctors_free_times_without_counting_the_booking_itself()
+    {
+        var w = await WorldAsync();
+        await BookAsync(w, w.Karim, w.Main, At(10));
+
+        var options = (await Service(w).GetMoveAsync(await IdAtAsync(w, At(10)), date: null, clinicId: null)).Data!;
+
+        Assert.Null(options.NotMovable);
+        Assert.Equal("10:15 10:30 10:45 11:00 11:15 11:30", Times(options.FreeStarts));   // its own 10:00 isn't offered
+    }
+
+    [Fact]
+    public async Task A_booking_moves_to_a_free_time_and_the_move_is_audited()
+    {
+        var w = await WorldAsync();
+        await BookAsync(w, w.Karim, w.Main, At(10));
+        var id = await IdAtAsync(w, At(10));
+        var uow = new UnitOfWork(w.Db);
+
+        var result = await Reservations(w, new AuditTrail(uow, new NoContext())).MoveReservationAsync(id, w.Branch, Sat, At(11), 1);
+
+        Assert.True(result.IsSuccess);
+        var moved = await w.Db.Reservations.AsNoTracking().SingleAsync(r => r.Id == id);
+        Assert.Equal((w.Branch, At(11)), (moved.ClinicId, moved.ReservationTime));
+        Assert.True(await w.Db.AuditLogs.AnyAsync(a => a.Action == AuditActions.ReservationMoved && a.EntityId == id));
+    }
+
+    [Fact]
+    public async Task A_booking_cannot_move_onto_another_booking_or_outside_the_hours()
+    {
+        var w = await WorldAsync();
+        await BookAsync(w, w.Karim, w.Main, At(10));
+        await BookAsync(w, w.Karim, w.Main, At(11));
+        var id = await IdAtAsync(w, At(10));
+
+        Assert.Contains("already has a booking", (await Reservations(w).MoveReservationAsync(id, w.Main, Sat, At(11, 15), 1)).Errors.First());
+        Assert.Contains("outside", (await Reservations(w).MoveReservationAsync(id, w.Main, Sat, At(15), 1)).Errors.First());
+    }
+
+    [Fact]
+    public async Task Cancelled_or_checked_in_bookings_cannot_be_moved()
+    {
+        var w = await WorldAsync();
+        await BookAsync(w, w.Karim, w.Main, At(10), status: "Cancelled");
+        await BookAsync(w, w.Mona, w.Main, At(10));
+        var checkedIn = await w.Db.Reservations.SingleAsync(r => r.DoctorId == w.Mona);
+        checkedIn.QueueStatus = PatientQueueStatus.Waiting;
+        await w.Db.SaveChangesAsync();
+
+        Assert.False((await Reservations(w).MoveReservationAsync(await w.Db.Reservations.Where(r => r.DoctorId == w.Karim).Select(r => r.Id).SingleAsync(), w.Main, Sat, At(11), 1)).IsSuccess);
+        Assert.False((await Reservations(w).MoveReservationAsync(checkedIn.Id, w.Main, Sat, At(11), 1)).IsSuccess);
+        Assert.NotNull((await Service(w).GetMoveAsync(checkedIn.Id, null, null)).Data!.NotMovable);
     }
 }

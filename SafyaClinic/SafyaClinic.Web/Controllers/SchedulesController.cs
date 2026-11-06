@@ -78,7 +78,7 @@ public class SchedulesController : BaseController
         {
             var result = await _schedules.SetDateChangeAsync(doctorId, clinicId, dto, CurrentUserId);
             if (result.IsSuccess) Success(result.Message);
-            else Error(string.Join(" ", result.Errors));
+            else { Error(string.Join(" ", result.Errors)); NoteStrandedBookings(result.Errors); }
         }
         return RedirectToAction(nameof(Edit), new { doctorId, clinicId });
     }
@@ -91,7 +91,7 @@ public class SchedulesController : BaseController
 
         var result = await _schedules.RemoveDateChangeAsync(doctorId, clinicId, date, CurrentUserId);
         if (result.IsSuccess) Success(result.Message);
-        else Error(string.Join(" ", result.Errors));
+        else { Error(string.Join(" ", result.Errors)); NoteStrandedBookings(result.Errors); }
         return RedirectToAction(nameof(Edit), new { doctorId, clinicId });
     }
 
@@ -115,6 +115,7 @@ public class SchedulesController : BaseController
                 return await BackAsync();
             }
             ApplyErrors(result);
+            NoteStrandedBookings(result.Errors);
         }
 
         var view = await _schedules.GetAsync(doctorId, clinicId);

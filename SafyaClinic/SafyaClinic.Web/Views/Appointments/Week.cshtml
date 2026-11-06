@@ -1,0 +1,83 @@
+@model SafyaClinic.Web.Models.WeekPageModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@{
+    ViewData["Title"] = T["Week"].Value;
+    string Short(DateTime d) => $"{T[d.DayOfWeek.ToString()].Value} {d.ToString("dd MMM", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+@* P2c: a clinic's week (Saturday first): per doctor and day, bookings and free times; each cell opens that day. *@
+<h1>@T["Week"]</h1>
+
+<app-filter-bar label="@T["Choose the week, clinic and visit"].Value" submit-text="@T["Show"].Value">
+    <div class="app-filter-bar__field">
+        <label for="weekDate" class="form-label">@T["Date"]</label>
+        <input type="date" id="weekDate" name="date" class="form-control" value="@Model.Start.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="app-filter-bar__field">
+        <label for="weekClinic" class="form-label">@T["Clinic"]</label>
+        <select id="weekClinic" name="clinicId" class="form-select">
+            @foreach (var c in Model.Clinics)
+            {
+                <option value="@c.Id" selected="@(c.Id == Model.ClinicId)">@c.Name</option>
+            }
+        </select>
+    </div>
+    <div class="app-filter-bar__field">
+        <label for="weekType" class="form-label">@T["Visit"]</label>
+        <select id="weekType" name="treatmentTypeId" class="form-select">
+            @foreach (var t in Model.TreatmentTypes)
+            {
+                <option value="@t.Id" selected="@(t.Id == Model.TreatmentTypeId)">@t.TypeName (@T["{0} minutes", t.DurationMinutes])</option>
+            }
+        </select>
+    </div>
+</app-filter-bar>
+
+<nav class="d-flex flex-wrap gap-2 mb-3" aria-label="@T["Other weeks"]">
+    <a class="btn btn-sm btn-outline-secondary" asp-action="Week" asp-route-date="@Model.Start.AddDays(-7).ToString("yyyy-MM-dd")" asp-route-clinicId="@Model.ClinicId" asp-route-treatmentTypeId="@Model.TreatmentTypeId">@T["Previous week"]</a>
+    <a class="btn btn-sm btn-outline-secondary" asp-action="Week" asp-route-clinicId="@Model.ClinicId" asp-route-treatmentTypeId="@Model.TreatmentTypeId">@T["This week"]</a>
+    <a class="btn btn-sm btn-outline-secondary" asp-action="Week" asp-route-date="@Model.Start.AddDays(7).ToString("yyyy-MM-dd")" asp-route-clinicId="@Model.ClinicId" asp-route-treatmentTypeId="@Model.TreatmentTypeId">@T["Next week"]</a>
+    <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-route-clinicId="@Model.ClinicId" asp-route-treatmentTypeId="@Model.TreatmentTypeId">@T["Day view"]</a>
+</nav>
+
+@if (Model.Doctors.Count == 0)
+{
+    <p class="text-muted">@T["No doctor can be booked in this clinic this week."]</p>
+}
+else
+{
+    <app-table caption="@T["Week"].Value" caption-hidden="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Doctor"]</th>
+                @foreach (var d in Model.Days)
+                {
+                    <th scope="col">@Short(d.Date)</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var doctor in Model.Doctors)
+            {
+                <tr>
+                    <th scope="row" dir="auto">@doctor.Name</th>
+                    @foreach (var d in Model.Days)
+                    {
+                        var col = d.Doctors.FirstOrDefault(x => x.DoctorId == doctor.Id);
+                        <td>
+                            @if (col is null)
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                            else
+                            {
+                                <a asp-action="Index" asp-route-date="@d.Date.ToString("yyyy-MM-dd")" asp-route-clinicId="@Model.ClinicId" asp-route-treatmentTypeId="@Model.TreatmentTypeId">
+                                    @T["{0} booked", col.Bookings.Count] · @T["{0} free", col.FreeStarts.Count]<span class="visually-hidden">, @doctor.Name, @Short(d.Date)</span>
+                                </a>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </app-table>
+}

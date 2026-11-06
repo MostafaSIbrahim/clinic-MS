@@ -15,3 +15,9 @@ public sealed record DoctorDayDto(
 public sealed record AppointmentDayDto(
     DateTime Date, int ClinicId, string ClinicName, bool ClinicHasHours, int VisitMinutes,
     IReadOnlyList<DoctorDayDto> Doctors, IReadOnlyList<string> NotHere);
+
+/// <summary>P2c: moving a booking: where it is now, and the doctor's free times on the chosen date and clinic.</summary>
+public sealed record MoveOptionsDto(
+    int ReservationId, string PatientName, int DoctorId, string DoctorName,
+    int CurrentClinicId, string CurrentClinicName, DateTime CurrentDate, TimeSpan CurrentTime, int DurationMinutes,
+    DateTime Date, int ClinicId, string ClinicName, IReadOnlyList<TimeSpan> FreeStarts, string? NotMovable);

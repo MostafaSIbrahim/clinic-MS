@@ -1,0 +1,68 @@
+@model SafyaClinic.Web.Models.MovePageModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@{
+    ViewData["Title"] = T["Move booking"].Value;
+    var o = Model.Options;
+    string Hm(TimeSpan t) => t.ToString("hh\\:mm");
+    string DayName(DateTime d) => $"{T[d.DayOfWeek.ToString()].Value} {d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}";
+}
+@* P2c: move a booking to another free time of the same doctor; the server re-checks the time. *@
+<h1>@T["Move booking"] #@o.ReservationId</h1>
+
+<dl class="app-booking-summary mb-3">
+    <div><dt>@T["Patient"]</dt><dd dir="auto">@o.PatientName</dd></div>
+    <div><dt>@T["Doctor"]</dt><dd dir="auto">@o.DoctorName</dd></div>
+    <div><dt>@T["Now"]</dt><dd>@DayName(o.CurrentDate) @Hm(o.CurrentTime) · <span dir="auto">@o.CurrentClinicName</span></dd></div>
+    <div><dt>@T["Length"]</dt><dd>@T["{0} minutes", o.DurationMinutes]</dd></div>
+</dl>
+
+@if (o.NotMovable is not null)
+{
+    <div class="alert alert-warning" role="status">@T["Only upcoming bookings that haven't been checked in can be moved."]</div>
+}
+else
+{
+    <app-filter-bar label="@T["Choose the new day and clinic"].Value" submit-text="@T["Show"].Value" clear-url="@Url.Action("Move", new { id = o.ReservationId })">
+        <div class="app-filter-bar__field">
+            <label for="moveDate" class="form-label">@T["Date"]</label>
+            <input type="date" id="moveDate" name="date" class="form-control" value="@o.Date.ToString("yyyy-MM-dd")" min="@Clock.Today.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="app-filter-bar__field">
+            <label for="moveClinic" class="form-label">@T["Clinic"]</label>
+            <select id="moveClinic" name="clinicId" class="form-select">
+                @foreach (var c in Model.Clinics)
+                {
+                    <option value="@c.Id" selected="@(c.Id == o.ClinicId)">@c.Name</option>
+                }
+            </select>
+        </div>
+    </app-filter-bar>
+
+    <h2 class="h5">@DayName(o.Date) · <span dir="auto">@o.ClinicName</span></h2>
+    @if (o.FreeStarts.Count == 0)
+    {
+        <p class="text-muted" role="status">@T["No free times that day."]</p>
+    }
+    else
+    {
+        <p class="text-muted small">@T["Choose the new time:"]</p>
+        <ul class="app-free-times list-unstyled">
+            @foreach (var start in o.FreeStarts)
+            {
+                <li>
+                    <form asp-action="Move" method="post" class="d-inline">
+                        <input type="hidden" name="id" value="@o.ReservationId" />
+                        <input type="hidden" name="clinicId" value="@o.ClinicId" />
+                        <input type="hidden" name="date" value="@o.Date.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" name="time" value="@Hm(start)" />
+                        <button type="submit" class="app-slot" data-confirm="@T["Move the booking to {0} {1}?", DayName(o.Date), Hm(start)]">@Hm(start)</button>
+                    </form>
+                </li>
+            }
+        </ul>
+    }
+}
+
+<p class="mt-3">
+    <a asp-controller="Reservations" asp-action="Details" asp-route-id="@o.ReservationId">@T["Back to the reservation"]</a>
+</p>

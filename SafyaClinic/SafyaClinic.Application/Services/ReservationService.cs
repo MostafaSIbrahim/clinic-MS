@@ -20,11 +20,15 @@ public class ReservationService : IReservationService
     private readonly IPermissionStore _permissions;
     private readonly IClinicClock _clock;
 
-    public ReservationService(IUnitOfWork uow, IPermissionStore permissions, IClinicClock? clock = null)
+    private readonly SafyaClinic.Application.Common.Auditing.IAuditTrail? _audit;
+
+    public ReservationService(IUnitOfWork uow, IPermissionStore permissions, IClinicClock? clock = null,
+        SafyaClinic.Application.Common.Auditing.IAuditTrail? audit = null)
     {
         _uow = uow;
         _permissions = permissions;
         _clock = clock ?? ClinicClock.Cairo;
+        _audit = audit;
     }
     // ── S7 rule helpers (F4b: permissions) ───────────────────
     private Task<IReadOnlySet<string>> PermissionsAsync(int userId) =>
@@ -59,6 +63,55 @@ public class ReservationService : IReservationService
         {
             return ServiceResult<ReservationDto>.Failure(
                 "Another booking for this doctor is being saved. Try again in a moment.");
+        }
+    }
+
+    /// <summary>
+    /// P2c: moves an upcoming, not-yet-checked-in booking to another time (and optionally another clinic) for
+    /// the same doctor. Same checks as booking, under the doctor's lock; the move is audited with from and to.
+    /// </summary>
+    public async Task<ServiceResult> MoveReservationAsync(int reservationId, int clinicId, DateTime date, TimeSpan time, int actingUserId)
+    {
+        var r = await _uow.Reservations.Query()
+            .Where(x => x.Id == reservationId)
+            .Select(x => new { x.DoctorId, x.ClinicId, x.ReservationDate, x.ReservationTime, x.DurationMinutes, x.QueueStatus, Status = x.Status.StatusName })
+            .FirstOrDefaultAsync();
+        if (r is null)
+            return ServiceResult.Failure("Reservation not found.");
+        if (r.Status is "Completed" or "Cancelled" or "NoShow" || r.QueueStatus != PatientQueueStatus.NotCheckedIn)
+            return ServiceResult.Failure("Only upcoming bookings that haven't been checked in can be moved.");
+        if (r.ClinicId == clinicId && r.ReservationDate.Date == date.Date && r.ReservationTime == time)
+            return ServiceResult.Failure("The booking is already at that time.");
+
+        try
+        {
+            return await _uow.ExecuteDoctorBookingAsync(
+                r.DoctorId,
+                async () =>
+                {
+                    var problem = await BookingProblemAsync(r.DoctorId, clinicId, date.Date, time, r.DurationMinutes, excludeReservationId: reservationId);
+                    if (problem is not null)
+                        return ServiceResult.Failure(problem);
+
+                    var entity = await _uow.Reservations.Query(asNoTracking: false).FirstAsync(x => x.Id == reservationId);
+                    entity.ClinicId = clinicId;
+                    entity.ReservationDate = date.Date;
+                    entity.ReservationTime = time;
+                    entity.UpdatedAt = DateTime.UtcNow;
+                    if (_audit is not null)
+                        await _audit.RecordAsync(SafyaClinic.Application.Common.Auditing.AuditActions.ReservationMoved, "Reservation", reservationId, new
+                        {
+                            fromClinicId = r.ClinicId, from = $"{r.ReservationDate:yyyy-MM-dd} {r.ReservationTime:hh\\:mm}",
+                            toClinicId = clinicId, to = $"{date:yyyy-MM-dd} {time:hh\\:mm}",
+                        }, actingUserId);
+                    await _uow.SaveChangesAsync();
+                    return ServiceResult.Success($"Booking moved to {date:dd MMM yyyy} {time:hh\\:mm}.");
+                },
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult.Failure("Another booking for this doctor is being saved. Try again in a moment.");
         }
     }
 

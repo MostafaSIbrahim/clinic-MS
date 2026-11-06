@@ -26,6 +26,16 @@ namespace SafyaClinic.Web.Controllers
         protected void Success(string message) =>
             TempData["Success"] = message;
 
+        // P2c: bookings a calendar change would strand ("#41 Sat …"), so the page can link each to Move.
+        protected void NoteStrandedBookings(IEnumerable<string> errors)
+        {
+            var ids = errors
+                .SelectMany(e => System.Text.RegularExpressions.Regex.Matches(e, @"#(\d+) ").Select(m => m.Groups[1].Value))
+                .Distinct()
+                .ToList();
+            if (ids.Count > 0) TempData["StrandedBookings"] = string.Join(",", ids);
+        }
+
         protected void Error(string message) =>
             TempData["Error"] = message;
 

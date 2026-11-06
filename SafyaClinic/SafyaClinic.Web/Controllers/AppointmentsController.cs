@@ -112,6 +112,65 @@ public class AppointmentsController : BaseController
         return await ShowBookAsync(form) ?? RedirectToAction(nameof(Index));
     }
 
+    // ── Week (P2c) ────────────────────────────────────────────────
+
+    [HttpGet]
+    [RequirePermission(Permissions.Reservations.View)]
+    public async Task<IActionResult> Week(DateTime? date, int? clinicId, int? treatmentTypeId)
+    {
+        var clinics = (await _clinics.GetAllAsync(includeInactive: false)).Data?.ToList() ?? new();
+        var types = (await _reservations.GetTreatmentTypesAsync()).Data?.ToList() ?? new();
+        var clinic = clinics.FirstOrDefault(c => c.Id == clinicId) ?? clinics.FirstOrDefault();
+        var type = types.FirstOrDefault(t => t.Id == treatmentTypeId) ?? types.FirstOrDefault();
+
+        // The clinic week starts on Saturday.
+        var day = (date ?? _clock.Today).Date;
+        var start = day.AddDays(-(((int)day.DayOfWeek + 1) % 7));
+
+        var days = new List<SafyaClinic.Application.Scheduling.AppointmentDayDto>();
+        if (clinic is not null)
+            for (var d = 0; d < 7; d++)
+            {
+                var result = await _appointments.GetDayAsync(start.AddDays(d), clinic.Id, VisitMinutes(type?.DurationMinutes));
+                if (result.Data is not null) days.Add(result.Data);
+            }
+
+        var doctors = days.SelectMany(x => x.Doctors).Select(x => (x.DoctorId, x.DoctorName))
+            .Distinct().OrderBy(x => x.DoctorName).ToList();
+        return View(new WeekPageModel
+        {
+            Start = start, Days = days, Doctors = doctors, Clinics = clinics, TreatmentTypes = types,
+            ClinicId = clinic?.Id, TreatmentTypeId = type?.Id,
+        });
+    }
+
+    // ── Move (P2c) ────────────────────────────────────────────────
+
+    [HttpGet]
+    [RequirePermission(Permissions.Reservations.Manage)]
+    public async Task<IActionResult> Move(int id, DateTime? date, int? clinicId)
+    {
+        var options = await _appointments.GetMoveAsync(id, date, clinicId);
+        if (!options.IsSuccess) { Error(options.Errors.First()); return RedirectToAction(nameof(Index)); }
+        var clinics = (await _clinics.GetAllAsync(includeInactive: false)).Data?.ToList() ?? new();
+        return View(new MovePageModel { Options = options.Data!, Clinics = clinics });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Reservations.Manage)]
+    public async Task<IActionResult> Move(int id, int clinicId, DateTime date, TimeSpan time)
+    {
+        var result = await _reservations.MoveReservationAsync(id, clinicId, date.Date, time, CurrentUserId);
+        if (result.IsSuccess)
+        {
+            Success(result.Message);
+            return RedirectToAction(nameof(Index), new { date = date.ToString("yyyy-MM-dd"), clinicId });
+        }
+        Error(string.Join(" ", result.Errors));
+        return RedirectToAction(nameof(Move), new { id, date = date.ToString("yyyy-MM-dd"), clinicId });
+    }
+
     private async Task<IActionResult?> ShowBookAsync(BookAppointmentForm form)
     {
         var doctor = (await _users.GetDoctorsAsync()).Data?.FirstOrDefault(d => d.Id == form.DoctorId);

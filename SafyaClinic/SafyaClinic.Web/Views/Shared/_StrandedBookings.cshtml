@@ -1,0 +1,31 @@
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@* P2c: the bookings a calendar or clinic-hours change would leave outside the hours, each with a Move link. *@
+@{
+    var ids = (TempData["StrandedBookings"] as string)?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+    var canMove = await Can.HasAsync(Permissions.Reservations.Manage);
+}
+@if (ids.Length > 0)
+{
+    <div class="alert alert-warning" role="status">
+        <p class="mb-2"><strong>@T["Move or cancel these bookings first, then save again:"]</strong></p>
+        <ul class="list-inline mb-0">
+            @foreach (var id in ids)
+            {
+                <li class="list-inline-item mb-1">
+                    @if (canMove)
+                    {
+                        <a class="btn btn-sm btn-outline-primary" asp-controller="Appointments" asp-action="Move" asp-route-id="@id">@T["Move booking #{0}", id]</a>
+                    }
+                    else
+                    {
+                        <span>#@id</span>
+                    }
+                </li>
+            }
+        </ul>
+        @if (!canMove)
+        {
+            <p class="small mb-0 mt-2">@T["Ask the front desk to move them."]</p>
+        }
+    </div>
+}
