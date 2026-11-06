@@ -3,10 +3,17 @@
     ViewData["Title"] = "New Prescription";
 }
 
+@if (ViewData["PatientId"] is int patientId)
+{
+    @await Component.InvokeAsync("PatientHeader", new { patientId })
+}
+
 <h4>New Prescription</h4>
 <p class="text-muted">Record #@Model.RecordId</p>
 
-<form asp-action="CreatePrescription" method="post">
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<form asp-action="CreatePrescription" method="post" data-allergy-check>
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="RecordId" />
 
@@ -22,6 +29,8 @@
         <i class="bi bi-plus-lg"></i> Add Drug
     </button>
 
+    <partial name="_AllergyConfirm" model="@(ViewData["AllergyMatches"] as IReadOnlyList<SafyaClinic.Application.Clinical.AllergyMatch>)" />
+
     <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary">Save Prescription</button>
         <a asp-action="Details" asp-route-id="@Model.RecordId" class="btn btn-outline-secondary">Cancel</a>
@@ -32,8 +41,10 @@
     <script src="~/js/medicine-autocomplete.js"></script>
     <script>
         let drugIndex = 0;
+        // P5a: after a refusal (e.g. an allergy warning) the drugs already entered are shown again.
+        const enteredDrugs = @Json.Serialize(Model.Items);
 
-        function addDrugRow() {
+        function addDrugRow(drug) {
             const container = document.getElementById('drugs-container');
             const html = `
                         <div class="card mb-2 drug-row" data-index="${drugIndex}">
@@ -69,12 +80,21 @@
             container.insertAdjacentHTML('beforeend', html);
 
             const newRow = container.lastElementChild;
+            if (drug) {
+                ['medicationName', 'dosage', 'frequency', 'duration', 'routeOfAdministration', 'instructions'].forEach(function (key) {
+                    const pascal = key.charAt(0).toUpperCase() + key.slice(1);
+                    const field = newRow.querySelector('[name$=".' + pascal + '"]');
+                    const value = drug[key] ?? drug[pascal];
+                    if (field && value) field.value = value;
+                });
+            }
             const medInput = newRow.querySelector('.med-input');
             const dosageInput = newRow.querySelector('.dosage-input');
             attachMedicineAutocomplete(medInput, {
                 minLength: 2,
                 onSelect: function (med) {
                     medInput.value = med.tradeName;
+                    medInput.dispatchEvent(new Event('input', { bubbles: true }));   // P5a: re-check allergies
                     if (dosageInput && !dosageInput.value) {
                         dosageInput.value = med.strength || '';
                             }
@@ -84,6 +104,8 @@
                     drugIndex++;
                 }
 
-                addDrugRow();
+                if (enteredDrugs && enteredDrugs.length) enteredDrugs.forEach(function (d) { addDrugRow(d); });
+                else addDrugRow();
     </script>
+    <script src="~/js/allergy-check.js" asp-append-version="true"></script>
 }

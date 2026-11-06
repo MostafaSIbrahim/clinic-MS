@@ -615,4 +615,16 @@
   <data name="Check in" xml:space="preserve">
     <value>تسجيل الحضور</value>
   </data>
+  <data name="Allergy warning" xml:space="preserve">
+    <value>تحذير حساسية</value>
+  </data>
+  <data name="{0} matches the recorded allergy: {1}" xml:space="preserve">
+    <value>{0} يطابق حساسية مسجّلة: {1}</value>
+  </data>
+  <data name="Check with the patient before prescribing. To prescribe it anyway, tick the box; this is recorded." xml:space="preserve">
+    <value>راجع المريض قبل وصف الدواء. لوصفه رغم ذلك ضع علامة في المربع، وسيُسجَّل ذلك.</value>
+  </data>
+  <data name="Prescribe anyway" xml:space="preserve">
+    <value>وصف الدواء رغم ذلك</value>
+  </data>
 </root>

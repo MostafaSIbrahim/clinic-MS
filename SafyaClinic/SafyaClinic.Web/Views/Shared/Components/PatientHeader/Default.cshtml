@@ -9,7 +9,8 @@
     }.Where(part => part is not null));
 }
 @* F8: patient header. Allergies always show, in words, with an icon and colour (never colour alone). *@
-<section class="app-patient-header mb-3" aria-label="@T["Patient"]">
+@* P5a: data-patient-allergies feeds the prescribing forms' allergy warning (allergy-check.js). *@
+<section class="app-patient-header mb-3" aria-label="@T["Patient"]" data-patient-allergies="@Model.Allergies">
     <div class="app-patient-header__identity">
         <a class="app-patient-header__name" asp-controller="Patients" asp-action="Details" asp-route-id="@Model.Id">@Model.Name</a>
         <dl class="app-patient-header__facts">

@@ -8,6 +8,7 @@ using global::SafyaClinic.Domain.Enums;
 using global::SafyaClinic.Domain.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SafyaClinic.Application.Common.Auditing;
+using SafyaClinic.Application.Clinical;
 
 public class PatientRecordService : IPatientRecordService
 {
@@ -442,13 +443,22 @@ public class PatientRecordService : IPatientRecordService
             .Where(r => r.Id == request.RecordId)
             .Select(r => new
             {
-                r.IsLocked
+                r.IsLocked,
+                r.Patient.Allergies
             })
             .FirstOrDefaultAsync();
         if (record is null) 
             return ServiceResult<PrescriptionDetailDto>.Failure("Record not found.");
         if (record.IsLocked) 
             return ServiceResult<PrescriptionDetailDto>.Failure("Record is locked.");
+
+        // P5a: a medicine matching a recorded allergy needs the doctor's explicit confirmation, which is audited.
+        var allergyMatches = AllergyCheck.Matches(record.Allergies, request.Items.Select(i => i.MedicationName));
+        if (allergyMatches.Count > 0 && !request.ConfirmAllergyOverride)
+            return ServiceResult<PrescriptionDetailDto>.Failure(AllergyCheck.Warning(allergyMatches));
+        if (allergyMatches.Count > 0)
+            await _audit.RecordAsync(AuditActions.AllergyOverride, "PatientRecord", request.RecordId,
+                new { overrides = allergyMatches.Select(m => new { medication = m.Medication, allergy = m.Allergy }) });
 
         var prescription = new Prescription
         {
@@ -529,7 +539,8 @@ public class PatientRecordService : IPatientRecordService
                 .Where(p => p.Id == prescriptionId)
                 .Select(p => new
                 {
-                    IsRecordLocked = p.Record.IsLocked
+                    IsRecordLocked = p.Record.IsLocked,
+                    p.Record.Patient.Allergies
                 })
                 .FirstOrDefaultAsync();
 
@@ -538,6 +549,14 @@ public class PatientRecordService : IPatientRecordService
 
         if (prescriptionState.IsRecordLocked)
             return ServiceResult<PrescriptionItemDto>.Failure("Record is locked.");
+
+        // P5a: a medicine matching a recorded allergy needs the doctor's explicit confirmation, which is audited.
+        var allergyMatches = AllergyCheck.Matches(prescriptionState.Allergies, new[] { request.MedicationName });
+        if (allergyMatches.Count > 0 && !request.ConfirmAllergyOverride)
+            return ServiceResult<PrescriptionItemDto>.Failure(AllergyCheck.Warning(allergyMatches));
+        if (allergyMatches.Count > 0)
+            await _audit.RecordAsync(AuditActions.AllergyOverride, "Prescription", prescriptionId,
+                new { overrides = allergyMatches.Select(m => new { medication = m.Medication, allergy = m.Allergy }) });
         var item = new PrescriptionItem
         {
             PrescriptionId = prescriptionId,
@@ -858,6 +877,7 @@ public class PatientRecordService : IPatientRecordService
             {
                 Id = r.Id,
                 PatientId = r.PatientId,
+                PatientAllergies = r.Patient.Allergies,
                 PatientName = $"{r.Patient.FirstName} {r.Patient.LastName}",
                 DoctorId = r.DoctorId,
                 DoctorName = r.Doctor.FullName,
@@ -904,6 +924,8 @@ public class PatientRecordService : IPatientRecordService
                 IsPrinted = p.IsPrinted,
                 CreatedAt = p.CreatedAt,
 
+                PatientId = p.Record.PatientId,
+                PatientAllergies = p.Record.Patient.Allergies,
                 PatientName = $"{p.Record.Patient.FirstName} {p.Record.Patient.LastName}",
                 PatientAge = p.Record.Patient.DateOfBirth.HasValue
                     ? (int)((DateTime.Today - p.Record.Patient.DateOfBirth.Value)

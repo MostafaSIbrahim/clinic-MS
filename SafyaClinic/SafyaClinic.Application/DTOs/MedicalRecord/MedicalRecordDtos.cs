@@ -6,6 +6,8 @@ public class PatientRecordDto
 {
     public int Id { get; init; }
     public int PatientId { get; init; }
+    /// <summary>P5a: filled when one record is loaded, for the allergy check when prescribing.</summary>
+    public string? PatientAllergies { get; init; }
     public string PatientName { get; init; } = string.Empty;
     public int DoctorId { get; init; }
     public string DoctorName { get; init; } = string.Empty;
@@ -138,6 +140,8 @@ public class PrescriptionItemRequest
 
 public class AddPrescriptionItemRequest
 {
+    /// <summary>P5a: the doctor confirmed adding a medicine that matches a recorded allergy.</summary>
+    public bool ConfirmAllergyOverride { get; init; }
     public int PrescriptionId { get; init; }
     public string MedicationName { get; init; } = string.Empty;
     public string? Dosage { get; init; }
@@ -161,6 +165,9 @@ public class PrescriptionListDto
 // ── Prescription Detail (full view with all drugs) ────────────
 public class PrescriptionDetailDto
 {
+    /// <summary>P5a: for the patient header and the allergy check.</summary>
+    public int PatientId { get; init; }
+    public string? PatientAllergies { get; init; }
     public int Id { get; init; }
     public int RecordId { get; init; }
     public DateTime PrescriptionDate { get; init; }
@@ -207,6 +214,8 @@ public class AttachmentDto
 // ── Requests ──────────────────────────────────────────────────
 public class CreatePrescriptionRequest
 {
+    /// <summary>P5a: the doctor confirmed adding medicines that match a recorded allergy.</summary>
+    public bool ConfirmAllergyOverride { get; init; }
     public int RecordId { get; init; }
     public string? Notes { get; init; }
     public List<PrescriptionItemRequest> Items { get; init; } = new();
