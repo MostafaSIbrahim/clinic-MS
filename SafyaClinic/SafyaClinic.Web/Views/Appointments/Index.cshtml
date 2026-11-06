@@ -1,0 +1,134 @@
+@model SafyaClinic.Web.Models.AppointmentsPageModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@{
+    ViewData["Title"] = T["Appointments"].Value;
+    var day = Model.Day;
+    string Hm(TimeSpan t) => t.ToString("hh\\:mm");
+    string DayName(DateTime d) => $"{T[d.DayOfWeek.ToString()].Value} {d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}";
+    object Route(DateTime d) => new { date = d.ToString("yyyy-MM-dd"), clinicId = Model.ClinicId, treatmentTypeId = Model.TreatmentTypeId };
+    var noClinics = new EmptyStateModel(T["No active clinics yet."].Value, Icon: "bi-hospital");
+    var nobody = new EmptyStateModel(T["No doctor can be booked in this clinic on this day."].Value, Icon: "bi-calendar-x",
+        Hint: T["Check the clinic's opening hours and the doctors' calendars."].Value);
+}
+@* P2b: a clinic's day: each doctor's bookings and free times. Clicking a free time books it. *@
+<h1>@T["Appointments"]</h1>
+
+<app-filter-bar label="@T["Choose the day, clinic and visit"].Value" submit-text="@T["Show"].Value">
+    <div class="app-filter-bar__field">
+        <label for="apptDate" class="form-label">@T["Date"]</label>
+        <input type="date" id="apptDate" name="date" class="form-control" value="@Model.Date.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="app-filter-bar__field">
+        <label for="apptClinic" class="form-label">@T["Clinic"]</label>
+        <select id="apptClinic" name="clinicId" class="form-select">
+            @foreach (var c in Model.Clinics)
+            {
+                <option value="@c.Id" selected="@(c.Id == Model.ClinicId)">@c.Name</option>
+            }
+        </select>
+    </div>
+    <div class="app-filter-bar__field">
+        <label for="apptType" class="form-label">@T["Visit"]</label>
+        <select id="apptType" name="treatmentTypeId" class="form-select">
+            @foreach (var t in Model.TreatmentTypes)
+            {
+                <option value="@t.Id" selected="@(t.Id == Model.TreatmentTypeId)">@t.TypeName (@T["{0} minutes", t.DurationMinutes])</option>
+            }
+        </select>
+    </div>
+</app-filter-bar>
+
+<nav class="d-flex flex-wrap gap-2 mb-3" aria-label="@T["Other days"]">
+    <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-all-route-data="@ToDict(Route(Model.Date.AddDays(-1)))">@T["Previous day"]</a>
+    <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-all-route-data="@ToDict(Route(Clock.Today))">@T["Today"]</a>
+    <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-all-route-data="@ToDict(Route(Model.Date.AddDays(1)))">@T["Next day"]</a>
+</nav>
+
+@if (day is null)
+{
+    <partial name="_AppEmpty" model="noClinics" />
+}
+else
+{
+    <h2 class="h5">@DayName(day.Date) · <span dir="auto">@day.ClinicName</span></h2>
+    @if (!day.ClinicHasHours)
+    {
+        <div class="alert alert-info" role="status">@T["This clinic hasn't set its opening hours yet, so its doctors can be booked at any time of the day."]</div>
+    }
+
+    @if (day.Doctors.Count == 0)
+    {
+        <partial name="_AppEmpty" model="nobody" />
+    }
+    else
+    {
+        <div class="app-day">
+            @foreach (var doctor in day.Doctors)
+            {
+                <app-card title="@doctor.DoctorName" level="3" icon="bi-person-badge">
+                    <p class="text-muted small mb-2">
+                        @(doctor.Hours.Count == 0 ? T["Not bookable here today"].Value : string.Join(", ", doctor.Hours.Select(h => h.ToString())))
+                        @if (!doctor.HasCalendar) { <span>· @T["clinic hours (no calendar)"]</span> }
+                    </p>
+
+                    <h4 class="h6">@T["Booked"]</h4>
+                    @if (doctor.Bookings.Count == 0)
+                    {
+                        <p class="text-muted small">@T["No bookings yet."]</p>
+                    }
+                    else
+                    {
+                        <ol class="app-day__bookings list-unstyled">
+                            @foreach (var b in doctor.Bookings)
+                            {
+                                <li>
+                                    <span class="app-day__time">@Hm(b.Start)–@Hm(b.End)</span>
+                                    <a asp-controller="Reservations" asp-action="Details" asp-route-id="@b.ReservationId" dir="auto">@b.PatientName</a>
+                                    <partial name="_StatusBadge" model="b.Status" />
+                                </li>
+                            }
+                        </ol>
+                    }
+
+                    <h4 class="h6">@T["Free times"]</h4>
+                    @if (doctor.FreeStarts.Count == 0)
+                    {
+                        <p class="text-muted small mb-0">@T["No free times that day."]</p>
+                    }
+                    else
+                    {
+                        <ul class="app-free-times list-unstyled mb-0">
+                            @foreach (var start in doctor.FreeStarts)
+                            {
+                                <li>
+                                    @if (Model.CanBook)
+                                    {
+                                        <a class="app-slot" asp-action="Book" asp-route-doctorId="@doctor.DoctorId" asp-route-clinicId="@day.ClinicId"
+                                           asp-route-date="@day.Date.ToString("yyyy-MM-dd")" asp-route-time="@Hm(start)" asp-route-treatmentTypeId="@Model.TreatmentTypeId">@Hm(start)<span class="visually-hidden"> @T["with {0}", doctor.DoctorName]</span></a>
+                                    }
+                                    else
+                                    {
+                                        <span>@Hm(start)</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </app-card>
+            }
+        </div>
+    }
+
+    @if (day.NotHere.Count > 0)
+    {
+        <p class="text-muted mt-3 mb-0">@T["Not in this clinic on this day:"] <span dir="auto">@string.Join(", ", day.NotHere)</span></p>
+    }
+}
+
+@functions {
+    private static IDictionary<string, string> ToDict(object values) =>
+        new Microsoft.AspNetCore.Routing.RouteValueDictionary(values)
+            .Where(p => p.Value is not null)
+            .ToDictionary(p => p.Key, p => p.Value!.ToString()!);
+}

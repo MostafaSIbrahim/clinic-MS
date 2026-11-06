@@ -453,4 +453,85 @@
   <data name="No free times that day." xml:space="preserve">
     <value>لا توجد أوقات متاحة في ذلك اليوم.</value>
   </data>
+  <data name="Appointments" xml:space="preserve">
+    <value>المواعيد</value>
+  </data>
+  <data name="No doctor can be booked in this clinic on this day." xml:space="preserve">
+    <value>لا يوجد طبيب متاح للحجز في هذه العيادة في هذا اليوم.</value>
+  </data>
+  <data name="Check the clinic's opening hours and the doctors' calendars." xml:space="preserve">
+    <value>راجع مواعيد عمل العيادة وتقويمات الأطباء.</value>
+  </data>
+  <data name="Choose the day, clinic and visit" xml:space="preserve">
+    <value>اختر اليوم والعيادة ونوع الزيارة</value>
+  </data>
+  <data name="Show" xml:space="preserve">
+    <value>عرض</value>
+  </data>
+  <data name="Visit" xml:space="preserve">
+    <value>الزيارة</value>
+  </data>
+  <data name="Other days" xml:space="preserve">
+    <value>أيام أخرى</value>
+  </data>
+  <data name="Previous day" xml:space="preserve">
+    <value>اليوم السابق</value>
+  </data>
+  <data name="Today" xml:space="preserve">
+    <value>اليوم</value>
+  </data>
+  <data name="Next day" xml:space="preserve">
+    <value>اليوم التالي</value>
+  </data>
+  <data name="This clinic hasn't set its opening hours yet, so its doctors can be booked at any time of the day." xml:space="preserve">
+    <value>لم تحدد هذه العيادة مواعيد عملها بعد، لذلك يمكن الحجز مع أطبائها في أي وقت من اليوم.</value>
+  </data>
+  <data name="Not bookable here today" xml:space="preserve">
+    <value>غير متاح للحجز هنا اليوم</value>
+  </data>
+  <data name="clinic hours (no calendar)" xml:space="preserve">
+    <value>مواعيد العيادة (بدون تقويم)</value>
+  </data>
+  <data name="Booked" xml:space="preserve">
+    <value>المحجوز</value>
+  </data>
+  <data name="No bookings yet." xml:space="preserve">
+    <value>لا توجد حجوزات بعد.</value>
+  </data>
+  <data name="with {0}" xml:space="preserve">
+    <value>مع {0}</value>
+  </data>
+  <data name="Not in this clinic on this day:" xml:space="preserve">
+    <value>ليسوا في هذه العيادة في هذا اليوم:</value>
+  </data>
+  <data name="Book appointment" xml:space="preserve">
+    <value>حجز موعد</value>
+  </data>
+  <data name="Time" xml:space="preserve">
+    <value>الوقت</value>
+  </data>
+  <data name="Type at least 2 characters of the name or phone, then choose the patient." xml:space="preserve">
+    <value>اكتب حرفين على الأقل من الاسم أو الهاتف ثم اختر المريض.</value>
+  </data>
+  <data name="Register a new patient" xml:space="preserve">
+    <value>تسجيل مريض جديد</value>
+  </data>
+  <data name="Treatment" xml:space="preserve">
+    <value>العلاج</value>
+  </data>
+  <data name="Choose a treatment" xml:space="preserve">
+    <value>اختر العلاج</value>
+  </data>
+  <data name="The price and the visit length come from the treatment." xml:space="preserve">
+    <value>السعر ومدة الزيارة يحددهما نوع العلاج.</value>
+  </data>
+  <data name="Reason" xml:space="preserve">
+    <value>السبب</value>
+  </data>
+  <data name="Notes" xml:space="preserve">
+    <value>ملاحظات</value>
+  </data>
+  <data name="Book" xml:space="preserve">
+    <value>احجز</value>
+  </data>
 </root>

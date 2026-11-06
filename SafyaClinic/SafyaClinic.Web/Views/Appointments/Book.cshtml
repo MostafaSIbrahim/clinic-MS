@@ -1,0 +1,73 @@
+@model SafyaClinic.Web.Models.BookAppointmentForm
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Application.DTOs.MedicalRecord
+@{
+    ViewData["Title"] = T["Book appointment"].Value;
+    var types = ViewBag.TreatmentTypes as IEnumerable<TreatmentTypeDto> ?? Enumerable.Empty<TreatmentTypeDto>();
+}
+@* P2b: booking a free time. Doctor, clinic, date and time come from the time clicked; the price from the treatment. *@
+<h1>@T["Book appointment"]</h1>
+
+<form asp-action="Book" method="post" id="reservationCreateForm" class="app-form-narrow" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="DoctorId" />
+    <input type="hidden" asp-for="ClinicId" />
+    <input type="hidden" asp-for="Date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+    <input type="hidden" asp-for="Time" value="@Model.Time.ToString("hh\\:mm")" />
+
+    <dl class="app-booking-summary">
+        <div><dt>@T["Doctor"]</dt><dd dir="auto">@Model.DoctorName</dd></div>
+        <div><dt>@T["Clinic"]</dt><dd dir="auto">@Model.ClinicName</dd></div>
+        <div><dt>@T["Date"]</dt><dd>@T[Model.Date.DayOfWeek.ToString()] @Model.Date.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</dd></div>
+        <div><dt>@T["Time"]</dt><dd>@Model.Time.ToString("hh\\:mm")</dd></div>
+    </dl>
+
+    <div class="mb-3">
+        <label for="patientSearchInput" class="form-label">@T["Patient"] <span class="app-required" aria-hidden="true">*</span></label>
+        <input type="hidden" asp-for="PatientId" id="patientIdHidden" />
+        <div class="position-relative">
+            <input type="text" id="patientSearchInput" class="form-control" value="@Model.PatientName"
+                   autocomplete="off" required data-search-url="@Url.Content("~/api/patients/search")"
+                   aria-describedby="patientSearchHelp patientSearchStatus" />
+        </div>
+        <small id="patientSearchHelp" class="text-muted">@T["Type at least 2 characters of the name or phone, then choose the patient."]</small>
+        <div id="patientSearchStatus" class="small mt-1" role="status" aria-live="polite"></div>
+        <span asp-validation-for="PatientId" class="app-field-error"></span>
+        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="registerPatientButton"
+                data-popup-url="@Url.Action("Create", "Patients", new { popup = true })">
+            <i class="bi bi-person-plus" aria-hidden="true"></i> @T["Register a new patient"]
+        </button>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="TreatmentTypeId" class="form-label">@T["Treatment"] <span class="app-required" aria-hidden="true">*</span></label>
+        <select asp-for="TreatmentTypeId" class="form-select" required>
+            <option value="">@T["Choose a treatment"]</option>
+            @foreach (var t in types)
+            {
+                <option value="@t.Id">@t.TypeName · @T["{0} minutes", t.DurationMinutes]@(t.DefaultCost is decimal cost ? $" · {cost.ToMoney()}" : "")</option>
+            }
+        </select>
+        <small class="text-muted">@T["The price and the visit length come from the treatment."]</small>
+        <span asp-validation-for="TreatmentTypeId" class="app-field-error"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Reason" class="form-label">@T["Reason"]</label>
+        <input asp-for="Reason" class="form-control" dir="auto" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="Notes" class="form-label">@T["Notes"]</label>
+        <textarea asp-for="Notes" class="form-control" rows="2" dir="auto"></textarea>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">@T["Book"]</button>
+        <a asp-action="Index" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" asp-route-clinicId="@Model.ClinicId" asp-route-treatmentTypeId="@Model.TreatmentTypeId"
+           class="btn btn-outline-secondary">@T["Cancel"]</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/reservation-patient-picker.js" asp-append-version="true"></script>
+}
