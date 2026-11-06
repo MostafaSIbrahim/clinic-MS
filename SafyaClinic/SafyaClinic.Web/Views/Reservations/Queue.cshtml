@@ -61,12 +61,14 @@
             </div>
         </form>
 
-        @if (Model.CanViewAllQueues)
-        {
-            <div class="small text-muted mt-2">
-                Queue data updates when you refresh. Actions are checked against the latest saved state.
-            </div>
-        }
+        @* P4: the queue refreshes itself every 30 seconds unless paused or someone is typing. *@
+        <div class="d-flex flex-wrap align-items-center gap-2 small text-muted mt-2" data-auto-refresh="30">
+            <span>Updates every 30 seconds. Actions are checked against the latest saved state.</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-auto-refresh-toggle aria-pressed="true"
+                    data-on="Auto-update on" data-off="Auto-update paused">
+                <i class="bi bi-arrow-repeat" aria-hidden="true"></i> <span data-label>Auto-update on</span>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -188,6 +190,7 @@ else
 }
 
 @section Scripts {
+    <script src="~/js/auto-refresh.js" asp-append-version="true"></script>
     <script>
         document.getElementById('queueClinic')
             .addEventListener('change', function() {

@@ -393,7 +393,7 @@ public class ReservationsController : BaseController
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permissions.Reservations.CheckIn)]
-    public async Task<IActionResult> CheckIn(int id)
+    public async Task<IActionResult> CheckIn(int id, string? returnUrl = null)
     {
         var result = await _reservationService.CheckInAsync(id);
 
@@ -405,6 +405,10 @@ public class ReservationsController : BaseController
         {
             Error(result.Errors.FirstOrDefault() ?? "Check-in failed.");
         }
+
+        // P4: checking in from the Appointments day returns there; never to another site.
+        if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
 
         return RedirectToAction(nameof(Details), new { id });
     }

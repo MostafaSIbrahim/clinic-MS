@@ -4,6 +4,9 @@
 @{
     ViewData["Title"] = T["Appointments"].Value;
     var day = Model.Day;
+    var canCheckIn = await Can.HasAsync(Permissions.Reservations.CheckIn);
+    var canSeeQueue = await Can.HasAsync(Permissions.Reservations.ViewQueue);
+    var here = Context.Request.Path + Context.Request.QueryString;
     string Hm(TimeSpan t) => t.ToString("hh\\:mm");
     string DayName(DateTime d) => $"{T[d.DayOfWeek.ToString()].Value} {d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)}";
     object Route(DateTime d) => new { date = d.ToString("yyyy-MM-dd"), clinicId = Model.ClinicId, treatmentTypeId = Model.TreatmentTypeId, patientId = Model.PatientId };
@@ -65,7 +68,13 @@
 }
 else
 {
-    <h2 class="h5">@DayName(day.Date) · <span dir="auto">@day.ClinicName</span></h2>
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <h2 class="h5 mb-0">@DayName(day.Date) · <span dir="auto">@day.ClinicName</span></h2>
+        @if (day.Date == Clock.Today && canSeeQueue)
+        {
+            <a class="btn btn-sm btn-outline-primary" asp-controller="Reservations" asp-action="Queue" asp-route-clinicId="@day.ClinicId">@T["Open the queue"]</a>
+        }
+    </div>
     @if (!day.ClinicHasHours)
     {
         <div class="alert alert-info" role="status">@T["This clinic hasn't set its opening hours yet, so its doctors can be booked at any time of the day."]</div>
@@ -103,6 +112,18 @@ else
                                     @if (b.Status != "Cancelled")
                                     {
                                         <partial name="_PaymentStatusToggle" model="(b.ReservationId, b.PatientId, b.IsPaid)" />
+                                    }
+                                    @* P4: today's arrivals are checked in here; afterwards the queue status shows. *@
+                                    @if (b.QueueStatus != SafyaClinic.Domain.Enums.PatientQueueStatus.NotCheckedIn)
+                                    {
+                                        <partial name="_StatusBadge" model="b.QueueStatus.ToString()" />
+                                    }
+                                    else if (canCheckIn && day.Date == Clock.Today && b.Status is not ("Completed" or "Cancelled" or "NoShow"))
+                                    {
+                                        <form asp-controller="Reservations" asp-action="CheckIn" asp-route-id="@b.ReservationId" method="post" class="d-inline">
+                                            <input type="hidden" name="returnUrl" value="@here" />
+                                            <button type="submit" class="btn btn-sm btn-success">@T["Check in"]<span class="visually-hidden"> @b.PatientName</span></button>
+                                        </form>
                                     }
                                     @if (Model.CanBook && b.Status is not ("Completed" or "Cancelled" or "NoShow"))
                                     {

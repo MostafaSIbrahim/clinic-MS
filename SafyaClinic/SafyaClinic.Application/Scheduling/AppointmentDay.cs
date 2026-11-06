@@ -7,6 +7,9 @@ public sealed record AppointmentDto(int ReservationId, TimeSpan Start, int Durat
     public int PatientId { get; init; }
     public bool IsPaid { get; init; }
 
+    /// <summary>P4: where the patient is today (not checked in, waiting, in consultation, finished, left).</summary>
+    public Domain.Enums.PatientQueueStatus QueueStatus { get; init; }
+
     public TimeSpan End => Start + TimeSpan.FromMinutes(DurationMinutes);
 }
 
