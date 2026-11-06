@@ -54,7 +54,7 @@
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Request Selected Analyses</button>
                 @if (Model.RecordId.HasValue)
                 {
-                    <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@Model.RecordId.Value" class="btn btn-outline-secondary">Cancel</a>
+                    <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@Model.RecordId.Value" asp-route-tab="lab" class="btn btn-outline-secondary">Cancel</a>
                 }
                 else
                 {

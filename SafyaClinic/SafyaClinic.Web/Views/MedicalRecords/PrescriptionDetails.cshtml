@@ -16,7 +16,7 @@
         <a asp-action="PrintPrescription" asp-route-prescriptionId="@Model.Id" target="_blank" class="btn btn-sm btn-primary">
             <i class="bi bi-printer me-1"></i>Print
         </a>
-        <a asp-action="Details" asp-route-id="@Model.RecordId" class="btn btn-sm btn-outline-secondary">Back to Record</a>
+        <a asp-action="Details" asp-route-id="@Model.RecordId" asp-route-tab="prescriptions" class="btn btn-sm btn-outline-secondary">Back to Record</a>
     </div>
 </div>
 

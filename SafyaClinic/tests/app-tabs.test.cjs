@@ -9,7 +9,15 @@ const source = fs.readFileSync(path.join(__dirname, '../SafyaClinic.Web/wwwroot/
 const sandbox = {};
 sandbox.globalThis = sandbox;
 vm.runInNewContext(source, sandbox);
-const { target } = sandbox.AppTabs;
+const { target, keyOf } = sandbox.AppTabs;
+
+test('P5b: the tab key comes from its panel id', () => {
+    assert.equal(keyOf('visit-treatments-panel', 'visit'), 'treatments');
+    assert.equal(keyOf('visit-lab-panel', 'visit'), 'lab');
+    assert.equal(keyOf('other-lab-panel', 'visit'), null);
+    assert.equal(keyOf('visit--panel', 'visit'), null);
+    assert.equal(keyOf(null, 'visit'), null);
+});
 
 test('arrow keys move to the next and previous tab and wrap around', () => {
     assert.equal(target(0, 3, 'ArrowRight', false), 1);
