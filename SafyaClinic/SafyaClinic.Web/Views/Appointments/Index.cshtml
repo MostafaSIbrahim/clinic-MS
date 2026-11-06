@@ -87,6 +87,10 @@ else
                                     <span class="app-day__time">@Hm(b.Start)–@Hm(b.End)</span>
                                     <a asp-controller="Reservations" asp-action="Details" asp-route-id="@b.ReservationId" dir="auto">@b.PatientName</a>
                                     <partial name="_StatusBadge" model="b.Status" />
+                                    @if (b.Status != "Cancelled")
+                                    {
+                                        <partial name="_PaymentStatusToggle" model="(b.ReservationId, b.PatientId, b.IsPaid)" />
+                                    }
                                     @if (Model.CanBook && b.Status is not ("Completed" or "Cancelled" or "NoShow"))
                                     {
                                         <a class="btn btn-sm btn-link p-0" asp-action="Move" asp-route-id="@b.ReservationId">@T["Move"]<span class="visually-hidden"> @b.PatientName</span></a>

@@ -64,10 +64,10 @@ public class ReservationsController : BaseController
         return View(result.IsSuccess ? result.Data : null);
     }
 
-    public async Task<IActionResult> Today([FromQuery] int? doctorId)
+    public IActionResult Today([FromQuery] int? doctorId)
     {
-        var result = await _reservationService.GetTodayReservationsAsync(doctorId);
-        return View(result.IsSuccess ? result.Data : Enumerable.Empty<ReservationSummaryDto>());
+        // P2d: today's list is the Appointments day (bookings, coverage and free times in one place).
+        return RedirectToAction("Index", "Appointments");
     }
 
     [HttpGet]
@@ -162,36 +162,13 @@ public class ReservationsController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Board(
+    public IActionResult Board(
     DateTime? date,
     int? doctorId,
     int? clinicId)
     {
-        if (!ModelState.IsValid)
-            return BadRequest("Invalid board filters.");
-
-        var result = await _reservationService.GetAppointmentBoardAsync(
-            date ?? DateTime.Today, doctorId, clinicId);
-
-        if (!result.IsSuccess || result.Data is null)
-        {
-            Error(result.Errors.FirstOrDefault() ?? "Could not load appointment board.");
-            return RedirectToAction(nameof(Index));
-        }
-
-        var doctors = await _userService.GetDoctorsAsync();
-        var clinics = await _clinicService.GetAllAsync(includeInactive: true);
-
-        if (!doctors.IsSuccess || !clinics.IsSuccess)
-        {
-            Error("Could not load board filters.");
-            return RedirectToAction(nameof(Index));
-        }
-
-        ViewBag.Doctors = doctors.Data;
-        ViewBag.Clinics = clinics.Data;
-
-        return View(result.Data);
+        // P2d: the appointment board is replaced by the Appointments screen (same day and clinic).
+        return RedirectToAction("Index", "Appointments", new { date = date?.ToString("yyyy-MM-dd"), clinicId });
     }
     public async Task<IActionResult> Details(int id)
     {

@@ -19,13 +19,13 @@ public class NavigationCatalogueTests
 
     [Theory]
     [InlineData(SystemGroups.AdminRole,
-        "Dashboard|Patients|Appointments|Appointment Board|Reservations|Doctor Queues|Follow-ups|My schedule|Doctor schedules|Analysis|Nutrition|Payment Dashboard|Payment Reports|Users|Permission Groups|Lookups|Patient Sources|Clinics")]
+        "Dashboard|Patients|Appointments|Reservations|Doctor Queues|Follow-ups|My schedule|Doctor schedules|Analysis|Nutrition|Payment Dashboard|Payment Reports|Users|Permission Groups|Lookups|Patient Sources|Clinics")]
     [InlineData(SystemGroups.DoctorRole,
-        "Dashboard|Patients|Appointments|Appointment Board|Reservations|My Queue|Follow-ups|My schedule|Analysis|Payment Reports")]
+        "Dashboard|Patients|Appointments|Reservations|My Queue|Follow-ups|My schedule|Analysis|Payment Reports")]
     [InlineData(SystemGroups.NutritionistRole,
-        "Dashboard|Patients|Appointments|Appointment Board|Reservations|My schedule|Nutrition")]
+        "Dashboard|Patients|Appointments|Reservations|My schedule|Nutrition")]
     [InlineData(SystemGroups.ReceptionRole,
-        "Dashboard|Patients|Appointments|Appointment Board|Reservations|Doctor Queues|Follow-ups|Unpaid Payments|Payment Reports")]
+        "Dashboard|Patients|Appointments|Reservations|Doctor Queues|Follow-ups|Unpaid Payments|Payment Reports")]
     [InlineData(SystemGroups.ReceptionAdminRole,
         "Dashboard|Doctor schedules|Unpaid Payments|Payment Reports")]
     public void Each_group_sees_its_pages(string role, string expected)
@@ -43,7 +43,6 @@ public class NavigationCatalogueTests
 
     [Theory]
     [InlineData("Reservations", "Queue", "Doctor Queues")]
-    [InlineData("Reservations", "Board", "Appointment Board")]
     [InlineData("Reservations", "Edit", "Reservations")]
     [InlineData("Payments", "Report", "Payment Reports")]
     [InlineData("Payments", "Collect", "Payment Dashboard")]

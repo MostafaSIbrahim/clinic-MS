@@ -44,7 +44,11 @@ public class AppointmentsService : IAppointmentsService
             {
                 r.DoctorId,
                 Booking = new AppointmentDto(r.Id, r.ReservationTime, r.DurationMinutes,
-                    r.Patient.FirstName + " " + r.Patient.LastName, r.Status.StatusName),
+                    r.Patient.FirstName + " " + r.Patient.LastName, r.Status.StatusName)
+                {
+                    PatientId = r.PatientId,
+                    IsPaid = r.IsPaid,
+                },
             })
             .ToListAsync();
 
