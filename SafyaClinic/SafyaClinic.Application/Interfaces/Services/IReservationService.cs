@@ -14,6 +14,9 @@ public interface IReservationService
 
     // Treatment types (used when booking a reservation to derive the price)
     Task<ServiceResult<IEnumerable<TreatmentTypeDto>>> GetTreatmentTypesAsync(string? category = null);
+
+    /// <summary>P2c: moves an upcoming booking to another free time of the same doctor (optionally another clinic).</summary>
+    Task<ServiceResult> MoveReservationAsync(int reservationId, int clinicId, DateTime date, TimeSpan time, int actingUserId);
     Task<ServiceResult<List<ReservationDto>>> GetPatientReservationHistoryAsync(int patientId);
     Task<ServiceResult<AppointmentBoardDto>> GetAppointmentBoardAsync(
     DateTime date,

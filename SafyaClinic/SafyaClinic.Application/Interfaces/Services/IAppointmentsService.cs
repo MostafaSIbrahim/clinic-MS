@@ -11,4 +11,7 @@ public interface IAppointmentsService
     /// their free start times for a visit of this length; the other clinicians by name.
     /// </summary>
     Task<ServiceResult<AppointmentDayDto>> GetDayAsync(DateTime date, int clinicId, int visitMinutes);
+
+    /// <summary>P2c: a booking and the doctor's free times for it on a date in a clinic (the booking's own time doesn't count as taken).</summary>
+    Task<ServiceResult<MoveOptionsDto>> GetMoveAsync(int reservationId, DateTime? date, int? clinicId);
 }

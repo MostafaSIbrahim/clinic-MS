@@ -16,6 +16,8 @@
 <h1 class="mb-1">@T["Calendar"]: <span dir="auto">@Model.DoctorName</span>, <span dir="auto">@Model.ClinicName</span></h1>
 <p class="text-muted">@T["Times are clinic time and must be inside the clinic's opening hours."]</p>
 
+<partial name="_StrandedBookings" />
+
 <form asp-action="Edit" asp-route-doctorId="@Model.DoctorId" asp-route-clinicId="@Model.ClinicId" method="post" novalidate data-schedule-form>
     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 

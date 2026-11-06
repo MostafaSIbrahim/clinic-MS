@@ -33,3 +33,22 @@ public class BookAppointmentForm
     public string ClinicName { get; set; } = string.Empty;
     public string? PatientName { get; set; }
 }
+
+/// <summary>P2c: moving a booking.</summary>
+public class MovePageModel
+{
+    public MoveOptionsDto Options { get; init; } = null!;
+    public IReadOnlyList<ClinicDto> Clinics { get; init; } = Array.Empty<ClinicDto>();
+}
+
+/// <summary>P2c: a clinic's week: per doctor and day, how many bookings and free times.</summary>
+public class WeekPageModel
+{
+    public DateTime Start { get; init; }
+    public IReadOnlyList<AppointmentDayDto> Days { get; init; } = Array.Empty<AppointmentDayDto>();
+    public IReadOnlyList<(int Id, string Name)> Doctors { get; init; } = Array.Empty<(int, string)>();
+    public IReadOnlyList<ClinicDto> Clinics { get; init; } = Array.Empty<ClinicDto>();
+    public IReadOnlyList<TreatmentTypeDto> TreatmentTypes { get; init; } = Array.Empty<TreatmentTypeDto>();
+    public int? ClinicId { get; init; }
+    public int? TreatmentTypeId { get; init; }
+}

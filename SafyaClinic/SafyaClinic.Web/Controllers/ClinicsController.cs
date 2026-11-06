@@ -117,6 +117,7 @@ public class ClinicsController : BaseController
             if (result.IsSuccess)
                 return RedirectWithSuccess(result.Message, nameof(Details), routeValues: new { id });
             ApplyErrors(result);
+            NoteStrandedBookings(result.Errors);
         }
 
         var clinic = await _clinicService.GetByIdAsync(id);

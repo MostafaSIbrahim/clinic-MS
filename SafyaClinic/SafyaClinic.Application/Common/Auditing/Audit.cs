@@ -32,6 +32,7 @@ public static class AuditActions
     public const string ClinicHoursChanged = "Clinic.HoursChanged";   // P1
     public const string ScheduleChanged = "Schedule.Changed";         // P1
     public const string ScheduleDateChanged = "Schedule.DateChanged"; // P1c
+    public const string ReservationMoved = "Reservation.Moved";       // P2c
 }
 
 /// <summary>Who is acting and from where — supplied by the web layer.</summary>

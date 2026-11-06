@@ -534,4 +534,73 @@
   <data name="Book" xml:space="preserve">
     <value>احجز</value>
   </data>
+  <data name="Move or cancel these bookings first, then save again:" xml:space="preserve">
+    <value>انقل هذه الحجوزات أو ألغها أولًا ثم احفظ مرة أخرى:</value>
+  </data>
+  <data name="Move booking #{0}" xml:space="preserve">
+    <value>نقل الحجز رقم {0}</value>
+  </data>
+  <data name="Ask the front desk to move them." xml:space="preserve">
+    <value>اطلب من الاستقبال نقلها.</value>
+  </data>
+  <data name="Move booking" xml:space="preserve">
+    <value>نقل حجز</value>
+  </data>
+  <data name="Now" xml:space="preserve">
+    <value>الآن</value>
+  </data>
+  <data name="Length" xml:space="preserve">
+    <value>المدة</value>
+  </data>
+  <data name="Only upcoming bookings that haven't been checked in can be moved." xml:space="preserve">
+    <value>يمكن نقل الحجوزات القادمة التي لم يُسجَّل حضورها فقط.</value>
+  </data>
+  <data name="Choose the new day and clinic" xml:space="preserve">
+    <value>اختر اليوم والعيادة الجديدين</value>
+  </data>
+  <data name="Choose the new time:" xml:space="preserve">
+    <value>اختر الوقت الجديد:</value>
+  </data>
+  <data name="Move the booking to {0} {1}?" xml:space="preserve">
+    <value>نقل الحجز إلى {0} {1}؟</value>
+  </data>
+  <data name="Back to the reservation" xml:space="preserve">
+    <value>العودة إلى الحجز</value>
+  </data>
+  <data name="Week" xml:space="preserve">
+    <value>الأسبوع</value>
+  </data>
+  <data name="Choose the week, clinic and visit" xml:space="preserve">
+    <value>اختر الأسبوع والعيادة ونوع الزيارة</value>
+  </data>
+  <data name="Other weeks" xml:space="preserve">
+    <value>أسابيع أخرى</value>
+  </data>
+  <data name="Previous week" xml:space="preserve">
+    <value>الأسبوع السابق</value>
+  </data>
+  <data name="This week" xml:space="preserve">
+    <value>هذا الأسبوع</value>
+  </data>
+  <data name="Next week" xml:space="preserve">
+    <value>الأسبوع التالي</value>
+  </data>
+  <data name="Day view" xml:space="preserve">
+    <value>عرض اليوم</value>
+  </data>
+  <data name="No doctor can be booked in this clinic this week." xml:space="preserve">
+    <value>لا يوجد طبيب متاح للحجز في هذه العيادة هذا الأسبوع.</value>
+  </data>
+  <data name="{0} booked" xml:space="preserve">
+    <value>{0} محجوز</value>
+  </data>
+  <data name="{0} free" xml:space="preserve">
+    <value>{0} متاح</value>
+  </data>
+  <data name="Week view" xml:space="preserve">
+    <value>عرض الأسبوع</value>
+  </data>
+  <data name="Move" xml:space="preserve">
+    <value>نقل</value>
+  </data>
 </root>

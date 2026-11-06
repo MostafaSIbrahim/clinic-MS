@@ -71,4 +71,45 @@ public class AppointmentsService : IAppointmentsService
         return ServiceResult<AppointmentDayDto>.Success(
             new AppointmentDayDto(date, clinicId, clinic, hours.Count > 0, visitMinutes, columns, notHere));
     }
+
+    public async Task<ServiceResult<MoveOptionsDto>> GetMoveAsync(int reservationId, DateTime? date, int? clinicId)
+    {
+        var r = await _uow.Reservations.Query()
+            .Where(x => x.Id == reservationId)
+            .Select(x => new
+            {
+                x.DoctorId, DoctorName = x.Doctor.FullName, x.ClinicId, ClinicName = x.Clinic.Name,
+                x.ReservationDate, x.ReservationTime, x.DurationMinutes, x.QueueStatus, Status = x.Status.StatusName,
+                PatientName = x.Patient.FirstName + " " + x.Patient.LastName,
+            })
+            .FirstOrDefaultAsync();
+        if (r is null)
+            return ServiceResult<MoveOptionsDto>.Failure("Reservation not found.");
+
+        var notMovable = r.Status is "Completed" or "Cancelled" or "NoShow" || r.QueueStatus != PatientQueueStatus.NotCheckedIn
+            ? "Only upcoming bookings that haven't been checked in can be moved."
+            : null;
+
+        var targetDate = (date ?? r.ReservationDate).Date;
+        var targetClinicId = clinicId ?? r.ClinicId;
+        var targetClinic = await _uow.Clinics.Query().Where(c => c.Id == targetClinicId && c.IsActive).Select(c => c.Name).FirstOrDefaultAsync();
+        if (targetClinic is null)
+            return ServiceResult<MoveOptionsDto>.Failure("Clinic not found.");
+
+        IReadOnlyList<TimeSpan> free = Array.Empty<TimeSpan>();
+        if (notMovable is null)
+        {
+            var inputs = await CalendarData.InputsAsync(_uow, r.DoctorId, targetClinicId, targetDate);
+            var bookings = (await CalendarData.BookingsAsync(_uow, targetDate, r.DoctorId, clinicId: null, toDate: targetDate))
+                .Where(b => b.ReservationId != reservationId);
+            free = Availability.FreeStarts(targetDate, r.DurationMinutes, inputs, bookings, _clock.Now)
+                .Where(t => !(targetDate == r.ReservationDate.Date && targetClinicId == r.ClinicId && t == r.ReservationTime))
+                .ToList();
+        }
+
+        return ServiceResult<MoveOptionsDto>.Success(new MoveOptionsDto(
+            reservationId, r.PatientName, r.DoctorId, r.DoctorName,
+            r.ClinicId, r.ClinicName, r.ReservationDate.Date, r.ReservationTime, r.DurationMinutes,
+            targetDate, targetClinicId, targetClinic, free, notMovable));
+    }
 }

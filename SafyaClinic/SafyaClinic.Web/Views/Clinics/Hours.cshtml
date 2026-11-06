@@ -10,6 +10,8 @@
     <p class="text-muted mb-0">@T["Up to three periods a day, in clinic time. Leave a day empty when the clinic is closed."]</p>
 </div>
 
+<partial name="_StrandedBookings" />
+
 <form asp-action="Hours" asp-route-id="@Model.ClinicId" method="post" novalidate>
     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
     <input type="hidden" asp-for="ClinicName" />
