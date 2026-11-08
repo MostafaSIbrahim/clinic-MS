@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.Billing;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.DTOs.Reservation;
@@ -193,7 +194,7 @@ public class ReservationService : IReservationService
             // A reservation whose treatment type genuinely costs nothing (e.g. a nutrition
             // "Follow-up" visit already covered by the enrollment package) has nothing left
             // to collect, so it's considered paid the moment it's created.
-            IsPaid = totalAmount.HasValue && totalAmount.Value == 0m,
+            IsPaid = Coverage.IsCovered(totalAmount, 0m),   // P6: nothing paid yet, so only a 0 price is covered
             TotalAmount = totalAmount,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = createdBy
@@ -493,10 +494,8 @@ public class ReservationService : IReservationService
                 r.Status.StatusName != "Cancelled" &&
                 r.Status.StatusName != "NoShow" &&
                 (r.TotalAmount ?? 0m) >
-                    (r.Payments
-                        .Where(p =>
-                            p.Status == PaymentStatusEnum.Active ||
-                            p.Status == PaymentStatusEnum.Cancelled)
+                    (r.Payments.AsQueryable()
+                        .Where(Coverage.Covers)
                         .Sum(p => (decimal?)p.Amount) ?? 0m)
             }).ToListAsync();
 
@@ -815,6 +814,14 @@ public class ReservationService : IReservationService
         var reason = request.Reason?.Trim();
         var notes = request.Notes?.Trim();
 
+        // P6 (F12): "Covered" is recomputed from the payments for the new price. Before, a price
+        // change kept the old value, so a visit could show Covered while a balance was due.
+        var covered = await _uow.Payments.Query()
+            .Where(p => p.ReservationId == reservationId)
+            .Where(Coverage.Covers)
+            .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+        var isPaid = Coverage.IsCovered(totalAmount, covered);
+
         var affectedRows = await _uow.Reservations
             .Query()
             .Where(x =>
@@ -833,11 +840,7 @@ public class ReservationService : IReservationService
                 .SetProperty(x => x.Reason, reason)
                 .SetProperty(x => x.Notes, notes)
                 .SetProperty(x => x.TotalAmount, totalAmount)
-                .SetProperty(
-                    x => x.IsPaid,
-                    x => totalAmount.HasValue && totalAmount.Value == 0m
-                        ? true
-                        : x.IsPaid)
+                .SetProperty(x => x.IsPaid, isPaid)
                 .SetProperty(x => x.UpdatedAt, (DateTime?)updatedAtUtc));
 
         if (affectedRows == 0)

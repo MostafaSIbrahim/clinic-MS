@@ -31,7 +31,7 @@
     </div>
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card bg-amber-soft">
-            <div class="small opacity-75">Written Off (Cancelled)</div>
+            <div class="small opacity-75">Written Off</div>
             <div class="fs-3 fw-bold">@Model.TotalWrittenOff.ToMoney()</div>
         </div>
     </div>
@@ -182,9 +182,15 @@
                                 {
                                     <span class="badge bg-success">Active</span>
                                 }
+                                else if (p.Status == "WrittenOff")
+                                {
+                                    @* P6: an excused balance; covers the visit, not revenue. *@
+                                    <span class="badge bg-warning text-dark" title="@p.CancellationReason">Written off</span>
+                                }
                                 else
                                 {
-                                    <span class="badge bg-secondary" title="@p.CancellationReason">Cancelled</span>
+                                    @* P6: a void; doesn't cover the visit. *@
+                                    <span class="badge bg-secondary" title="@p.CancellationReason">Cancelled (void)</span>
                                 }
                             </td>
                             <td>@p.CollectorName</td>
