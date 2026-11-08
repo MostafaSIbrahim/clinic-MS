@@ -27,6 +27,9 @@ public interface IReservationService
     int reservationId,
     int currentUserId,
     bool isAdmin);
+    /// <summary>Today's Pending or Confirmed bookings that haven't been checked in yet (the queue's "Not arrived yet").</summary>
+    Task<List<DoctorQueueEntryDto>> GetExpectedArrivalsAsync(int? clinicId = null, int? doctorId = null);
+
     Task<ServiceResult<List<DoctorQueueEntryDto>>> GetDoctorQueueAsync(
     int? clinicId = null,
     int? doctorId = null);

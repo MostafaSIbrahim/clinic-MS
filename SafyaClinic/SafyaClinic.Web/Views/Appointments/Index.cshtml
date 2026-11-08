@@ -125,7 +125,9 @@ else
                                             <button type="submit" class="btn btn-sm btn-success">@T["Check in"]<span class="visually-hidden"> @b.PatientName</span></button>
                                         </form>
                                     }
-                                    @if (Model.CanBook && b.Status is not ("Completed" or "Cancelled" or "NoShow"))
+                                    @* Moving is only for bookings that haven't been checked in (the server enforces the same rule). *@
+                                    @if (Model.CanBook && b.Status is not ("Completed" or "Cancelled" or "NoShow")
+                                         && b.QueueStatus == SafyaClinic.Domain.Enums.PatientQueueStatus.NotCheckedIn)
                                     {
                                         <a class="btn btn-sm btn-link p-0" asp-action="Move" asp-route-id="@b.ReservationId">@T["Move"]<span class="visually-hidden"> @b.PatientName</span></a>
                                     }

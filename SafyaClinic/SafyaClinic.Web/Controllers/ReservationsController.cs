@@ -141,6 +141,7 @@ public class ReservationsController : BaseController
             DoctorId = doctorId,
             CanViewAllQueues = canViewAllQueues,
             Entries = queueResult.Data,
+            NotArrived = await _reservationService.GetExpectedArrivalsAsync(clinicId, doctorId),
 
             Clinics = clinics
                 .OrderBy(c => c.Name)
