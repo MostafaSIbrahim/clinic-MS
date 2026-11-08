@@ -627,4 +627,124 @@
   <data name="Prescribe anyway" xml:space="preserve">
     <value>وصف الدواء رغم ذلك</value>
   </data>
+  <data name="Medical record #{0}" xml:space="preserve">
+    <value>السجل الطبي رقم {0}</value>
+  </data>
+  <data name="Locked" xml:space="preserve">
+    <value>مقفل</value>
+  </data>
+  <data name="Editable" xml:space="preserve">
+    <value>قابل للتعديل</value>
+  </data>
+  <data name="Complete this visit? The reservation will be marked completed." xml:space="preserve">
+    <value>إنهاء هذه الزيارة؟ سيُسجَّل الحجز كمكتمل.</value>
+  </data>
+  <data name="Complete visit" xml:space="preserve">
+    <value>إنهاء الزيارة</value>
+  </data>
+  <data name="Back to queue" xml:space="preserve">
+    <value>العودة إلى قائمة الانتظار</value>
+  </data>
+  <data name="More actions" xml:space="preserve">
+    <value>إجراءات أخرى</value>
+  </data>
+  <data name="Back to patient" xml:space="preserve">
+    <value>العودة إلى المريض</value>
+  </data>
+  <data name="View reservation" xml:space="preserve">
+    <value>عرض الحجز</value>
+  </data>
+  <data name="Lock this record? It cannot be edited afterwards." xml:space="preserve">
+    <value>قفل هذا السجل؟ لن يمكن تعديله بعد ذلك.</value>
+  </data>
+  <data name="Lock record" xml:space="preserve">
+    <value>قفل السجل</value>
+  </data>
+  <data name="Visit sections" xml:space="preserve">
+    <value>أقسام الزيارة</value>
+  </data>
+  <data name="Edit notes" xml:space="preserve">
+    <value>تعديل الملاحظات</value>
+  </data>
+  <data name="Chief complaint" xml:space="preserve">
+    <value>الشكوى الرئيسية</value>
+  </data>
+  <data name="History" xml:space="preserve">
+    <value>التاريخ المرضي</value>
+  </data>
+  <data name="Diagnosis" xml:space="preserve">
+    <value>التشخيص</value>
+  </data>
+  <data name="Differential diagnosis" xml:space="preserve">
+    <value>التشخيص التفريقي</value>
+  </data>
+  <data name="Treatment plan" xml:space="preserve">
+    <value>خطة العلاج</value>
+  </data>
+  <data name="Follow-up date" xml:space="preserve">
+    <value>موعد المتابعة</value>
+  </data>
+  <data name="Treatments" xml:space="preserve">
+    <value>العلاجات</value>
+  </data>
+  <data name="No treatments recorded." xml:space="preserve">
+    <value>لا توجد علاجات مسجّلة.</value>
+  </data>
+  <data name="Remove this treatment?" xml:space="preserve">
+    <value>حذف هذا العلاج؟</value>
+  </data>
+  <data name="Description" xml:space="preserve">
+    <value>الوصف</value>
+  </data>
+  <data name="Cost" xml:space="preserve">
+    <value>التكلفة</value>
+  </data>
+  <data name="Add treatment" xml:space="preserve">
+    <value>إضافة علاج</value>
+  </data>
+  <data name="Prescriptions" xml:space="preserve">
+    <value>الوصفات</value>
+  </data>
+  <data name="New prescription" xml:space="preserve">
+    <value>وصفة جديدة</value>
+  </data>
+  <data name="No prescriptions yet." xml:space="preserve">
+    <value>لا توجد وصفات بعد.</value>
+  </data>
+  <data name="Prescription #{0}" xml:space="preserve">
+    <value>وصفة رقم {0}</value>
+  </data>
+  <data name="{0} drug(s)" xml:space="preserve">
+    <value>{0} دواء</value>
+  </data>
+  <data name="Details" xml:space="preserve">
+    <value>التفاصيل</value>
+  </data>
+  <data name="Print" xml:space="preserve">
+    <value>طباعة</value>
+  </data>
+  <data name="Printed" xml:space="preserve">
+    <value>مطبوعة</value>
+  </data>
+  <data name="Mark printed" xml:space="preserve">
+    <value>تعليم كمطبوعة</value>
+  </data>
+  <data name="Lab" xml:space="preserve">
+    <value>التحاليل</value>
+  </data>
+  <data name="Lab tests open on their own page; when you finish, you come back to this visit." xml:space="preserve">
+    <value>تُفتح التحاليل في صفحة مستقلة، وعند الانتهاء تعود إلى هذه الزيارة.</value>
+  </data>
+  <data name="Request lab tests" xml:space="preserve">
+    <value>طلب تحاليل</value>
+  </data>
+  <data name="No lab tests requested from this visit yet." xml:space="preserve">
+    <value>لم تُطلب تحاليل من هذه الزيارة بعد.</value>
+  </data>
+  <data name="Open" xml:space="preserve">
+    <value>فتح</value>
+  </data>
+  <data name="Back to the visit" xml:space="preserve">
+    <value>العودة إلى الزيارة</value>
+  </data>
 </root>

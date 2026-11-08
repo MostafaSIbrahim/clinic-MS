@@ -1,4 +1,5 @@
 @model IEnumerable<MedicalAnalysisDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
     ViewData["Title"] = "Analysis Request Slip";
     Layout = null;
@@ -24,6 +25,13 @@
 <body>
     <div class="no-print mb-3 d-flex gap-2">
         <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+        @if (first.RecordId is int visitRecordId)
+        {
+            @* P5b: lab tests requested from a visit return to that visit's Lab tab. *@
+            <a class="btn btn-success" asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@visitRecordId" asp-route-tab="lab">
+                <i class="bi bi-arrow-return-left"></i> @T["Back to the visit"]
+            </a>
+        }
         <a class="btn btn-outline-secondary" href="/Analysis/PatientAnalyses?patientId=@first.PatientId">Back to Patient Analyses</a>
     </div>
 

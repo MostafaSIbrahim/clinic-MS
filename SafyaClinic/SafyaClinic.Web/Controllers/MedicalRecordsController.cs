@@ -4,6 +4,7 @@ using SafyaClinic.Application.Clinical;
 using SafyaClinic.Application.DTOs.MedicalRecord;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Services.Files;
+using SafyaClinic.Web.Models;
 using SafyaClinic.Web.Security;
 using SafyaClinic.Application.Security;
 
@@ -42,8 +43,9 @@ namespace SafyaClinic.Web.Controllers
             return View(result.IsSuccess ? result.Data : Enumerable.Empty<PatientRecordDto>());
         }
 
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, string? tab = null)
         {
+            ViewBag.Tab = VisitTabs.Normalize(tab);   // P5b: the workspace opens on the requested tab
             var result = await _recordService.GetRecordByIdAsync(id);
 
             if (!result.IsSuccess || result.Data is null)
@@ -183,7 +185,7 @@ namespace SafyaClinic.Web.Controllers
         {
             var result = await _recordService.AddTreatmentAsync(recordId, model, CurrentUserId);
             if (!result.IsSuccess) Error(result.Errors.First());
-            return RedirectToAction(nameof(Details), new { id = recordId });
+            return RedirectToAction(nameof(Details), new { id = recordId, tab = VisitTabs.Treatments });
         }
 
         [HttpPost]
@@ -192,7 +194,7 @@ namespace SafyaClinic.Web.Controllers
         public async Task<IActionResult> RemoveTreatment(int treatmentId, int recordId)
         {
             await _recordService.RemoveTreatmentAsync(treatmentId);
-            return RedirectToAction(nameof(Details), new { id = recordId });
+            return RedirectToAction(nameof(Details), new { id = recordId, tab = VisitTabs.Treatments });
         }
 
         // ── Prescriptions ─────────────────────────────────────────
@@ -211,7 +213,7 @@ namespace SafyaClinic.Web.Controllers
                 if (!refused) ApplyErrors(result);
                 return await PrescriptionFormAsync(model, refused);
             }
-            return RedirectWithSuccess("Prescription created.", nameof(Details), routeValues: new { id = model.RecordId });
+            return RedirectWithSuccess("Prescription created.", nameof(Details), routeValues: new { id = model.RecordId, tab = VisitTabs.Prescriptions });
         }
         [HttpGet]
         [RequirePermission(Permissions.Records.Write)]
@@ -277,7 +279,7 @@ namespace SafyaClinic.Web.Controllers
         public async Task<IActionResult> MarkPrescriptionPrinted(int prescriptionId, int recordId)
         {
             await _recordService.MarkPrescriptionPrintedAsync(prescriptionId);
-            return RedirectToAction(nameof(Details), new { id = recordId });
+            return RedirectToAction(nameof(Details), new { id = recordId, tab = VisitTabs.Prescriptions });
         }
         // ── Attachments ───────────────────────────────────────────
 

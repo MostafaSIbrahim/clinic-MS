@@ -1289,3 +1289,118 @@ a.app-kpi:focus-visible {
     margin: 0;
     font-variant-numeric: var(--numeric-tabular);
 }
+
+/* ── P5b: consultation workspace ───────────────────────────── */
+/* The visit bar (title, Complete visit) stays in view on every tab. */
+.visit-bar {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-3) 0;
+    margin-bottom: var(--space-3);
+    background: var(--color-bg-page);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.visit-bar__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+}
+
+.visit-bar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+    .visit-bar__actions .btn,
+    #visit .btn {
+        min-height: 44px;
+    }
+
+.visit-notes {
+    display: grid;
+    grid-template-columns: minmax(9rem, 14rem) 1fr;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: 0;
+}
+
+    .visit-notes dt {
+        color: var(--color-text-muted);
+        font-weight: var(--font-weight-medium);
+    }
+
+    .visit-notes dd {
+        margin-bottom: 0;
+    }
+
+.visit-add-row {
+    display: grid;
+    grid-template-columns: 1fr 10rem auto;
+    gap: var(--space-2);
+}
+
+/* Tablet (1024 and below): tabs fill the width, the notes stack, buttons share a row. */
+@media (max-width: 1024px) {
+    #visit .app-tabs__list {
+        flex-wrap: nowrap;
+    }
+
+    #visit .app-tabs__tab {
+        flex: 1 1 0;
+        min-height: 48px;
+    }
+
+    .visit-notes {
+        grid-template-columns: 1fr;
+        gap: 0 0;
+    }
+
+        .visit-notes dd {
+            margin-bottom: var(--space-3);
+        }
+}
+
+@media (max-width: 575.98px) {
+    .visit-bar {
+        position: static;
+    }
+
+    .visit-bar__actions,
+    .visit-bar__actions > form,
+    .visit-bar__actions > .btn,
+    .visit-bar__actions > .dropdown {
+        width: 100%;
+    }
+
+        .visit-bar__actions .btn {
+            width: 100%;
+        }
+
+    .visit-add-row {
+        grid-template-columns: 1fr;
+    }
+
+    #visit .app-tabs__list {
+        flex-wrap: wrap;
+    }
+}
+
+@media print {
+    .visit-bar__actions {
+        display: none !important;
+    }
+
+    .visit-bar {
+        position: static;
+    }
+}
