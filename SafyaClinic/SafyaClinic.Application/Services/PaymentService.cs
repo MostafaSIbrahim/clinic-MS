@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.Billing;
 using SafyaClinic.Application.Common.Auditing;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Payment;
@@ -329,7 +330,7 @@ public class PaymentService : IPaymentService
             .SumAsync(p => p.Amount);
         var totalWrittenOff = await _uow.Payments.Query()
             .Where (p => p.PatientId == patientId && 
-            p.Status == PaymentStatusEnum.Cancelled)
+            p.Status == PaymentStatusEnum.WrittenOff)   // P6: cancelled payments are voids, not write-offs
             .SumAsync(p => p.Amount);
 
         var dtos = await _uow.Payments.Query()
@@ -396,10 +397,8 @@ public class PaymentService : IPaymentService
                  ClinicName = r.Clinic.Name,
                  TreatmentName = r.TreatmentType.TypeName,
                  Charge = r.TotalAmount ?? 0m,
-                 Covered = r.Payments
-                     .Where(p =>
-                         p.Status == PaymentStatusEnum.Active ||
-                         p.Status == PaymentStatusEnum.Cancelled)
+                 Covered = r.Payments.AsQueryable()
+                     .Where(Coverage.Covers)
                      .Sum(p => (decimal?)p.Amount) ?? 0m
              })
              .Where(r => r.Charge > r.Covered)
@@ -443,7 +442,7 @@ public class PaymentService : IPaymentService
             .Where(p =>
                 p.ReservationId is null &&
                 p.EnrollmentId is null &&
-                (p.Status == "Active" || p.Status == "Cancelled"))
+                Coverage.CoversStatus(p.Status))
             .Sum(p => p.Amount);
         var summary = new PatientFinancialSummaryDto
         {
@@ -520,6 +519,8 @@ public class PaymentService : IPaymentService
             return ServiceResult<PaymentDto>.Failure("Payment not found.");
         if (payment.Status == PaymentStatusEnum.Cancelled)
             return ServiceResult<PaymentDto>.Failure("Payment is already cancelled.");
+        if (payment.Status == PaymentStatusEnum.WrittenOff)
+            return ServiceResult<PaymentDto>.Failure("A write-off can't be cancelled here.");
         if (string.IsNullOrWhiteSpace(request.Reason))
             return ServiceResult<PaymentDto>.Failure("A cancellation reason is required.");
 
@@ -548,11 +549,17 @@ public class PaymentService : IPaymentService
         await _audit.RecordAsync(AuditActions.PaymentCancelled, "Payment", payment.Id,
             new { amount = oldAmount }, currentUserId);
 
-        // NOTE: Cancelling a payment writes the amount off — it is removed from "collected
-        // revenue" (excluded from Active-only totals/reports) but it does NOT reopen the
-        // patient's/reservation's due balance. We deliberately do NOT reverse
-        // enrollment.TotalPaid here, and RecalculateReservationPaidStatusAsync below treats
-        // Active + Cancelled payments as combined "coverage" so IsPaid stays true.
+        // P6: cancelling VOIDS the payment: it stops being revenue AND stops covering the visit,
+        // so the balance reopens. (Excusing a balance is a write-off, a separate action.)
+        if (payment.EnrollmentId.HasValue)
+        {
+            var enrollment = await _uow.NutritionEnrollments.GetByIdAsync(payment.EnrollmentId.Value);
+            if (enrollment is not null)
+            {
+                enrollment.TotalPaid = Math.Max(0m, enrollment.TotalPaid - oldAmount);
+                _uow.NutritionEnrollments.Update(enrollment);
+            }
+        }
         //
         // BUGFIX: persist the status change first so the AsNoTracking() query inside
         // RecalculateReservationPaidStatusAsync (which reads straight from the database)
@@ -576,6 +583,8 @@ public class PaymentService : IPaymentService
             return ServiceResult<PaymentDto>.Failure("Payment not found.");
         if (payment.Status == PaymentStatusEnum.Cancelled)
             return ServiceResult<PaymentDto>.Failure("Cannot change the amount of a cancelled payment.");
+        if (payment.Status == PaymentStatusEnum.WrittenOff)
+            return ServiceResult<PaymentDto>.Failure("Cannot change the amount of a write-off.");
         if (request.NewAmount < 0)
             return ServiceResult<PaymentDto>.Failure("Amount cannot be negative.");
         if (string.IsNullOrWhiteSpace(request.Reason))
@@ -714,7 +723,7 @@ public class PaymentService : IPaymentService
                     .Sum(p => (decimal?)p.Amount) ?? 0m,
 
                 WrittenOff = r.Payments
-                    .Where(p => p.Status == PaymentStatusEnum.Cancelled)
+                    .Where(p => p.Status == PaymentStatusEnum.WrittenOff)
                     .Sum(p => (decimal?)p.Amount) ?? 0m
             })
             .ToListAsync();
@@ -731,9 +740,8 @@ public class PaymentService : IPaymentService
                 r.QueueStatus != PatientQueueStatus.Finished)
                 continue;
 
-            var total = r.TotalAmount ?? 0m;
-
-            if (r.Paid + r.WrittenOff >= total)
+            // P6: the same rule as everywhere else (Paid = Active, WrittenOff = WrittenOff).
+            if (Coverage.Due(r.TotalAmount, r.Paid + r.WrittenOff) <= 0m)
                 continue;
 
             var dto = new UnpaidReservationDto
@@ -899,10 +907,8 @@ public class PaymentService : IPaymentService
                     r.TotalAmount,
                     r.QueueStatus,
                     StatusName = r.Status.StatusName,
-                    Covered = r.Payments
-                        .Where(p =>
-                            p.Status == PaymentStatusEnum.Active ||
-                            p.Status == PaymentStatusEnum.Cancelled)
+                    Covered = r.Payments.AsQueryable()
+                        .Where(Coverage.Covers)
                         .Sum(p => (decimal?)p.Amount) ?? 0m
                 })
                 .FirstOrDefaultAsync();
@@ -920,9 +926,7 @@ public class PaymentService : IPaymentService
             if (!isCollectible)
                 return ServiceResult<decimal>.Success(0m);
 
-            var due = Math.Max(
-                0m,
-                (reservation.TotalAmount ?? 0m) - reservation.Covered);
+            var due = Coverage.Due(reservation.TotalAmount, reservation.Covered);
 
             return ServiceResult<decimal>.Success(due);
         }
@@ -972,13 +976,11 @@ public class PaymentService : IPaymentService
 
         var reservationsToUpdate = new Dictionary<int, bool>();
 
-        // Only Active + Cancelled payments count as "coverage" — see the note in
-        // RecalculateReservationPaidStatusAsync for why Cancelled is included here.
+        // P6: the coverage rule (Active + WrittenOff) lives in Coverage.
         var coverageByReservation = await _uow.Payments
                 .Query()
-                .Where(p => p.ReservationId != null &&
-                            (p.Status == PaymentStatusEnum.Active ||
-                             p.Status == PaymentStatusEnum.Cancelled))
+                .Where(p => p.ReservationId != null)
+                .Where(Coverage.Covers)
                 .GroupBy(p => p.ReservationId!.Value)
                 .Select(g => new
                 {
@@ -998,8 +1000,7 @@ public class PaymentService : IPaymentService
             // NOTE: no longer requires TotalAmount > 0 — a reservation whose treatment type
             // genuinely costs nothing (e.g. a nutrition "Follow-up" visit) has TotalAmount
             // explicitly set to 0, and 0 >= 0 correctly means "fully covered", i.e. paid.
-            var shouldBePaid = reservation.TotalAmount.HasValue &&
-                                totalCoverage >= reservation.TotalAmount.Value;
+            var shouldBePaid = Coverage.IsCovered(reservation.TotalAmount, totalCoverage);
 
             if (reservation.IsPaid != shouldBePaid)
             {
@@ -1260,18 +1261,14 @@ public class PaymentService : IPaymentService
         var reservation = await _uow.Reservations.GetByIdAsync(reservationId);
         if (reservation is null) return;
 
-        // "Coverage" = Active (real cash) + Cancelled (written off, but not owed again).
-        // This intentionally does NOT re-open the due balance when a payment is cancelled.
-        var payments = await _uow.Payments.FindAsync(
-            p => p.ReservationId == reservationId &&
-                 (p.Status == PaymentStatusEnum.Active || p.Status == PaymentStatusEnum.Cancelled));
-        var totalCoverage = payments.Sum(p => p.Amount);
+        // P6: coverage = Active (collected) + WrittenOff (excused); a cancelled payment is a void.
+        var totalCoverage = await _uow.Payments.Query()
+            .Where(p => p.ReservationId == reservationId)
+            .Where(Coverage.Covers)
+            .SumAsync(p => (decimal?)p.Amount) ?? 0m;
 
-        // NOTE: no longer requires TotalAmount > 0 — see the matching comment in
-        // RecalculateAllReservationsPaidStatusAsync for why a $0 reservation (e.g. a
-        // nutrition "Follow-up" visit) is correctly considered fully paid.
-        reservation.IsPaid = reservation.TotalAmount.HasValue &&
-                              totalCoverage >= reservation.TotalAmount.Value;
+        // A 0-price reservation (e.g. a nutrition "Follow-up" visit) is covered.
+        reservation.IsPaid = Coverage.IsCovered(reservation.TotalAmount, totalCoverage);
         reservation.UpdatedAt = DateTime.UtcNow;
         _uow.Reservations.Update(reservation);
     }

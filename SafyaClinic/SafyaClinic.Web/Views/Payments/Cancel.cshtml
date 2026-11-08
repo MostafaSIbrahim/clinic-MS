@@ -7,10 +7,9 @@
     <div class="card-header bg-danger text-white"><i class="bi bi-x-circle me-2"></i>Cancel Payment</div>
     <div class="card-body">
         <div class="alert alert-warning">
-            Cancelling writes this payment off: the amount stops counting as collected revenue, but it
-            will <strong>not</strong> reopen as a due balance for the patient or reservation — the clinic
-            is treating it as settled/waived. This is recorded in the payment's audit trail and cannot be
-            undone from here.
+            Cancelling <strong>voids</strong> this payment, as if it was never collected: it stops counting
+            as revenue <strong>and the amount becomes due again</strong> on the visit. Use it for a payment
+            entered by mistake. This is recorded in the payment's audit trail and cannot be undone from here.
         </div>
         <form asp-action="Cancel" method="post">
             @Html.AntiForgeryToken()

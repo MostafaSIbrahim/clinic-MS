@@ -86,9 +86,13 @@
                                     {
                                         <span class="badge bg-success">Active</span>
                                     }
+                                    else if (p.Status == "WrittenOff")
+                                    {
+                                        <span class="badge bg-warning text-dark">Written off</span>
+                                    }
                                     else
                                     {
-                                        <span class="badge bg-secondary">Cancelled</span>
+                                        <span class="badge bg-secondary">Cancelled (void)</span>
                                     }
                                 </td>
                                 <td>@p.CollectorName</td>
