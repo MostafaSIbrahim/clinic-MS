@@ -165,7 +165,14 @@ public static class DbSeeder
 
     private static async Task SeedTreatmentTypesAsync(SafyaDbContext context)
     {
-        if (await context.TreatmentTypes.AnyAsync()) return;
+        // P7a (found by the end-to-end test): on a new database the SeedNutritionFollowUpTreatmentType
+        // migration has already inserted the free nutrition "Follow-up", so "any types yet?" was always true
+        // and the priced defaults were never added: every visit cost nothing. Seed the defaults unless the
+        // clinic has types of its own (anything other than that one migration row).
+        var hasOwnTypes = await context.TreatmentTypes
+            .AnyAsync(t => !(t.TypeName == "Follow-up" && t.Category == TreatmentCategory.Nutritional));
+        if (hasOwnTypes) return;
+        var hasFollowUp = await context.TreatmentTypes.AnyAsync();
 
         var types = new[]
         {
@@ -180,7 +187,8 @@ public static class DbSeeder
             new TreatmentType { Category = TreatmentCategory.Nutritional, TypeName = "Follow-up", Description = "Nutrition follow-up visit — included in the enrollment package, no extra charge", DefaultCost = 0.00m, DurationMinutes = 15 }
         };
 
-        await context.TreatmentTypes.AddRangeAsync(types);
+        await context.TreatmentTypes.AddRangeAsync(
+            types.Where(t => !(hasFollowUp && t.TypeName == "Follow-up" && t.Category == TreatmentCategory.Nutritional)));
         await context.SaveChangesAsync();
     }
 

@@ -45,8 +45,10 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         screens['Appointments'] = '/Appointments';
         // A priced visit (800), so there is a balance to collect and write off later.
         const visit = page.locator('#apptType');
-        const consultation = await visit.locator('option', { hasText: 'General Consultation' }).getAttribute('value');
-        await visit.selectOption(consultation);
+        const options = await visit.locator('option').allInnerTexts();
+        const consultation = options.find(o => o.startsWith('General Consultation'));
+        if (!consultation) throw new Error(`No "General Consultation" visit type. The list has: ${options.join(' | ')}`);
+        await visit.selectOption({ label: consultation });
         await clicks.click(page.getByRole('button', { name: 'Show', exact: true }));
         await expect(page.getByText(`Booking for ${patientName}`)).toBeVisible();
         await checkA11y(page, 'Appointments');

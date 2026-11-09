@@ -114,4 +114,41 @@ public class DbSeederTests
         Assert.Equal(1, await context.Users.CountAsync());
         Assert.Equal(SystemGroups.All.Count, await context.PermissionGroups.CountAsync(g => g.SystemKey != null));
     }
+
+    // ── P7a: visit types on a new database ─────────────────────
+
+    [Fact]
+    public async Task A_new_database_gets_the_priced_visit_types_beside_the_migrations_free_follow_up()
+    {
+        await using var context = NewContext();
+        // What the SeedNutritionFollowUpTreatmentType migration leaves on a new database.
+        context.TreatmentTypes.Add(new SafyaClinic.Domain.Entities.MedicalRecord.TreatmentType
+        {
+            Category = SafyaClinic.Domain.Enums.TreatmentCategory.Nutritional, TypeName = "Follow-up", DefaultCost = 0m, DurationMinutes = 15,
+        });
+        await context.SaveChangesAsync();
+
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+
+        var types = await context.TreatmentTypes.ToListAsync();
+        Assert.Equal(800m, types.Single(t => t.TypeName == "General Consultation").DefaultCost);
+        Assert.Single(types, t => t.TypeName == "Follow-up");
+        Assert.Equal(7, types.Count);
+    }
+
+    [Fact]
+    public async Task A_clinic_with_its_own_visit_types_gets_no_defaults()
+    {
+        await using var context = NewContext();
+        context.TreatmentTypes.Add(new SafyaClinic.Domain.Entities.MedicalRecord.TreatmentType
+        {
+            Category = SafyaClinic.Domain.Enums.TreatmentCategory.InternalMedicine, TypeName = "Clinic visit", DefaultCost = 500m, DurationMinutes = 20,
+        });
+        await context.SaveChangesAsync();
+
+        await DbSeeder.SeedAsync(context, Config(TestPassword));
+
+        Assert.Equal("Clinic visit", Assert.Single(await context.TreatmentTypes.ToListAsync()).TypeName);
+    }
 }
