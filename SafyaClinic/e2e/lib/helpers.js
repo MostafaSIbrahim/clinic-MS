@@ -27,7 +27,8 @@ async function signIn(page, user) {
     await page.goto('/Auth/Login');
     await page.locator('input[name="PhoneNumber"]').fill(user.phone);
     await page.locator('input[name="Password"]').fill(user.password());
-    await page.locator('form button[type="submit"]').click();
+    // The language switch is a form too, so pick the sign-in button by its name.
+    await page.getByRole('button', { name: 'Sign In', exact: true }).click();
     await page.waitForLoadState('domcontentloaded');
     if (/\/Auth\/Login/i.test(page.url()))
         throw new Error(`Sign-in failed for ${user.phone}. Check the test passwords.`);
