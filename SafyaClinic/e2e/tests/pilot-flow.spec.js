@@ -43,6 +43,12 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await clicks.click(page.getByRole('link', { name: 'Book appointment' }));
         await expect(page.getByText(`Booking for ${patientName}`)).toBeVisible();
         screens['Appointments'] = '/Appointments';
+        // A priced visit (800), so there is a balance to collect and write off later.
+        const visit = page.locator('#apptType');
+        const consultation = await visit.locator('option', { hasText: 'General Consultation' }).getAttribute('value');
+        await visit.selectOption(consultation);
+        await clicks.click(page.getByRole('button', { name: 'Show', exact: true }));
+        await expect(page.getByText(`Booking for ${patientName}`)).toBeVisible();
         await checkA11y(page, 'Appointments');
         const slot = page.getByRole('link', { name: new RegExp(`^\\d\\d:\\d\\d with ${USERS.doctor.name}$`) }).first();
         await expect(slot, 'a free time today (none are left after about 23:30 clinic time)').toBeVisible();
@@ -112,7 +118,14 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await page.goto(`/Payments/PatientSummary?patientId=${patientId}`);
         screens['Patient payments'] = `/Payments/PatientSummary?patientId=${patientId}`;
         await checkA11y(page, 'Patient payments');
-        await page.locator('main').getByRole('link', { name: 'Collect', exact: true }).first().click();
+        const collect = page.locator('main').getByRole('link', { name: 'Collect', exact: true }).first();
+        try {
+            await collect.waitFor({ timeout: 10_000 });
+        } catch {
+            const text = (await page.locator('body').innerText()).replace(/\s+/g, ' ').slice(0, 2000);
+            throw new Error(`No Collect button for the completed visit. The page says: ${text}`);
+        }
+        await collect.click();
         await checkA11y(page, 'Collect payment');
         await page.locator('input[name="Amount"]').fill('500');
         await page.getByRole('button', { name: 'Collect Payment' }).click();

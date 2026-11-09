@@ -30,7 +30,7 @@
     <div class="card-body">
         <form asp-action="Queue" method="get" class="row g-3 align-items-end">
             <div class="col-md-4">
-                <label asp-for="ClinicId" class="form-label">Clinic</label>
+                <label for="queueClinic" class="form-label">Clinic</label>
                 <select asp-for="ClinicId"
                         asp-items="Model.Clinics"
                         class="form-select"
@@ -42,7 +42,7 @@
             @if (Model.CanViewAllQueues)
             {
                 <div class="col-md-4">
-                    <label asp-for="DoctorId" class="form-label">Doctor</label>
+                    <label for="queueDoctor" class="form-label">Doctor</label>
                     <select asp-for="DoctorId"
                             asp-items="Model.Doctors"
                             class="form-select"
