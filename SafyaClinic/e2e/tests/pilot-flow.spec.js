@@ -3,9 +3,9 @@
 // record → prescription with the allergy warning → complete visit → collect part → supervisor writes off the rest.
 // Every screen gets an axe check; the key screens are then checked at 1366, 1024 and 390 px.
 const { test, expect } = require('@playwright/test');
-const { USERS, newSession, clickCounter, checkA11y, checkNoSidewaysScroll, recordMetric, expectMovedTo, writeResults } = require('../lib/helpers');
+const { USERS, newSession, clickCounter, checkA11y, checkNoSidewaysScroll, recordMetric, expectMovedTo, saveScreens, loadScreens, writeResults } = require('../lib/helpers');
 
-test.describe.configure({ mode: 'serial' });
+// Not 'serial': the screen-size test runs even when the flow reports accessibility findings.
 
 const stamp = Date.now().toString().slice(-6);
 const patient = {
@@ -17,6 +17,7 @@ const patientName = `${patient.first} ${patient.last}`;
 const screens = {};   // name → path, for the screen-size checks
 
 test.afterAll(() => writeResults());
+test.afterEach(() => { if (Object.keys(screens).length) saveScreens(screens); });
 
 test('pilot visit: book, check in, consult, prescribe, complete, collect, write off', async ({ browser }) => {
     const reception = await newSession(browser, USERS.reception);
@@ -154,11 +155,12 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
 });
 
 test('pilot screens at 1366, 1024 and 390 px', async ({ browser }) => {
-    test.skip(Object.keys(screens).length === 0, 'needs the pilot visit to have run');
+    const visited = loadScreens();
+    test.skip(Object.keys(visited).length === 0, 'needs the pilot visit to have run');
     const admin = await newSession(browser, USERS.admin);
     for (const width of [1366, 1024, 390]) {
         await admin.page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
-        for (const [name, path] of Object.entries(screens)) {
+        for (const [name, path] of Object.entries(visited)) {
             await admin.page.goto(path);
             await checkNoSidewaysScroll(admin.page, name);
             await checkA11y(admin.page, `${name} @${width}`);

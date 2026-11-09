@@ -1,9 +1,13 @@
 // P7: creates the test accounts (front desk, doctor, supervisor) through the Users screen, as the seeded admin.
 // Safe to run again on the same database: an account that already exists is left as it is.
+const fs = require('node:fs');
+const path = require('node:path');
 const { chromium } = require('@playwright/test');
 const { USERS, signIn } = require('./lib/helpers');
 
 module.exports = async (config) => {
+    // Start each run with empty results (the tests add to these files).
+    fs.rmSync(path.join(__dirname, 'results'), { recursive: true, force: true });
     const baseURL = config.projects[0].use.baseURL;
     const browser = await chromium.launch();
     const page = await browser.newPage({ baseURL });

@@ -59,6 +59,9 @@ const metrics = {};
 
 /** axe on the current page: no serious or critical violations (WCAG 2.1 A/AA). Soft, so the flow continues. */
 async function checkA11y(page, screen) {
+    // Let fade-ins finish first (e.g. the toast after an action): a half-faded element reads as low contrast.
+    await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'), null, { timeout: 3000 })
+        .catch(() => { /* a looping animation; check anyway */ });
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     const serious = results.violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
     a11y.push({
@@ -85,6 +88,17 @@ async function checkNoSidewaysScroll(page, screen) {
 
 function recordMetric(name, value) { metrics[name] = value; }
 
+// The screens visited by the flow, kept in a file so the screen-size test can reopen them even after the
+// flow test has failed (Playwright starts a new worker after a failure).
+const SCREENS_FILE = path.join(RESULTS, 'screens.json');
+function saveScreens(screens) {
+    fs.mkdirSync(RESULTS, { recursive: true });
+    fs.writeFileSync(SCREENS_FILE, JSON.stringify(screens, null, 2));
+}
+function loadScreens() {
+    try { return JSON.parse(fs.readFileSync(SCREENS_FILE, 'utf8')); } catch { return {}; }
+}
+
 /** Waits for the page to move on; if it doesn't, fails with the messages the page shows (validation, toasts). */
 async function expectMovedTo(page, pattern, what) {
     try {
@@ -97,8 +111,17 @@ async function expectMovedTo(page, pattern, what) {
     }
 }
 
+function readJson(name, fallback) {
+    try { return JSON.parse(fs.readFileSync(path.join(RESULTS, name), 'utf8')); } catch { return fallback; }
+}
+
 function writeResults() {
     fs.mkdirSync(RESULTS, { recursive: true });
+    // Each test file run (worker) adds to what earlier ones wrote.
+    a11y.unshift(...readJson('axe.json', []).filter(r => !a11y.includes(r)));
+    layout.unshift(...readJson('layout.json', []));
+    Object.assign(metrics, { ...readJson('metrics.json', {}), ...metrics });
+    delete metrics.recordedAt;
     fs.writeFileSync(path.join(RESULTS, 'axe.json'), JSON.stringify(a11y, null, 2));
     fs.writeFileSync(path.join(RESULTS, 'layout.json'), JSON.stringify(layout, null, 2));
     fs.writeFileSync(path.join(RESULTS, 'metrics.json'), JSON.stringify({ ...metrics, recordedAt: new Date().toISOString() }, null, 2));
@@ -118,4 +141,4 @@ function writeResults() {
     fs.writeFileSync(path.join(RESULTS, 'summary.md'), lines.join('\n') + '\n');
 }
 
-module.exports = { USERS, signIn, newSession, clickCounter, checkA11y, checkNoSidewaysScroll, recordMetric, expectMovedTo, writeResults };
+module.exports = { USERS, signIn, newSession, clickCounter, checkA11y, checkNoSidewaysScroll, recordMetric, expectMovedTo, saveScreens, loadScreens, writeResults };
