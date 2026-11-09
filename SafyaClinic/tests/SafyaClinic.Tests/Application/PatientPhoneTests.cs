@@ -131,4 +131,32 @@ public class PatientPhoneTests
 
         Assert.False(result.IsSuccess);
     }
+
+    // ── P7a: the address on the registration form is optional ─────
+
+    [Fact]
+    public async Task A_patient_can_be_registered_without_an_address()
+    {
+        var context = await SeededAsync();
+        var request = Patient("NoAddress", ("01005550001", true));
+        request.Addresses.Add(new CreatePatientAddressRequest());   // the form's empty address row
+
+        var result = await Patients(context).CreatePatientAsync(request, 1);
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors));
+        Assert.Empty(await context.PatientAddresses.Where(a => a.PatientId == result.Data!.Id).ToListAsync());
+    }
+
+    [Fact]
+    public async Task A_started_address_needs_its_city()
+    {
+        var context = await SeededAsync();
+        var request = Patient("HalfAddress", ("01005550002", true));
+        request.Addresses.Add(new CreatePatientAddressRequest { Street = "12 Tahrir St" });
+
+        var result = await Patients(context).CreatePatientAsync(request, 1);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("city", result.Errors.First(), StringComparison.OrdinalIgnoreCase);
+    }
 }

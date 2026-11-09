@@ -3,7 +3,7 @@
 // record → prescription with the allergy warning → complete visit → collect part → supervisor writes off the rest.
 // Every screen gets an axe check; the key screens are then checked at 1366, 1024 and 390 px.
 const { test, expect } = require('@playwright/test');
-const { USERS, newSession, clickCounter, checkA11y, checkNoSidewaysScroll, recordMetric, writeResults } = require('../lib/helpers');
+const { USERS, newSession, clickCounter, checkA11y, checkNoSidewaysScroll, recordMetric, expectMovedTo, writeResults } = require('../lib/helpers');
 
 test.describe.configure({ mode: 'serial' });
 
@@ -32,7 +32,7 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await page.locator('input[name="Phones[0].PhoneNumber"]').fill(patient.phone);
         await page.locator('textarea[name="Allergies"]').fill('Penicillin');
         await page.getByRole('button', { name: 'Register Patient' }).click();
-        await expect(page).toHaveURL(/\/Patients\/Details\/\d+/);
+        await expectMovedTo(page, /\/Patients\/Details\/\d+/, 'Registering the patient');
         patientId = Number(page.url().match(/Details\/(\d+)/)[1]);
         screens['Patient page'] = new URL(page.url()).pathname;
         await checkA11y(page, 'Patient page');
@@ -76,7 +76,7 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await checkA11y(dpage, 'New medical record');
         await dpage.locator('textarea[name="Diagnosis"]').fill('Acute pharyngitis');
         await dpage.locator('form:has(textarea[name="Diagnosis"]) button[type="submit"]').click();
-        await expect(dpage).toHaveURL(/\/MedicalRecords\/Details\/\d+/);
+        await expectMovedTo(dpage, /\/MedicalRecords\/Details\/\d+/, 'Saving the medical record');
         recordPath = new URL(dpage.url()).pathname;
         screens['Consultation workspace'] = recordPath;
         await expect(dpage.locator('.app-patient-header')).toContainText('Penicillin');
@@ -97,7 +97,7 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await expect(dpage).toHaveURL(/CreatePrescription/);   // blocked until confirmed
         await dpage.locator('[data-allergy-override]').check();
         await dpage.getByRole('button', { name: 'Save Prescription' }).click();
-        await expect(dpage).toHaveURL(/tab=prescriptions/);
+        await expectMovedTo(dpage, /tab=prescriptions/, 'Saving the prescription');
         await expect(dpage.getByRole('tabpanel')).toContainText('Prescription #');
     });
 

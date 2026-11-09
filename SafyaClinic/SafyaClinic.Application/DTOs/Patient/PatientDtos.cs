@@ -93,7 +93,11 @@ public class CreatePatientPhoneRequest
 public class CreatePatientAddressRequest
 {
     public string? Street { get; init; }
-    public string City { get; init; } = string.Empty;
+    /// <summary>
+    /// Required for an address, but nullable so that an empty address row on the registration form is simply
+    /// "no address" (P7a: a non-nullable string was implicitly required, so registering without a city failed).
+    /// </summary>
+    public string? City { get; init; }
     public string? Governorate { get; init; }
     public string? PostalCode { get; init; }
     public bool IsPrimary { get; init; } = true;

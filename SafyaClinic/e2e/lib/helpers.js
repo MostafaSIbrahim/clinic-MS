@@ -82,6 +82,18 @@ async function checkNoSidewaysScroll(page, screen) {
 
 function recordMetric(name, value) { metrics[name] = value; }
 
+/** Waits for the page to move on; if it doesn't, fails with the messages the page shows (validation, toasts). */
+async function expectMovedTo(page, pattern, what) {
+    try {
+        await expect(page).toHaveURL(pattern);
+    } catch (error) {
+        const messages = await page.locator('.validation-summary-errors, .alert-danger, .text-danger, [role="alert"], .toast')
+            .allInnerTexts().catch(() => []);
+        const shown = messages.map(m => m.trim()).filter(Boolean).join(' | ') || '(no message on the page)';
+        throw new Error(`${what}: still on ${new URL(page.url()).pathname}. The page says: ${shown}`);
+    }
+}
+
 function writeResults() {
     fs.mkdirSync(RESULTS, { recursive: true });
     fs.writeFileSync(path.join(RESULTS, 'axe.json'), JSON.stringify(a11y, null, 2));
@@ -103,4 +115,4 @@ function writeResults() {
     fs.writeFileSync(path.join(RESULTS, 'summary.md'), lines.join('\n') + '\n');
 }
 
-module.exports = { USERS, signIn, newSession, clickCounter, checkA11y, checkNoSidewaysScroll, recordMetric, writeResults };
+module.exports = { USERS, signIn, newSession, clickCounter, checkA11y, checkNoSidewaysScroll, recordMetric, expectMovedTo, writeResults };

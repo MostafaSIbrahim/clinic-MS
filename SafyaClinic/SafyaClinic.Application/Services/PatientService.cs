@@ -59,6 +59,14 @@ public class PatientService : IPatientService
         if (phoneConflict is not null)
             return ServiceResult<PatientDto>.Failure(phoneConflict);
 
+        // P7a: an address is optional; an empty address row is ignored, but a started one needs its city.
+        var addressEntries = request.Addresses
+            .Where(a => !string.IsNullOrWhiteSpace(a.City) || !string.IsNullOrWhiteSpace(a.Street)
+                        || !string.IsNullOrWhiteSpace(a.Governorate) || !string.IsNullOrWhiteSpace(a.PostalCode))
+            .ToList();
+        if (addressEntries.Any(a => string.IsNullOrWhiteSpace(a.City)))
+            return ServiceResult<PatientDto>.Failure("Enter the city for the address, or leave the address empty.");
+
         if (!string.IsNullOrWhiteSpace(request.Gender) &&
             !Enum.TryParse<Gender>(request.Gender, out _))
             return ServiceResult<PatientDto>.Failure("Invalid gender value.");
@@ -102,12 +110,12 @@ public class PatientService : IPatientService
         await _uow.PatientPhones.AddRangeAsync(phones);
 
         // Addresses
-        var addresses = request.Addresses
+        var addresses = addressEntries
             .Select(addr => new PatientAddress
             {
                 PatientId = patient.Id,
                 Street = addr.Street?.Trim(),
-                City = addr.City.Trim(),
+                City = addr.City!.Trim(),
                 Governorate = addr.Governorate?.Trim(),
                 PostalCode = addr.PostalCode?.Trim(),
                 IsPrimary = addr.IsPrimary
@@ -528,6 +536,8 @@ public class PatientService : IPatientService
     {
         if (!await _uow.Patients.ExistsAsync(patientId))
             return ServiceResult.Failure("Patient not found.");
+        if (string.IsNullOrWhiteSpace(request.City))
+            return ServiceResult.Failure("Enter the city.");
 
         await _uow.PatientAddresses.AddAsync(new PatientAddress
         {
