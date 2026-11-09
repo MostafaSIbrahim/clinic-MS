@@ -79,6 +79,7 @@ public static class Permissions
         public const string ReportAllDoctors = "Payments.ReportAllDoctors";
         public const string ViewFullDashboard = "Payments.ViewFullDashboard";
         public const string Maintenance = "Payments.Maintenance";
+        public const string WriteOff = "Payments.WriteOff";   // P6b
     }
 
     public static class Settings
@@ -148,6 +149,7 @@ public static class PermissionCatalogue
         new(Permissions.Payments.ReportAllDoctors, "Payments", "See every doctor's payments in the report (others see their own)"),
         new(Permissions.Payments.ViewFullDashboard, "Payments", "See the full payment dashboard and its details"),
         new(Permissions.Payments.Maintenance, "Payments", "Run payment maintenance (recalculate statuses, backfill)", IsSensitive: true),
+        new(Permissions.Payments.WriteOff, "Payments", "Write off a visit's balance, and undo write-offs (with a reason; audited)", IsSensitive: true),
 
         new(Permissions.Schedule.ManageOwn, "Scheduling", "Set their own calendar: mode, step, working periods, breaks and slots"),
         new(Permissions.Schedule.ManageAll, "Scheduling", "Set any doctor's calendar"),
@@ -172,6 +174,7 @@ public static class SystemGroups
     public const string NutritionistRole = "Nutritionist";
     public const string ReceptionRole = "Reception";
     public const string ReceptionAdminRole = "ReceptionAdmin";
+    public const string ClinicAdminRole = "ClinicAdmin";   // P6b
 
     public static readonly IReadOnlyList<SystemGroupDefinition> All = new SystemGroupDefinition[]
     {
@@ -209,11 +212,23 @@ public static class SystemGroups
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
         }),
 
-        new(ReceptionAdminRole, "Reception supervisors", "Payments, payment reports and doctors' calendars", new[]
+        new(ReceptionAdminRole, "Reception supervisors", "Payments, payment reports, write-offs and doctors' calendars", new[]
         {
             Permissions.Payments.View, Permissions.Payments.Collect, Permissions.Payments.Adjust,
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
+            Permissions.Payments.WriteOff,
             Permissions.Schedule.ManageAll,
+        }),
+
+        // P6b: the clinic manager. Reception supervisors' access plus write-offs, the full payment dashboard,
+        // reports for any date and clinic settings (including opening hours). No users, permissions or records.
+        new(ClinicAdminRole, "Clinic managers", "Everything Reception supervisors do, plus the full payment dashboard, any-date reports and clinic settings", new[]
+        {
+            Permissions.Payments.View, Permissions.Payments.Collect, Permissions.Payments.Adjust,
+            Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
+            Permissions.Payments.WriteOff, Permissions.Payments.ViewFullDashboard, Permissions.Payments.ReportAnyDate,
+            Permissions.Schedule.ManageAll,
+            Permissions.Settings.Clinics,
         }),
     };
 }

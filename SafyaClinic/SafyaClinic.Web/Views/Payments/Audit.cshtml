@@ -72,7 +72,9 @@
                         var actionLabel = adjustment.ActionType switch
                         {
                             "AmountChanged" => "Amount changed",
-                            "Cancelled" => "Cancelled",
+                            "Cancelled" => "Cancelled (void)",
+                            "WrittenOff" => "Written off",            // P6b
+                            "WriteOffCancelled" => "Write-off undone", // P6b
                             _ => adjustment.ActionType
                         };
 

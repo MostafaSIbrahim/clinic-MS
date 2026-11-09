@@ -2,6 +2,8 @@
 
 public class PaymentDto
 {
+    /// <summary>P6b: the write-off reason category, for written-off payments.</summary>
+    public string? WriteOffReason { get; init; }
     public int Id { get; init; }
     public int PatientId { get; init; }
     public string PatientName { get; init; } = string.Empty;
@@ -45,6 +47,28 @@ public class CollectPaymentRequest
     public string? ReferenceNumber { get; init; }
     public string? Notes { get; init; }
 }
+
+/// <summary>P6b: write off (part of) a visit's remaining balance.</summary>
+public class WriteOffRequest
+{
+    public int PatientId { get; init; }
+    public int ReservationId { get; init; }
+    public decimal Amount { get; init; }
+    /// <summary>Discount, Hardship, StaffOrFamily, BillingError or Other.</summary>
+    public string Reason { get; init; } = string.Empty;
+    /// <summary>Required when the reason is Other.</summary>
+    public string? Note { get; init; }
+}
+
+/// <summary>P6b: undo a write-off; the balance becomes due again.</summary>
+public class CancelWriteOffRequest
+{
+    public int PaymentId { get; init; }
+    public string Reason { get; init; } = string.Empty;
+}
+
+/// <summary>P6b: write-offs in the dashboard period, by reason.</summary>
+public sealed record WriteOffReasonAmountDto(string Reason, int Count, decimal Amount);
 
 public class CancelPaymentRequest
 {
@@ -96,6 +120,10 @@ public class PaymentDashboardDto
 
     public IEnumerable<SourceAmountDto> AmountBySource { get; init; } = Enumerable.Empty<SourceAmountDto>();
     public IEnumerable<ClinicAmountDto> AmountByClinic { get; init; } = Enumerable.Empty<ClinicAmountDto>();
+
+    /// <summary>P6b: write-offs in the period. Never part of the collected totals above.</summary>
+    public decimal TotalWrittenOff { get; init; }
+    public IEnumerable<WriteOffReasonAmountDto> WrittenOffByReason { get; init; } = Enumerable.Empty<WriteOffReasonAmountDto>();
 }
 
 public class UnpaidReservationDto
@@ -110,7 +138,7 @@ public class UnpaidReservationDto
     public decimal? TotalAmount { get; init; }
     public decimal AmountPaid { get; init; }
 
-    /// <summary>Sum of cancelled payments for this reservation — written off, not owed again.</summary>
+    /// <summary>Sum of written-off payments for this reservation (P6: status WrittenOff), not owed again.</summary>
     public decimal WrittenOff { get; init; }
     public decimal Balance => Math.Max(0m, (TotalAmount ?? 0m) - AmountPaid - WrittenOff);
 }

@@ -1,0 +1,49 @@
+@model WriteOffRequest
+@{
+    ViewData["Title"] = "Write Off Balance";
+    var due = ViewBag.Due as decimal? ?? 0m;
+}
+
+@await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
+
+<div class="card" style="max-width:640px;">
+    <div class="card-header"><i class="bi bi-slash-circle me-2" aria-hidden="true"></i>Write off balance: reservation #@Model.ReservationId</div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            Remaining balance: <strong>@due.ToMoney()</strong>. A write-off excuses this amount: the visit counts as
+            covered, but it is <strong>not revenue</strong> and is reported separately. It is recorded with your name
+            and reason in the audit log, and can be undone.
+        </div>
+        <form asp-action="WriteOff" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <input type="hidden" asp-for="PatientId" />
+            <input type="hidden" asp-for="ReservationId" />
+
+            <div class="mb-3">
+                <label asp-for="Amount" class="form-label">Amount to write off *</label>
+                <input asp-for="Amount" type="number" step="0.01" min="0.01" max="@due.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" class="form-control" required />
+                <div class="form-text">Up to the remaining balance. Write off part of it to leave the rest to collect.</div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Reason" class="form-label">Reason *</label>
+                <select asp-for="Reason" class="form-select" required>
+                    <option value="">Choose…</option>
+                    <option value="Discount">Discount</option>
+                    <option value="Hardship">Hardship</option>
+                    <option value="StaffOrFamily">Staff or family</option>
+                    <option value="BillingError">Billing error</option>
+                    <option value="Other">Other (describe below)</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Note" class="form-label">Note <span class="text-muted">(required for Other)</span></label>
+                <textarea asp-for="Note" class="form-control" rows="2" maxlength="500"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-warning"><i class="bi bi-slash-circle me-1" aria-hidden="true"></i>Write off</button>
+            <a asp-action="PatientSummary" asp-route-patientId="@Model.PatientId" class="btn btn-outline-secondary">Back</a>
+        </form>
+    </div>
+</div>

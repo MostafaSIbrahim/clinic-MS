@@ -88,6 +88,13 @@
             <div class="form-actions">
                 <button type="submit" class="btn btn-success"><i class="bi bi-check-lg me-1"></i>Collect Payment</button>
                 <a asp-action="PatientSummary" asp-route-patientId="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+                @* P6b: not paying? Excuse the balance instead, with a reason. *@
+                @if (Model.ReservationId.HasValue && await Can.HasAsync(Permissions.Payments.WriteOff))
+                {
+                    <a asp-action="WriteOff" asp-route-patientId="@Model.PatientId" asp-route-reservationId="@Model.ReservationId" class="btn btn-outline-warning">
+                        <i class="bi bi-slash-circle me-1" aria-hidden="true"></i>Write off instead
+                    </a>
+                }
             </div>
         </form>
     </div>

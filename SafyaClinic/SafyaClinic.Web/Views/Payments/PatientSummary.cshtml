@@ -118,6 +118,16 @@
                                        class="btn btn-sm btn-success">
                                         <i class="bi bi-cash-coin me-1"></i>Collect
                                     </a>
+                                    @* P6b: excuse the balance (or part of it), with a reason. *@
+                                    @if (item.ReservationId.HasValue && await Can.HasAsync(Permissions.Payments.WriteOff))
+                                    {
+                                        <a asp-action="WriteOff"
+                                           asp-route-patientId="@Model.PatientId"
+                                           asp-route-reservationId="@item.ReservationId"
+                                           class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-slash-circle me-1" aria-hidden="true"></i>Write off
+                                        </a>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -185,7 +195,11 @@
                                 else if (p.Status == "WrittenOff")
                                 {
                                     @* P6: an excused balance; covers the visit, not revenue. *@
-                                    <span class="badge bg-warning text-dark" title="@p.CancellationReason">Written off</span>
+                                    <span class="badge bg-warning text-dark" title="@p.Notes">Written off</span>
+                                    @if (p.WriteOffReason is not null)
+                                    {
+                                        <div class="small text-muted">@Labels.Humanize(p.WriteOffReason)</div>
+                                    }
                                 }
                                 else
                                 {
@@ -201,6 +215,12 @@
                                     <i class="bi bi-clock-history me-1"></i>Audit History
                                 </button>
                                 
+                                @if (p.Status == "WrittenOff" && await Can.HasAsync(Permissions.Payments.WriteOff))
+                                {
+                                    <a asp-action="CancelWriteOff" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger" title="Undo write-off">
+                                        <i class="bi bi-arrow-counterclockwise"></i><span class="visually-hidden">Undo write-off</span>
+                                    </a>
+                                }
                                 @if (p.Status == "Active")
                                 {
                                     <a asp-action="ChangeAmount" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-primary" title="Change amount">

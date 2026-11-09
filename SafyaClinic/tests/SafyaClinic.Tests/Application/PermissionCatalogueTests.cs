@@ -39,17 +39,18 @@ public class PermissionCatalogueTests
         [Permissions.Nutrition.View] = "A N",
         [Permissions.Nutrition.Manage] = "A N",
         [Permissions.Nutrition.ManagePackages] = "A",
-        [Permissions.Payments.View] = "A R RA",
-        [Permissions.Payments.Collect] = "A R RA",
-        [Permissions.Payments.Adjust] = "A R RA",
-        [Permissions.Payments.ViewReport] = "A D R RA",
-        [Permissions.Payments.ReportAnyDate] = "A D",
-        [Permissions.Payments.ReportAllDoctors] = "A R RA",
-        [Permissions.Payments.ViewFullDashboard] = "A",
+        [Permissions.Payments.View] = "A R RA CA",
+        [Permissions.Payments.Collect] = "A R RA CA",
+        [Permissions.Payments.Adjust] = "A R RA CA",
+        [Permissions.Payments.ViewReport] = "A D R RA CA",
+        [Permissions.Payments.ReportAnyDate] = "A D CA",
+        [Permissions.Payments.ReportAllDoctors] = "A R RA CA",
+        [Permissions.Payments.ViewFullDashboard] = "A CA",
         [Permissions.Payments.Maintenance] = "A",
+        [Permissions.Payments.WriteOff] = "A RA CA",          // P6b
         [Permissions.Schedule.ManageOwn] = "A D N",       // P1b: clinicians set their own calendar
-        [Permissions.Schedule.ManageAll] = "A RA",        // P1b: default; changeable on the Permission Groups screen
-        [Permissions.Settings.Clinics] = "A",
+        [Permissions.Schedule.ManageAll] = "A RA CA",        // P1b: default; changeable on the Permission Groups screen
+        [Permissions.Settings.Clinics] = "A CA",
         [Permissions.Settings.PatientSources] = "A",
         [Permissions.Settings.Lookups] = "A",
         [Permissions.Users.Manage] = "A",
@@ -62,6 +63,7 @@ public class PermissionCatalogueTests
         ["N"] = SystemGroups.NutritionistRole,
         ["R"] = SystemGroups.ReceptionRole,
         ["RA"] = SystemGroups.ReceptionAdminRole,
+        ["CA"] = SystemGroups.ClinicAdminRole,   // P6b
     };
 
     private static IEnumerable<string> AllCodes => PermissionCatalogue.All.Select(p => p.Code).OrderBy(c => c);

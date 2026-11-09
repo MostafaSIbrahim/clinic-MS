@@ -313,6 +313,73 @@ public class PaymentsController : BaseController
             routeValues: new { patientId = result.Data!.PatientId });
     }
 
+    // ── Write off (P6b) ─────────────────────────────────────────
+
+    [HttpGet]
+    [RequirePermission(Permissions.Payments.WriteOff)]
+    public async Task<IActionResult> WriteOff(int patientId, int reservationId)
+    {
+        var due = await _paymentService.GetDueAmountAsync(patientId, reservationId, null);
+        if (!due.IsSuccess || due.Data <= 0m)
+        {
+            Error(due.IsSuccess ? "This visit has no balance to write off." : due.Errors.FirstOrDefault() ?? "Could not load the balance.");
+            return RedirectToAction(nameof(PatientSummary), new { patientId });
+        }
+        ViewBag.Due = due.Data;
+        return View(new WriteOffRequest { PatientId = patientId, ReservationId = reservationId, Amount = due.Data });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Payments.WriteOff)]
+    public async Task<IActionResult> WriteOff(WriteOffRequest model)
+    {
+        var result = await _paymentService.WriteOffAsync(model, CurrentUserId);
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            var due = await _paymentService.GetDueAmountAsync(model.PatientId, model.ReservationId, null);
+            ViewBag.Due = due.IsSuccess ? due.Data : 0m;
+            return View(model);
+        }
+        return RedirectWithSuccess(
+            $"{Money.Format(result.Data!.Amount)} written off for reservation #{model.ReservationId}.",
+            nameof(PatientSummary),
+            routeValues: new { patientId = model.PatientId });
+    }
+
+    [HttpGet]
+    [RequirePermission(Permissions.Payments.WriteOff)]
+    public async Task<IActionResult> CancelWriteOff(int paymentId)
+    {
+        var result = await _paymentService.GetPaymentByIdAsync(paymentId);
+        if (!result.IsSuccess || result.Data is null || result.Data.Status != "WrittenOff")
+        {
+            Error("Write-off not found.");
+            return RedirectToAction(nameof(Report));
+        }
+        ViewBag.Payment = result.Data;
+        return View(new CancelWriteOffRequest { PaymentId = paymentId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Payments.WriteOff)]
+    public async Task<IActionResult> CancelWriteOff(CancelWriteOffRequest model)
+    {
+        var result = await _paymentService.CancelWriteOffAsync(model, CurrentUserId);
+        if (!result.IsSuccess)
+        {
+            ApplyErrors(result);
+            ViewBag.Payment = (await _paymentService.GetPaymentByIdAsync(model.PaymentId)).Data;
+            return View(model);
+        }
+        return RedirectWithSuccess(
+            "Write-off undone. The amount is due again.",
+            nameof(PatientSummary),
+            routeValues: new { patientId = result.Data!.PatientId });
+    }
+
     // ── Change amount ───────────────────────────────────────────
 
     [HttpGet]

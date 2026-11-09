@@ -22,17 +22,17 @@ Auth.ChangePassword POST: signed-in
 Auth.Login GET: anyone
 Auth.Login POST: anyone
 Auth.Logout POST: signed-in
-Clinics.Create GET: Admin
-Clinics.Create POST: Admin
-Clinics.Delete POST: Admin
-Clinics.Details ANY: Admin
-Clinics.Edit GET: Admin
-Clinics.Edit POST: Admin
-Clinics.Hours GET: Admin
-Clinics.Hours POST: Admin
-Clinics.Index ANY: Admin
-Clinics.RemoveAgreement POST: Admin
-Clinics.SaveAgreement POST: Admin
+Clinics.Create GET: Admin ClinicAdmin
+Clinics.Create POST: Admin ClinicAdmin
+Clinics.Delete POST: Admin ClinicAdmin
+Clinics.Details ANY: Admin ClinicAdmin
+Clinics.Edit GET: Admin ClinicAdmin
+Clinics.Edit POST: Admin ClinicAdmin
+Clinics.Hours GET: Admin ClinicAdmin
+Clinics.Hours POST: Admin ClinicAdmin
+Clinics.Index ANY: Admin ClinicAdmin
+Clinics.RemoveAgreement POST: Admin ClinicAdmin
+Clinics.SaveAgreement POST: Admin ClinicAdmin
 Components.Index GET: Admin
 Dashboard.Index ANY: signed-in
 FollowUps.Book GET: Admin Doctor Reception
@@ -131,19 +131,23 @@ Patients.RemovePhone POST: Admin Doctor Nutritionist Reception
 Patients.Timeline GET: Admin Doctor
 Patients.UseExisting GET: Admin Doctor Nutritionist Reception
 PatientsApi.Search GET: Admin Doctor Nutritionist Reception
-Payments.Audit GET: Admin Reception ReceptionAdmin
+Payments.Audit GET: Admin Reception ReceptionAdmin ClinicAdmin
 Payments.BackfillZeroCostPayments POST: Admin
-Payments.Cancel GET: Admin Reception ReceptionAdmin
-Payments.Cancel POST: Admin Reception ReceptionAdmin
-Payments.ChangeAmount GET: Admin Reception ReceptionAdmin
-Payments.ChangeAmount POST: Admin Reception ReceptionAdmin
-Payments.Collect GET: Admin Reception ReceptionAdmin
-Payments.Collect POST: Admin Reception ReceptionAdmin
-Payments.Dashboard GET: Admin Reception ReceptionAdmin
-Payments.DashboardLineDetails GET: Admin
-Payments.PatientSummary ANY: Admin Reception ReceptionAdmin
+Payments.Cancel GET: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.Cancel POST: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.CancelWriteOff GET: Admin ReceptionAdmin ClinicAdmin
+Payments.CancelWriteOff POST: Admin ReceptionAdmin ClinicAdmin
+Payments.ChangeAmount GET: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.ChangeAmount POST: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.Collect GET: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.Collect POST: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.Dashboard GET: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.DashboardLineDetails GET: Admin ClinicAdmin
+Payments.PatientSummary ANY: Admin Reception ReceptionAdmin ClinicAdmin
 Payments.RecalculateAllPaidStatuses POST: Admin
-Payments.Report GET: Admin Doctor Reception ReceptionAdmin
+Payments.Report GET: Admin Doctor Reception ReceptionAdmin ClinicAdmin
+Payments.WriteOff GET: Admin ReceptionAdmin ClinicAdmin
+Payments.WriteOff POST: Admin ReceptionAdmin ClinicAdmin
 PermissionGroups.AddMember POST: Admin
 PermissionGroups.Create GET: Admin
 PermissionGroups.Create POST: Admin
@@ -169,7 +173,7 @@ Reservations.UpdateStatus POST: Admin Doctor Nutritionist Reception
 Schedules.AddDate POST: signed-in
 Schedules.Edit GET: signed-in
 Schedules.Edit POST: signed-in
-Schedules.Index GET: Admin ReceptionAdmin
+Schedules.Index GET: Admin ReceptionAdmin ClinicAdmin
 Schedules.Mine GET: Admin Doctor Nutritionist
 Schedules.RemoveDate POST: signed-in
 Users.AddToGroup POST: Admin

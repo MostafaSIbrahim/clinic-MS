@@ -20,6 +20,7 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
             builder.Property(p => p.ClinicNetAmount).HasPrecision(18, 2);
             builder.Property(p => p.OriginalAmount).HasPrecision(18, 2);
             builder.Property(p => p.CancellationReason).HasMaxLength(500);
+            builder.Property(p => p.WriteOffReason).HasConversion<string>().HasMaxLength(20);   // P6b
 
             builder.HasIndex(p => p.PatientId);
             builder.HasIndex(p => p.ReservationId);
