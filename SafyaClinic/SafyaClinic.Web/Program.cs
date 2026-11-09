@@ -16,6 +16,7 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using SafyaClinic.Application.Common.Auditing;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,6 +99,12 @@ builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditContext, HttpAuditContext>();
 builder.Services.AddScoped<IAuditTrail, AuditTrail>();
+
+// ── Sign-in keys (D2a): kept in App_Data/keys so a restart or recycle on the host doesn't sign everyone
+// out or break open forms. App_Data is never served, is git-ignored and survives publishing.
+builder.Services.AddDataProtection()
+    .SetApplicationName("SafyaClinic")
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys")));
 // ── Pipeline ─────────────────────────────────────────────────
 var app = builder.Build();
 

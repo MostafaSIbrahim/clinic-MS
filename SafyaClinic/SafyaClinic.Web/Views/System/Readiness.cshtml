@@ -1,0 +1,51 @@
+@model IReadOnlyList<SafyaClinic.Web.Startup.ReadinessItem>
+@using SafyaClinic.Web.Startup
+@{
+    ViewData["Title"] = "Site readiness";
+    var problems = Model.Count(i => i.Level == ReadinessLevel.Problem);
+    var warnings = Model.Count(i => i.Level == ReadinessLevel.Warning);
+}
+
+<h1>Site readiness</h1>
+<p class="text-muted">Checks before real patients are entered, and after each deployment. Nothing here changes the site.</p>
+
+@{
+    var summary = problems > 0
+        ? $"{problems} problem(s) to fix" + (warnings > 0 ? $" and {warnings} warning(s) to review." : ".")
+        : warnings > 0 ? $"{warnings} warning(s) to review." : "Every check passed.";
+    var verdict = problems > 0 ? "Not ready:" : warnings > 0 ? "Almost ready:" : "Ready.";
+}
+<div class="alert @(problems > 0 ? "alert-danger" : warnings > 0 ? "alert-warning" : "alert-success")" role="status">
+    <strong>@verdict</strong> <span>@summary</span>
+</div>
+
+<div class="table-responsive" tabindex="0" role="region" aria-label="Readiness checks">
+    <table class="table align-middle">
+        <thead>
+            <tr><th scope="col">Check</th><th scope="col">Result</th><th scope="col">Details</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td class="fw-semibold">@item.Name</td>
+                    <td>
+                        @switch (item.Level)
+                        {
+                            case ReadinessLevel.Ok:
+                                <span class="badge bg-success"><i class="bi bi-check-lg" aria-hidden="true"></i> OK</span>
+                                break;
+                            case ReadinessLevel.Warning:
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-lg" aria-hidden="true"></i> Review</span>
+                                break;
+                            default:
+                                <span class="badge bg-danger"><i class="bi bi-x-lg" aria-hidden="true"></i> Problem</span>
+                                break;
+                        }
+                    </td>
+                    <td>@item.Detail</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
