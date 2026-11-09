@@ -1404,3 +1404,12 @@ a.app-kpi:focus-visible {
         position: static;
     }
 }
+
+/* ── P7a: screen-reader-only text inside scrolling tables ───────
+   .visually-hidden is position:absolute. Inside a .table-responsive with no positioned ancestor of its own,
+   it was placed against the card instead, so it escaped the table's scroll box and made the whole page
+   scroll sideways (found by the end-to-end screen-size check on Patient payments). */
+.table-responsive,
+.app-table-wrap {
+    position: relative;
+}

@@ -116,7 +116,7 @@
                                        asp-route-reservationId="@item.ReservationId"
                                        asp-route-enrollmentId="@item.EnrollmentId"
                                        class="btn btn-sm btn-success">
-                                        <i class="bi bi-cash-coin me-1"></i>Collect
+                                        <i class="bi bi-cash-coin me-1" aria-hidden="true"></i>Collect
                                     </a>
                                     @* P6b: excuse the balance (or part of it), with a reason. *@
                                     @if (item.ReservationId.HasValue && await Can.HasAsync(Permissions.Payments.WriteOff))
