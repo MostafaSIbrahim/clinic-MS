@@ -14,6 +14,9 @@
     var treatmentsTitle = $"{T["Treatments"].Value} ({treatments.Count})";
     var prescriptionsTitle = $"{T["Prescriptions"].Value} ({prescriptions.Count})";
     var labTitle = $"{T["Lab"].Value} ({analyses.Count})";
+    // P5c: Start consultation opened this (the latest) record for a visit that has no record yet.
+    var pendingVisitId = ViewBag.PendingVisitId as int?;
+    var canContinue = ViewBag.CanContinueRecord is bool cont && cont;
 }
 
 @await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
@@ -31,6 +34,7 @@
                   data-confirm="@T["Complete this visit? The reservation will be marked completed."]">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="recordId" value="@Model.Id" />
+                <input type="hidden" name="reservationId" value="@ViewBag.VisitId" />
                 <button type="submit" class="btn btn-success">
                     <i class="bi bi-check-circle me-1" aria-hidden="true"></i>@T["Complete visit"]
                 </button>
@@ -74,6 +78,43 @@
     </div>
 </div>
 
+@if (pendingVisitId is int pendingId)
+{
+    <div class="alert alert-info visit-choice" role="region" aria-label="@T["Today's visit"]">
+        <p class="mb-2">
+            <i class="bi bi-journal-medical me-1" aria-hidden="true"></i>
+            <strong>@T["This is the patient's latest record."]</strong>
+            @if (canContinue)
+            {
+                @T["Continue in it for today's visit, or start a new record."]
+            }
+            else if (Model.IsLocked)
+            {
+                @T["It's locked, so today's visit needs a new record."]
+            }
+            else
+            {
+                @T["Today's visit needs a new record."]
+            }
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            @if (canContinue)
+            {
+                <form asp-action="ContinueRecord" method="post">
+                    <input type="hidden" name="recordId" value="@Model.Id" />
+                    <input type="hidden" name="reservationId" value="@pendingId" />
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-journal-arrow-down me-1" aria-hidden="true"></i>@T["Continue in this record"]
+                    </button>
+                </form>
+            }
+            <a asp-action="Consultation" asp-route-reservationId="@pendingId" asp-route-newRecord="true" class="btn @(canContinue ? "btn-outline-primary" : "btn-primary")">
+                <i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i>@T["Create a new record for this visit"]
+            </a>
+        </div>
+    </div>
+}
+
 <app-tabs label="@T["Visit sections"]" id="visit" selected="@tab" data-tab-param="tab">
     <app-tab id="notes" title="@T["Notes"]">
         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
@@ -100,6 +141,22 @@
             <dd class="clinical-text" dir="auto">@(Model.Notes ?? "—")</dd>
             <dt>@T["Follow-up date"]</dt>
             <dd>@(Model.FollowUpDate?.ToString("dd MMM yyyy") ?? "—")</dd>
+            @if (Model.Visits.Count > 0)
+            {
+                @* P5c: a record can document several visits. *@
+                <dt>@T["Visits in this record"]</dt>
+                <dd>
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var v in Model.Visits)
+                        {
+                            <li>
+                                <a asp-controller="Reservations" asp-action="Details" asp-route-id="@v.ReservationId">@v.Date.ToString("dd MMM yyyy") @v.Time.ToString(@"hh\:mm")</a>
+                                · @v.DoctorName · <partial name="_StatusBadge" model="v.StatusName" />
+                            </li>
+                        }
+                    </ul>
+                </dd>
+            }
         </dl>
     </app-tab>
 

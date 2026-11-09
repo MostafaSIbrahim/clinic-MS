@@ -81,7 +81,7 @@ public class PatientRecordService : IPatientRecordService
                     r.DoctorId,
                     r.QueueStatus,
                     StatusName = r.Status.StatusName,
-                    HasRecord = r.PatientRecord != null
+                    HasRecord = r.MedicalRecordId != null || r.PatientRecord != null
                 })
                 .FirstOrDefaultAsync();
 
@@ -155,6 +155,19 @@ public class PatientRecordService : IPatientRecordService
 
         await _uow.PatientRecords.AddAsync(record);
         await _uow.SaveChangesAsync();
+
+        // P5c: the visit is documented in the new record.
+        if (request.ReservationId.HasValue)
+        {
+            var visit = await _uow.Reservations.GetByIdAsync(request.ReservationId.Value);
+            if (visit is not null)
+            {
+                visit.MedicalRecordId = record.Id;
+                _uow.Reservations.Update(visit);
+                await _uow.SaveChangesAsync();
+            }
+        }
+
         var dto = await PatientRecordDtoQuery()
      .FirstOrDefaultAsync(r => r.Id == record.Id);
 
@@ -163,6 +176,65 @@ public class PatientRecordService : IPatientRecordService
                 "Medical record could not be loaded after creation.");
 
         return ServiceResult<PatientRecordDto>.Success(dto);
+    }
+
+    public async Task<LatestRecordDto?> GetLatestRecordAsync(int patientId, string category)
+    {
+        if (!Enum.TryParse<TreatmentCategory>(category, out var kind)) return null;
+        return await _uow.PatientRecords.Query()
+            .Where(r => r.PatientId == patientId && r.Category == kind)
+            .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
+            .Select(r => new LatestRecordDto(r.Id, r.IsLocked, r.CreatedAt, r.Doctor.FullName, r.Diagnosis))
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<ServiceResult> ContinueRecordAsync(int reservationId, int recordId, int currentUserId, bool isAdmin)
+    {
+        if (reservationId <= 0 || recordId <= 0 || currentUserId <= 0)
+            return ServiceResult.Failure("Invalid visit or record.");
+        try
+        {
+            // Same lock as creating the visit's record, so a visit can't get two records at once.
+            return await _uow.ExecuteReservationRecordAsync(
+                reservationId,
+                () => ContinueRecordCoreAsync(reservationId, recordId, currentUserId, isAdmin),
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult.Failure("Another request is saving this visit's record. Refresh the page and try again.");
+        }
+    }
+
+    private async Task<ServiceResult> ContinueRecordCoreAsync(int reservationId, int recordId, int currentUserId, bool isAdmin)
+    {
+        var visit = await _uow.Reservations.GetByIdAsync(reservationId);
+        if (visit is null) return ServiceResult.Failure("Visit not found.");
+        if (!isAdmin && visit.DoctorId != currentUserId)
+            return ServiceResult.Failure("You are not the assigned doctor.");
+        var statusName = await _uow.ReservationStatuses.Query().Where(s => s.Id == visit.StatusId).Select(s => s.StatusName).FirstOrDefaultAsync();
+        if (statusName != "Confirmed" || visit.QueueStatus != PatientQueueStatus.InConsultation)
+            return ServiceResult.Failure("The visit must be in consultation.");
+        var alreadyHasRecord = visit.MedicalRecordId != null
+            || await _uow.PatientRecords.Query().AnyAsync(r => r.ReservationId == reservationId);
+        if (alreadyHasRecord)
+            return ServiceResult.Failure("This visit already has a medical record. Refresh the page.");
+
+        var record = await _uow.PatientRecords.Query()
+            .Where(r => r.Id == recordId)
+            .Select(r => new { r.PatientId, r.IsLocked, r.Category })
+            .FirstOrDefaultAsync();
+        if (record is null) return ServiceResult.Failure("Medical record not found.");
+        if (record.PatientId != visit.PatientId) return ServiceResult.Failure("The record belongs to another patient.");
+        if (record.IsLocked) return ServiceResult.Failure("This record is locked. Create a new record for this visit.");
+        if (record.Category != visit.Category) return ServiceResult.Failure("The record is for a different kind of visit. Create a new record for this visit.");
+
+        visit.MedicalRecordId = recordId;
+        visit.UpdatedAt = DateTime.UtcNow;
+        _uow.Reservations.Update(visit);
+        await _audit.RecordAsync(AuditActions.RecordVisitLinked, "PatientRecord", recordId, new { reservationId });
+        await _uow.SaveChangesAsync();
+        return ServiceResult.Success("This visit continues the record.");
     }
 
     public async Task<ServiceResult<PatientRecordDto>> GetRecordByIdAsync(int recordId)
@@ -892,6 +964,11 @@ public class PatientRecordService : IPatientRecordService
                 FollowUpDate = r.FollowUpDate,
                 IsLocked = r.IsLocked,
                 CreatedAt = r.CreatedAt,
+
+                Visits = r.Visits
+                    .OrderBy(v => v.ReservationDate).ThenBy(v => v.ReservationTime)
+                    .Select(v => new RecordVisitDto(v.Id, v.ReservationDate, v.ReservationTime, v.Doctor.FullName, v.Status.StatusName))
+                    .ToList(),
 
                 Treatments = r.Treatments
                     .OrderByDescending(t => t.PerformedDate)

@@ -1225,9 +1225,7 @@ public class ReservationService : IReservationService
                 r.Category,
                 r.QueueStatus,
                 StatusName = r.Status.StatusName,
-                PatientRecordId = r.PatientRecord != null
-                    ? (int?)r.PatientRecord.Id
-                    : null
+                PatientRecordId = r.MedicalRecordId   // P5c: the record this visit is documented in
             })
             .FirstOrDefaultAsync();
 
@@ -1254,10 +1252,20 @@ public class ReservationService : IReservationService
                 PatientRecordId = reservation.PatientRecordId
             });
     }
+    public async Task<int?> GetVisitInConsultationAsync(int recordId) =>
+        await _uow.Reservations.Query()
+            .Where(r => r.MedicalRecordId == recordId &&
+                        r.Status.StatusName == "Confirmed" &&
+                        r.QueueStatus == PatientQueueStatus.InConsultation)
+            .OrderByDescending(r => r.ConsultationStartedAtUtc)
+            .Select(r => (int?)r.Id)
+            .FirstOrDefaultAsync();
+
     public async Task<ServiceResult<ReservationDto>> CompleteConsultationAsync(
     int recordId,
     int currentUserId,
-    bool isAdmin)
+    bool isAdmin,
+    int? visitId = null)
     {
         if (recordId <= 0 || currentUserId <= 0)
         {
@@ -1265,16 +1273,13 @@ public class ReservationService : IReservationService
                 "Invalid record or user.");
         }
 
-        var reservationId = await _uow.PatientRecords
-            .Query()
-            .Where(r => r.Id == recordId)
-            .Select(r => r.ReservationId)
-            .FirstOrDefaultAsync();
+        // P5c: a record can document several visits; complete the one given, or the one in consultation.
+        var reservationId = visitId ?? await GetVisitInConsultationAsync(recordId);
 
         if (!reservationId.HasValue)
         {
             return ServiceResult<ReservationDto>.Failure(
-                "This record is not linked to a reservation.");
+                "No visit in consultation is documented in this record.");
         }
 
         var completedStatusId = await _uow.ReservationStatuses
@@ -1300,10 +1305,10 @@ public class ReservationService : IReservationService
                 r.QueueStatus == PatientQueueStatus.InConsultation &&
                 r.ConsultationStartedAtUtc != null &&
                 r.QueueEndedAtUtc == null &&
-                r.PatientRecord != null &&
-                r.PatientRecord.Id == recordId &&
-                r.PatientRecord.PatientId == r.PatientId &&
-                r.PatientRecord.DoctorId == r.DoctorId)
+                // P5c: the visit must be documented in this record of the same patient. The record may
+                // have been opened by another doctor (continued records); the visit's doctor is checked above.
+                r.MedicalRecordId == recordId &&
+                r.MedicalRecord!.PatientId == r.PatientId)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(r => r.StatusId, completedStatusId.Value)
                 .SetProperty(

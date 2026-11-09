@@ -10,6 +10,12 @@ public interface IPatientRecordService
     int createdBy,
     bool isAdmin);
     Task<ServiceResult<PatientRecordDto>> GetRecordByIdAsync(int recordId);
+
+    /// <summary>P5c: the patient's latest record in a category (locked or not), or null.</summary>
+    Task<LatestRecordDto?> GetLatestRecordAsync(int patientId, string category);
+
+    /// <summary>P5c: document a visit that's in consultation in an existing, unlocked record of the same patient and kind.</summary>
+    Task<ServiceResult> ContinueRecordAsync(int reservationId, int recordId, int currentUserId, bool isAdmin);
     Task<ServiceResult<IEnumerable<PatientRecordDto>>> GetPatientRecordsAsync(int patientId);
     Task<ServiceResult> UpdateRecordAsync(int recordId, UpdatePatientRecordRequest request);
     Task<ServiceResult> LockRecordAsync(int recordId);

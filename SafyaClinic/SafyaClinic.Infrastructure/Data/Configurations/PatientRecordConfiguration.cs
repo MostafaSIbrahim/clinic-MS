@@ -38,6 +38,11 @@ namespace SafyaClinic.Infrastructure.Data.Configurations
                 .WithOne(r => r.PatientRecord)
                 .HasForeignKey<PatientRecord>(pr => pr.ReservationId)
                 .OnDelete(DeleteBehavior.ClientSetNull);
+            // P5c: visits documented in this record (a record can cover several visits).
+            builder.HasMany(pr => pr.Visits)
+                .WithOne(r => r.MedicalRecord)
+                .HasForeignKey(r => r.MedicalRecordId)
+                .OnDelete(DeleteBehavior.Restrict);
             builder.HasOne(pr => pr.FollowUpReservation)
                 .WithMany()
                 .HasForeignKey(pr => pr.FollowUpReservationId)
