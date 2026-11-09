@@ -90,8 +90,21 @@ async function checkNoSidewaysScroll(page, screen) {
             const r = el.getBoundingClientRect();
             return r.width > 0 && r.right > window.innerWidth + 1 && getComputedStyle(el).position !== 'fixed';
         });
-        return wide.filter(el => !wide.includes(el.parentElement)).slice(0, 5)
+        const outer = wide.filter(el => !wide.includes(el.parentElement)).slice(0, 5)
             .map(el => `${describe(el)} (${Math.round(el.getBoundingClientRect().width)}px wide, inside ${describe(el.parentElement)})`);
+        // The element reaching furthest right, with its ancestors' widths and overflow settings.
+        let far = null;
+        for (const el of document.querySelectorAll('body *')) {
+            const r = el.getBoundingClientRect();
+            if (getComputedStyle(el).position === 'fixed' || r.width === 0) continue;
+            if (!far || r.right > far.getBoundingClientRect().right) far = el;
+        }
+        const chain = [];
+        for (let el = far; el && el !== document.body && chain.length < 8; el = el.parentElement) {
+            const cs = getComputedStyle(el);
+            chain.push(`${describe(el)}[w=${Math.round(el.getBoundingClientRect().width)} right=${Math.round(el.getBoundingClientRect().right)} ox=${cs.overflowX} pos=${cs.position} disp=${cs.display}]`);
+        }
+        return [...outer, `furthest: ${chain.join(' < ')}`];
     });
     layout.push({ screen, url: new URL(page.url()).pathname, width: innerWidth, scrollWidth, ok: scrollWidth <= innerWidth + 1, culprits });
     expect.soft(scrollWidth, `no sideways scroll: ${screen} at ${innerWidth}px; sticking out: ${culprits.join('; ') || 'n/a'}`)
