@@ -20,7 +20,7 @@ public class AccessMatrixTests
     private static readonly string[] Roles =
     {
         SystemGroups.AdminRole, SystemGroups.DoctorRole, SystemGroups.NutritionistRole,
-        SystemGroups.ReceptionRole, SystemGroups.ReceptionAdminRole
+        SystemGroups.ReceptionRole, SystemGroups.ReceptionAdminRole, SystemGroups.ClinicAdminRole   // P6b
     };
 
     private static IEnumerable<Type> Controllers =>

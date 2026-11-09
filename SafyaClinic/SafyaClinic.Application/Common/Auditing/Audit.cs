@@ -24,6 +24,8 @@ public static class AuditActions
     public const string PaymentCollected = "Payment.Collected";
     public const string PaymentCancelled = "Payment.Cancelled";
     public const string PaymentAmountChanged = "Payment.AmountChanged";
+    public const string PaymentWrittenOff = "Payment.WrittenOff";                 // P6b
+    public const string PaymentWriteOffCancelled = "Payment.WriteOffCancelled";   // P6b
     public const string GroupCreated = "Group.Created";
     public const string GroupUpdated = "Group.Updated";
     public const string GroupDeleted = "Group.Deleted";

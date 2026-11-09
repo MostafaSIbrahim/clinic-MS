@@ -1,0 +1,33 @@
+@model CancelWriteOffRequest
+@{
+    ViewData["Title"] = "Undo Write-off";
+    var payment = ViewBag.Payment as PaymentDto;
+}
+
+<div class="card" style="max-width:600px;">
+    <div class="card-header"><i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i>Undo write-off</div>
+    <div class="card-body">
+        @if (payment is not null)
+        {
+            <div class="alert alert-warning">
+                Write-off of <strong>@payment.Amount.ToMoney()</strong>
+                @(payment.ReservationId.HasValue ? $"on reservation #{payment.ReservationId}" : "")
+                (@Labels.Humanize(payment.WriteOffReason ?? "before P6")).
+                Undoing it makes this amount <strong>due again</strong>. This is recorded in the audit log.
+            </div>
+        }
+        <form asp-action="CancelWriteOff" method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <input type="hidden" asp-for="PaymentId" />
+            <div class="mb-3">
+                <label asp-for="Reason" class="form-label">Reason *</label>
+                <textarea asp-for="Reason" class="form-control" rows="3" required maxlength="500"></textarea>
+            </div>
+            <button type="submit" class="btn btn-danger"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo write-off</button>
+            @if (payment is not null)
+            {
+                <a asp-action="PatientSummary" asp-route-patientId="@payment.PatientId" class="btn btn-outline-secondary">Back</a>
+            }
+        </form>
+    </div>
+</div>

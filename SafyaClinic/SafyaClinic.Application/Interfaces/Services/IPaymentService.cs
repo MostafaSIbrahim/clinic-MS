@@ -14,6 +14,12 @@ public interface IPaymentService
 
     // ── New payment operations ─────────────────────────────────
     Task<ServiceResult<PaymentDto>> CancelPaymentAsync(CancelPaymentRequest request, int currentUserId);
+
+    /// <summary>P6b: write off up to a visit's remaining balance, with a reason. Covers the visit; never revenue.</summary>
+    Task<ServiceResult<PaymentDto>> WriteOffAsync(WriteOffRequest request, int currentUserId);
+
+    /// <summary>P6b: undo a write-off (it becomes a void); the amount is due again.</summary>
+    Task<ServiceResult<PaymentDto>> CancelWriteOffAsync(CancelWriteOffRequest request, int currentUserId);
     Task<ServiceResult<PaymentDto>> ChangePaymentAmountAsync(ChangePaymentAmountRequest request, int currentUserId);
 
     // ── Dashboard ────────────────────────────────────────────────

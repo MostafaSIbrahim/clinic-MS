@@ -34,6 +34,9 @@ namespace SafyaClinic.Domain.Entities.Payment
         public int? CancelledBy { get; set; }
         public string? CancellationReason { get; set; }
 
+        /// <summary>P6b: set on write-offs (Status = WrittenOff): the reason category. The note is in Notes.</summary>
+        public WriteOffReason? WriteOffReason { get; set; }
+
         // ── Amount-change tracking ──────────────────────────────
         public decimal? OriginalAmount { get; set; }             // Amount at time of collection, kept even after edits
         public DateTime? LastModifiedAt { get; set; }

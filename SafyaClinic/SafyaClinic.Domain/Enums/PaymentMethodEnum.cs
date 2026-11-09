@@ -12,6 +12,8 @@ namespace SafyaClinic.Domain.Enums
         CreditCard,
         BankTransfer,
         Insurance,
-        MobilePayment
+        MobilePayment,
+        /// <summary>P6b: no money changed hands; used only by write-offs (never accepted by Collect).</summary>
+        WriteOff
     }
 }

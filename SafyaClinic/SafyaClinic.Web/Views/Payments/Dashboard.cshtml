@@ -134,6 +134,40 @@
     </div>
 </div>
 
+@* P6b: write-offs in the period, by reason. Never counted as collected money. *@
+<div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-slash-circle me-2" aria-hidden="true"></i>Written off (not revenue)</span>
+        <span class="fw-semibold">@Model.TotalWrittenOff.ToMoney()</span>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.WrittenOffByReason.Any())
+        {
+            <div class="text-center text-muted py-4">No write-offs in this period.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr><th scope="col">Reason</th><th scope="col"># Write-offs</th><th scope="col">Amount</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.WrittenOffByReason)
+                        {
+                            <tr>
+                                <td>@Labels.Humanize(r.Reason)</td>
+                                <td>@r.Count</td>
+                                <td class="fw-semibold">@r.Amount.ToMoney()</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
 <!-- ── Dashboard line drill-down modal ─────────────────────────────
      Two-step flow inside a single modal:
        Step 1: ask the user for the date range to run the detail report over

@@ -196,6 +196,7 @@ public class PaymentsControllerAccessTests
         "RecalculateAllPaidStatuses" or "BackfillZeroCostPayments" => Permissions.Payments.Maintenance,
         "Collect" => Permissions.Payments.Collect,
         "Cancel" or "ChangeAmount" => Permissions.Payments.Adjust,
+        "WriteOff" or "CancelWriteOff" => Permissions.Payments.WriteOff,   // P6b
         _ => Permissions.Payments.View
     };
 }

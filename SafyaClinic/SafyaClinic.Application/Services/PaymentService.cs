@@ -97,7 +97,7 @@ public class PaymentService : IPaymentService
         }
         if (!await _uow.Clinics.ExistsAsync(request.ClinicId))
             return ServiceResult<PaymentDto>.Failure("Clinic not found.");
-        if (!Enum.TryParse<PaymentMethodEnum>(request.PaymentMethod, out var method))
+        if (!Enum.TryParse<PaymentMethodEnum>(request.PaymentMethod, out var method) || method == PaymentMethodEnum.WriteOff)
             return ServiceResult<PaymentDto>.Failure(
                 "Invalid payment method. Valid: Cash, CreditCard, BankTransfer, Insurance, MobilePayment.");
         if (request.Amount < 0)
@@ -307,6 +307,7 @@ public class PaymentService : IPaymentService
                 Status = p.Status.ToString(),
                 CancelledAt = p.CancelledAt,
                 CancellationReason = p.CancellationReason,
+                WriteOffReason = p.WriteOffReason != null ? p.WriteOffReason.ToString() : null,
                 OriginalAmount = p.OriginalAmount,
                 LastModifiedAt = p.LastModifiedAt
             })
@@ -362,6 +363,7 @@ public class PaymentService : IPaymentService
                     Status = p.Status.ToString(),
                     CancelledAt = p.CancelledAt,
                     CancellationReason = p.CancellationReason,
+                    WriteOffReason = p.WriteOffReason != null ? p.WriteOffReason.ToString() : null,
                     OriginalAmount = p.OriginalAmount,
                     LastModifiedAt = p.LastModifiedAt
                 }).ToListAsync();
@@ -502,6 +504,7 @@ public class PaymentService : IPaymentService
                 Status = p.Status.ToString(),
                 CancelledAt = p.CancelledAt,
                 CancellationReason = p.CancellationReason,
+                WriteOffReason = p.WriteOffReason != null ? p.WriteOffReason.ToString() : null,
                 OriginalAmount = p.OriginalAmount,
                 LastModifiedAt = p.LastModifiedAt
             }).ToListAsync();
@@ -572,6 +575,145 @@ public class PaymentService : IPaymentService
 
         await _uow.SaveChangesAsync();
         return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(payment.Id), "Payment cancelled.");
+    }
+
+    // ── Write-offs (P6b) ─────────────────────────────────────────
+
+    public async Task<ServiceResult<PaymentDto>> WriteOffAsync(WriteOffRequest request, int currentUserId)
+    {
+        if (request.ReservationId <= 0 || request.PatientId <= 0)
+            return ServiceResult<PaymentDto>.Failure("Select the visit to write off.");
+        try
+        {
+            // Same lock as Collect, so the balance can't be paid and written off at the same time.
+            return await _uow.ExecutePatientPaymentAsync(
+                request.PatientId,
+                () => WriteOffCoreAsync(request, currentUserId),
+                result => result.IsSuccess);
+        }
+        catch (TimeoutException)
+        {
+            return ServiceResult<PaymentDto>.Failure(
+                "Another payment is being processed for this patient. Refresh the payment summary before trying again.");
+        }
+    }
+
+    private async Task<ServiceResult<PaymentDto>> WriteOffCoreAsync(WriteOffRequest request, int currentUserId)
+    {
+        if (!Enum.TryParse<WriteOffReason>(request.Reason, out var reason) || !Enum.IsDefined(reason))
+            return ServiceResult<PaymentDto>.Failure("Choose a reason for the write-off.");
+        var note = request.Note?.Trim();
+        if (reason == WriteOffReason.Other && string.IsNullOrWhiteSpace(note))
+            return ServiceResult<PaymentDto>.Failure("Describe the reason when it is Other.");
+        if (request.Amount <= 0m)
+            return ServiceResult<PaymentDto>.Failure("The amount to write off must be greater than zero.");
+
+        var reservation = await _uow.Reservations.Query()
+            .Where(r => r.Id == request.ReservationId && r.PatientId == request.PatientId)
+            .Select(r => new { r.ClinicId })
+            .FirstOrDefaultAsync();
+        if (reservation is null)
+            return ServiceResult<PaymentDto>.Failure("Reservation not found for this patient.");
+
+        // The same balance rule as Collect (P6a): only a visit that's in or after consultation has one.
+        var due = await GetDueAmountAsync(request.PatientId, request.ReservationId, null);
+        if (!due.IsSuccess) return ServiceResult<PaymentDto>.Failure(due.Errors);
+        if (due.Data <= 0m)
+            return ServiceResult<PaymentDto>.Failure("This visit has no balance to write off.");
+        if (request.Amount > due.Data)
+            return ServiceResult<PaymentDto>.Failure($"You can write off at most the remaining balance ({due.Data:0.00}).");
+
+        var now = DateTime.UtcNow;
+        var payment = new Payment
+        {
+            PatientId = request.PatientId,
+            ReservationId = request.ReservationId,
+            ClinicId = reservation.ClinicId,
+            CollectedBy = currentUserId > 0 ? currentUserId : 1,
+            Amount = request.Amount,
+            OriginalAmount = request.Amount,
+            PaymentMethod = PaymentMethodEnum.WriteOff,
+            PaymentDate = now,
+            Notes = note,
+            CreatedAt = now,
+            SourceDeductionAmount = 0m,
+            ClinicNetAmount = 0m,   // no money received
+            Status = PaymentStatusEnum.WrittenOff,
+            WriteOffReason = reason,
+        };
+        await _uow.Payments.AddAsync(payment);
+        await _uow.SaveChangesAsync();
+
+        await _uow.PaymentAdjustments.AddAsync(new PaymentAdjustment
+        {
+            PaymentId = payment.Id,
+            ActionType = "WrittenOff",
+            OldAmount = 0m,
+            NewAmount = request.Amount,
+            Reason = string.IsNullOrWhiteSpace(note) ? reason.ToString() : $"{reason}: {note}",
+            PerformedBy = currentUserId,
+            PerformedAt = now
+        });
+        await _audit.RecordAsync(AuditActions.PaymentWrittenOff, "Payment", payment.Id, new
+        {
+            amount = request.Amount,
+            reason = reason.ToString(),
+            reservationId = request.ReservationId
+        }, currentUserId);
+
+        await RecalculateReservationPaidStatusAsync(request.ReservationId);
+        await _uow.SaveChangesAsync();
+        return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(payment.Id), "Balance written off.");
+    }
+
+    public async Task<ServiceResult<PaymentDto>> CancelWriteOffAsync(CancelWriteOffRequest request, int currentUserId)
+    {
+        var payment = await _uow.Payments.GetByIdAsync(request.PaymentId);
+        if (payment is null)
+            return ServiceResult<PaymentDto>.Failure("Payment not found.");
+        if (payment.Status != PaymentStatusEnum.WrittenOff)
+            return ServiceResult<PaymentDto>.Failure("Only a write-off can be undone here.");
+        if (string.IsNullOrWhiteSpace(request.Reason))
+            return ServiceResult<PaymentDto>.Failure("A reason is required.");
+
+        var amount = payment.Amount;
+        payment.Status = PaymentStatusEnum.Cancelled;   // a void: the amount is due again
+        payment.CancelledAt = DateTime.UtcNow;
+        payment.CancelledBy = currentUserId;
+        payment.CancellationReason = request.Reason.Trim();
+        payment.LastModifiedAt = DateTime.UtcNow;
+        payment.LastModifiedBy = currentUserId;
+        _uow.Payments.Update(payment);
+
+        await _uow.PaymentAdjustments.AddAsync(new PaymentAdjustment
+        {
+            PaymentId = payment.Id,
+            ActionType = "WriteOffCancelled",
+            OldAmount = amount,
+            NewAmount = 0m,
+            Reason = request.Reason.Trim(),
+            PerformedBy = currentUserId,
+            PerformedAt = DateTime.UtcNow
+        });
+        await _audit.RecordAsync(AuditActions.PaymentWriteOffCancelled, "Payment", payment.Id, new { amount }, currentUserId);
+
+        // Old write-offs (converted from cancelled payments in P6a) may belong to a nutrition enrollment,
+        // whose paid total included them.
+        if (payment.EnrollmentId.HasValue)
+        {
+            var enrollment = await _uow.NutritionEnrollments.GetByIdAsync(payment.EnrollmentId.Value);
+            if (enrollment is not null)
+            {
+                enrollment.TotalPaid = Math.Max(0m, enrollment.TotalPaid - amount);
+                _uow.NutritionEnrollments.Update(enrollment);
+            }
+        }
+
+        await _uow.SaveChangesAsync();
+        if (payment.ReservationId.HasValue)
+            await RecalculateReservationPaidStatusAsync(payment.ReservationId.Value);
+        await _uow.SaveChangesAsync();
+        return ServiceResult<PaymentDto>.Success(await GetPaymentDtoByIdAsync(payment.Id), "Write-off undone.");
     }
 
     // ── Change payment amount ────────────────────────────────────
@@ -784,12 +926,21 @@ public class PaymentService : IPaymentService
                 p.PatientSourceId,
                 p.SourceDeductionAmount,
                 p.ClinicNetAmount,
-                p.Status
+                p.Status,
+                p.WriteOffReason
             })
             .ToListAsync();
 
         var activePayments = payments
             .Where(p => p.Status == PaymentStatusEnum.Active)
+            .ToList();
+
+        // P6b: write-offs in the period, by reason; shown separately, never as collected money.
+        var writeOffs = payments.Where(p => p.Status == PaymentStatusEnum.WrittenOff).ToList();
+        var writeOffsByReason = writeOffs
+            .GroupBy(p => p.WriteOffReason?.ToString() ?? "Before P6 (cancelled payment)")
+            .Select(g => new WriteOffReasonAmountDto(g.Key, g.Count(), g.Sum(p => p.Amount)))
+            .OrderByDescending(r => r.Amount)
             .ToList();
 
         var reservationsDict = reservations.ToDictionary(r => r.Id, r => r);
@@ -882,7 +1033,9 @@ public class PaymentService : IPaymentService
             TotalUnpaidPending = unpaidPending.Sum(r => r.Balance),
             TotalFullyPaid = fullyPaidPayments.Sum(p => p.Amount),
             AmountBySource = bySource.OrderByDescending(s => s.TotalCollected),
-            AmountByClinic = byClinic.OrderByDescending(c => c.TotalCollected)
+            AmountByClinic = byClinic.OrderByDescending(c => c.TotalCollected),
+            TotalWrittenOff = writeOffs.Sum(p => p.Amount),
+            WrittenOffByReason = writeOffsByReason
         });
     }
     // ── Collect-form helper ─────────────────────────────────────
@@ -1302,6 +1455,7 @@ public class PaymentService : IPaymentService
                 Status = p.Status.ToString(),
                 CancelledAt = p.CancelledAt,
                 CancellationReason = p.CancellationReason,
+                WriteOffReason = p.WriteOffReason != null ? p.WriteOffReason.ToString() : null,
                 OriginalAmount = p.OriginalAmount,
                 LastModifiedAt = p.LastModifiedAt
             })
