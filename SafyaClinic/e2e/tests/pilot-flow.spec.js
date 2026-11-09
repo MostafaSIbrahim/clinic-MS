@@ -120,7 +120,8 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await page.goto(`/Payments/PatientSummary?patientId=${patientId}`);
         screens['Patient payments'] = `/Payments/PatientSummary?patientId=${patientId}`;
         await checkA11y(page, 'Patient payments');
-        const collect = page.locator('main').getByRole('link', { name: 'Collect', exact: true }).first();
+        // Icon fonts can add a character to a link's name, so match the end of it.
+        const collect = page.locator('main').getByRole('link', { name: /Collect$/ }).first();
         try {
             await collect.waitFor({ timeout: 10_000 });
         } catch {
@@ -132,7 +133,7 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await page.locator('input[name="Amount"]').fill('500');
         await page.getByRole('button', { name: 'Collect Payment' }).click();
         await expect(page.locator('body')).toContainText('Payment of');
-        await expect(page.locator('main').getByRole('link', { name: 'Write off', exact: true })).toHaveCount(0);   // the front desk can't write off
+        await expect(page.locator('main').getByRole('link', { name: /Write off$/ })).toHaveCount(0);   // the front desk can't write off
     });
 
     const supervisor = await newSession(browser, USERS.supervisor);
@@ -140,13 +141,13 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
 
     await test.step('Supervisor writes off the rest, with a reason', async () => {
         await spage.goto(`/Payments/PatientSummary?patientId=${patientId}`);
-        await spage.locator('main').getByRole('link', { name: 'Write off', exact: true }).first().click();
+        await spage.locator('main').getByRole('link', { name: /Write off$/ }).first().click();
         await checkA11y(spage, 'Write off balance');
         await spage.locator('select[name="Reason"]').selectOption('Discount');
         await spage.getByRole('button', { name: 'Write off', exact: true }).click();
         await expect(spage.locator('body')).toContainText('written off for reservation');
         await expect(spage.locator('main')).toContainText('Written off');
-        await expect(spage.locator('main').getByRole('link', { name: 'Write off', exact: true })).toHaveCount(0);   // nothing left to write off
+        await expect(spage.locator('main').getByRole('link', { name: /Write off$/ })).toHaveCount(0);   // nothing left to write off
     });
 
     for (const s of [reception, doctor, supervisor]) await s.context.close();

@@ -68,7 +68,10 @@ async function checkA11y(page, screen) {
             nodes: v.nodes.slice(0, 10).map(n => ({ target: n.target.join(' '), summary: n.failureSummary })),
         })),
     });
-    expect.soft(serious.map(v => `${v.id} (${v.impact}, ${v.nodes.length} element(s))`), `axe: ${screen}`).toEqual([]);
+    // The message names each element and why, so the CI log alone is enough to fix it.
+    expect.soft(serious.flatMap(v => v.nodes.slice(0, 5).map(n =>
+        `${v.id} (${v.impact}) at ${n.target.join(' ')}: ${(n.failureSummary || '').replace(/\s+/g, ' ').trim()}`)),
+        `axe: ${screen}`).toEqual([]);
 }
 
 /** No sideways scrolling at the current width (D11: 1366, 1024, 390). */
