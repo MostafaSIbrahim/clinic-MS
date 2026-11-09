@@ -61,6 +61,7 @@ MedicalRecords.AddPrescriptionItem POST: Admin Doctor
 MedicalRecords.AddTreatment POST: Admin Doctor
 MedicalRecords.CompleteConsultation POST: Admin Doctor
 MedicalRecords.Consultation GET: Admin Doctor
+MedicalRecords.ContinueRecord POST: Admin Doctor
 MedicalRecords.Create GET: Admin Doctor
 MedicalRecords.Create POST: Admin Doctor
 MedicalRecords.CreatePrescription GET: Admin Doctor

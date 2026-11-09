@@ -39,10 +39,15 @@ public interface IReservationService
     int reservationId,
     int currentUserId,
     bool isAdmin);
+    /// <summary>P5c: completes the visit documented in this record (the given one, or the one in consultation).</summary>
     Task<ServiceResult<ReservationDto>> CompleteConsultationAsync(
     int recordId,
     int currentUserId,
-    bool isAdmin);
+    bool isAdmin,
+    int? reservationId = null);
+
+    /// <summary>P5c: the visit documented in this record that is in consultation now, if any.</summary>
+    Task<int?> GetVisitInConsultationAsync(int recordId);
     Task<ServiceResult<ReservationDto>> BookFollowUpAsync(
     int recordId,
     CreateReservationRequest request,

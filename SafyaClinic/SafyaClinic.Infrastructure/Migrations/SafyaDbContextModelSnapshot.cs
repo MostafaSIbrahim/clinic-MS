@@ -1252,6 +1252,9 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<bool>("IsPaid")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("MedicalRecordId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -1299,6 +1302,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.HasIndex("ClinicId");
 
                     b.HasIndex("DoctorId");
+
+                    b.HasIndex("MedicalRecordId");
 
                     b.HasIndex("PatientId");
 
@@ -2165,6 +2170,11 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("SafyaClinic.Domain.Entities.MedicalRecord.PatientRecord", "MedicalRecord")
+                        .WithMany("Visits")
+                        .HasForeignKey("MedicalRecordId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SafyaClinic.Domain.Entities.Patient.Patient", "Patient")
                         .WithMany("Reservations")
                         .HasForeignKey("PatientId")
@@ -2186,6 +2196,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("Clinic");
 
                     b.Navigation("Doctor");
+
+                    b.Navigation("MedicalRecord");
 
                     b.Navigation("Patient");
 
@@ -2318,6 +2330,8 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("Prescriptions");
 
                     b.Navigation("Treatments");
+
+                    b.Navigation("Visits");
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.MedicalRecord.TreatmentType", b =>

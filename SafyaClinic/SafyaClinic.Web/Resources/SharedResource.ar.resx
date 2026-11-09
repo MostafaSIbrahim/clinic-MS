@@ -747,4 +747,28 @@
   <data name="Back to the visit" xml:space="preserve">
     <value>العودة إلى الزيارة</value>
   </data>
+  <data name="Today&#x27;s visit" xml:space="preserve">
+    <value>زيارة اليوم</value>
+  </data>
+  <data name="This is the patient&#x27;s latest record." xml:space="preserve">
+    <value>هذا أحدث سجل للمريض.</value>
+  </data>
+  <data name="Continue in it for today&#x27;s visit, or start a new record." xml:space="preserve">
+    <value>تابِع فيه لزيارة اليوم، أو ابدأ سجلًا جديدًا.</value>
+  </data>
+  <data name="It&#x27;s locked, so today&#x27;s visit needs a new record." xml:space="preserve">
+    <value>السجل مقفل، لذا تحتاج زيارة اليوم إلى سجل جديد.</value>
+  </data>
+  <data name="Today&#x27;s visit needs a new record." xml:space="preserve">
+    <value>تحتاج زيارة اليوم إلى سجل جديد.</value>
+  </data>
+  <data name="Continue in this record" xml:space="preserve">
+    <value>المتابعة في هذا السجل</value>
+  </data>
+  <data name="Create a new record for this visit" xml:space="preserve">
+    <value>إنشاء سجل جديد لهذه الزيارة</value>
+  </data>
+  <data name="Visits in this record" xml:space="preserve">
+    <value>الزيارات في هذا السجل</value>
+  </data>
 </root>

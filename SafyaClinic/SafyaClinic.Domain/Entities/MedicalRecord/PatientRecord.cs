@@ -36,5 +36,7 @@ namespace SafyaClinic.Domain.Entities.MedicalRecord
         public virtual ICollection<Treatment> Treatments { get; set; } = new List<Treatment>();
         public virtual ICollection<Prescription.Prescription> Prescriptions { get; set; } = new List<Prescription.Prescription>();
         public virtual Reservation.Reservation? FollowUpReservation { get; set; }
+        /// <summary>P5c: every visit documented in this record (Reservations.MedicalRecordId).</summary>
+        public virtual ICollection<Reservation.Reservation> Visits { get; set; } = new List<Reservation.Reservation>();
     }
 }

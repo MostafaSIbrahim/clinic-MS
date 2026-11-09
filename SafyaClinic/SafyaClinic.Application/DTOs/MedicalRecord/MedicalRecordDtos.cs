@@ -2,8 +2,16 @@
 
 // ── Patient Record ────────────────────────────────────────────
 
+/// <summary>P5c: one visit documented in a record.</summary>
+public sealed record RecordVisitDto(int ReservationId, DateTime Date, TimeSpan Time, string DoctorName, string StatusName);
+
+/// <summary>P5c: the patient's latest record of a kind, offered when a consultation starts.</summary>
+public sealed record LatestRecordDto(int Id, bool IsLocked, DateTime CreatedAt, string DoctorName, string? Diagnosis);
+
 public class PatientRecordDto
 {
+    /// <summary>P5c: the visits documented in this record, oldest first (filled when one record is loaded).</summary>
+    public IReadOnlyList<RecordVisitDto> Visits { get; init; } = Array.Empty<RecordVisitDto>();
     public int Id { get; init; }
     public int PatientId { get; init; }
     /// <summary>P5a: filled when one record is loaded, for the allergy check when prescribing.</summary>

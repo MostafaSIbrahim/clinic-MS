@@ -30,6 +30,13 @@ namespace SafyaClinic.Domain.Entities.Reservation
 
         public DateTime? QueueEndedAtUtc { get; set; }
 
+        /// <summary>
+        /// P5c: the medical record this visit is documented in. A record can cover several visits
+        /// (a patient's ongoing record is continued at the next visit). <see cref="PatientRecord"/> is the
+        /// record that was first opened from this visit, if any.
+        /// </summary>
+        public int? MedicalRecordId { get; set; }
+
         // Navigation properties
         public virtual Patient.Patient Patient { get; set; } = null!;
         public virtual User Doctor { get; set; } = null!;
@@ -37,6 +44,7 @@ namespace SafyaClinic.Domain.Entities.Reservation
         public virtual ReservationStatus Status { get; set; } = null!;
         public virtual TreatmentType TreatmentType { get; set; } = null!;
         public virtual PatientRecord? PatientRecord { get; set; }
+        public virtual PatientRecord? MedicalRecord { get; set; }
         public virtual ICollection<Payment.Payment> Payments { get; set; } = new List<Payment.Payment>();
     }
 }

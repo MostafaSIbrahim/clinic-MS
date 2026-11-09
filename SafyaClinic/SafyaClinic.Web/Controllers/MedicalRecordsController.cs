@@ -43,7 +43,7 @@ namespace SafyaClinic.Web.Controllers
             return View(result.IsSuccess ? result.Data : Enumerable.Empty<PatientRecordDto>());
         }
 
-        public async Task<IActionResult> Details(int id, string? tab = null)
+        public async Task<IActionResult> Details(int id, string? tab = null, int? visit = null)
         {
             ViewBag.Tab = VisitTabs.Normalize(tab);   // P5b: the workspace opens on the requested tab
             var result = await _recordService.GetRecordByIdAsync(id);
@@ -57,21 +57,33 @@ namespace SafyaClinic.Web.Controllers
             var record = result.Data;
 
             ViewBag.CanCompleteConsultation = false;
+            var actOnBehalf = await CanAsync(Permissions.Consultations.ActOnBehalf);
 
-            if (record.ReservationId.HasValue)
+            // P5c: the visit in consultation that is documented in this record (a record can cover several visits).
+            var visitInConsultation = await _reservationService.GetVisitInConsultationAsync(record.Id);
+            if (visitInConsultation.HasValue)
             {
-                var contextResult =
-                    await _reservationService.GetConsultationContextAsync(
-                        record.ReservationId.Value,
-                        CurrentUserId,
-                        await CanAsync(Permissions.Consultations.ActOnBehalf));
+                var contextResult = await _reservationService.GetConsultationContextAsync(
+                    visitInConsultation.Value, CurrentUserId, actOnBehalf);
 
-                if (contextResult.IsSuccess && contextResult.Data is { } context)
+                if (contextResult.IsSuccess && contextResult.Data is { } context &&
+                    context.PatientRecordId == record.Id && context.PatientId == record.PatientId)
                 {
-                    ViewBag.CanCompleteConsultation =
-                        context.PatientRecordId == record.Id &&
-                        context.PatientId == record.PatientId &&
-                        context.DoctorId == record.DoctorId;
+                    ViewBag.CanCompleteConsultation = true;
+                    ViewBag.VisitId = context.ReservationId;
+                }
+            }
+
+            // P5c: Start consultation opened this (the latest) record for a visit that has no record yet:
+            // offer to continue in it, or to create a new record for the visit.
+            if (visit.HasValue && !visitInConsultation.HasValue)
+            {
+                var pending = await _reservationService.GetConsultationContextAsync(visit.Value, CurrentUserId, actOnBehalf);
+                if (pending.IsSuccess && pending.Data is { PatientRecordId: null } p && p.PatientId == record.PatientId)
+                {
+                    ViewBag.PendingVisitId = p.ReservationId;
+                    ViewBag.CanContinueRecord = !record.IsLocked && p.Category == record.Category
+                        && await CanAsync(Permissions.Records.Write);
                 }
             }
 
@@ -370,7 +382,7 @@ namespace SafyaClinic.Web.Controllers
         }
         //---Consultation Context for Doctor Queue and Consultation Pages--//
         [HttpGet]
-        public async Task<IActionResult> Consultation(int reservationId)
+        public async Task<IActionResult> Consultation(int reservationId, bool newRecord = false)
         {
             var result = await _reservationService.GetConsultationContextAsync(
                 reservationId,
@@ -394,6 +406,15 @@ namespace SafyaClinic.Web.Controllers
                     new { id = context.PatientRecordId.Value });
             }
 
+            // P5c: the patient has an earlier record of this kind: open it, with the choice to continue
+            // in it or to create a new record for this visit.
+            if (!newRecord)
+            {
+                var latest = await _recordService.GetLatestRecordAsync(context.PatientId, context.Category);
+                if (latest is not null)
+                    return RedirectToAction(nameof(Details), new { id = latest.Id, visit = context.ReservationId });
+            }
+
             return View("Create", new CreatePatientRecordRequest
             {
                 PatientId = context.PatientId,
@@ -402,15 +423,32 @@ namespace SafyaClinic.Web.Controllers
                 Category = context.Category
             });
         }
+        /// <summary>P5c: document this visit in the patient's existing record instead of a new one.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission(Permissions.Records.Write)]
-        public async Task<IActionResult> CompleteConsultation(int recordId)
+        public async Task<IActionResult> ContinueRecord(int recordId, int reservationId)
+        {
+            var result = await _recordService.ContinueRecordAsync(
+                reservationId, recordId, CurrentUserId, await CanAsync(Permissions.Consultations.ActOnBehalf));
+            if (!result.IsSuccess)
+            {
+                Error(result.Errors.FirstOrDefault() ?? "The visit could not be added to this record.");
+                return RedirectToAction(nameof(Details), new { id = recordId, visit = reservationId });
+            }
+            return RedirectWithSuccess("Today's visit is documented in this record.", nameof(Details), routeValues: new { id = recordId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Records.Write)]
+        public async Task<IActionResult> CompleteConsultation(int recordId, int? reservationId = null)
         {
             var result = await _reservationService.CompleteConsultationAsync(
                 recordId,
                 CurrentUserId,
-                await CanAsync(Permissions.Consultations.ActOnBehalf));
+                await CanAsync(Permissions.Consultations.ActOnBehalf),
+                reservationId);
 
             if (!result.IsSuccess || result.Data is null)
             {
