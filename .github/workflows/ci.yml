@@ -59,3 +59,93 @@ jobs:
         with:
           name: test-results
           path: TestResults
+
+  # P7: the pilot flow end to end in a browser (Playwright), with axe and screen-size checks, against a
+  # fresh SQL Server in a container. Report-only for now (continue-on-error): once it is reliably green,
+  # mark "e2e" as required in the branch protection rules. All passwords are generated per run.
+  e2e:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET (8 runtime, 10 SDK)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Generate passwords for this run
+        run: |
+          SA_PASSWORD="Sa1!$(openssl rand -hex 16)"
+          ADMIN_PASSWORD="Ad1!$(openssl rand -hex 16)"
+          USER_PASSWORD="Us1!$(openssl rand -hex 16)"
+          echo "::add-mask::$SA_PASSWORD"
+          echo "::add-mask::$ADMIN_PASSWORD"
+          echo "::add-mask::$USER_PASSWORD"
+          echo "SA_PASSWORD=$SA_PASSWORD" >> "$GITHUB_ENV"
+          echo "E2E_ADMIN_PASSWORD=$ADMIN_PASSWORD" >> "$GITHUB_ENV"
+          echo "E2E_USER_PASSWORD=$USER_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Start SQL Server
+        run: |
+          docker run -d --name sql -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=$SA_PASSWORD" -p 1433:1433 \
+            mcr.microsoft.com/mssql/server:2022-latest
+          for i in $(seq 1 60); do
+            if docker logs sql 2>&1 | grep -q "SQL Server is now ready for client connections"; then exit 0; fi
+            sleep 2
+          done
+          docker logs sql; exit 1
+
+      - name: Build the app
+        run: dotnet build SafyaClinic/SafyaClinic.Web/SafyaClinic.Web.csproj --configuration Release
+
+      - name: Start the app (Development settings, migrations applied at start-up, fresh database)
+        run: |
+          export ASPNETCORE_ENVIRONMENT=Development
+          export ASPNETCORE_URLS=http://localhost:5070
+          export Database__MigrateOnStartup=true
+          export ConnectionStrings__SafyaClinicDb="Server=localhost,1433;Database=SafyaClinicE2E;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True"
+          export Seed__AdminPassword="$E2E_ADMIN_PASSWORD"
+          nohup dotnet run --project SafyaClinic/SafyaClinic.Web --configuration Release --no-build --no-launch-profile > app.log 2>&1 &
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:5070/health | grep -q Healthy; then exit 0; fi
+            sleep 2
+          done
+          cat app.log; exit 1
+
+      - name: Install Playwright
+        working-directory: SafyaClinic/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run the pilot flow (Playwright + axe)
+        working-directory: SafyaClinic/e2e
+        env:
+          E2E_BASE_URL: http://localhost:5070
+        run: npx playwright test
+
+      - name: Summary
+        if: always()
+        run: cat SafyaClinic/e2e/results/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload E2E results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            SafyaClinic/e2e/results
+            SafyaClinic/e2e/playwright-report
+            SafyaClinic/e2e/test-results
+            app.log
