@@ -82,8 +82,20 @@ async function checkNoSidewaysScroll(page, screen) {
     const { scrollWidth, innerWidth } = await page.evaluate(() => ({
         scrollWidth: document.documentElement.scrollWidth, innerWidth: window.innerWidth,
     }));
-    layout.push({ screen, url: new URL(page.url()).pathname, width: innerWidth, scrollWidth, ok: scrollWidth <= innerWidth + 1 });
-    expect.soft(scrollWidth, `no sideways scroll: ${screen} at ${innerWidth}px`).toBeLessThanOrEqual(innerWidth + 1);
+    // When it does scroll, name the outermost elements that stick out, so the log says what to fix.
+    const culprits = scrollWidth <= innerWidth + 1 ? [] : await page.evaluate(() => {
+        const describe = el => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') +
+            [...el.classList].slice(0, 4).map(c => '.' + c).join('');
+        const wide = [...document.querySelectorAll('body *')].filter(el => {
+            const r = el.getBoundingClientRect();
+            return r.width > 0 && r.right > window.innerWidth + 1 && getComputedStyle(el).position !== 'fixed';
+        });
+        return wide.filter(el => !wide.includes(el.parentElement)).slice(0, 5)
+            .map(el => `${describe(el)} (${Math.round(el.getBoundingClientRect().width)}px wide, inside ${describe(el.parentElement)})`);
+    });
+    layout.push({ screen, url: new URL(page.url()).pathname, width: innerWidth, scrollWidth, ok: scrollWidth <= innerWidth + 1, culprits });
+    expect.soft(scrollWidth, `no sideways scroll: ${screen} at ${innerWidth}px; sticking out: ${culprits.join('; ') || 'n/a'}`)
+        .toBeLessThanOrEqual(innerWidth + 1);
 }
 
 function recordMetric(name, value) { metrics[name] = value; }
