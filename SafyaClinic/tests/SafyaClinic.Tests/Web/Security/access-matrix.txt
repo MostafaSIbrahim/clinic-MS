@@ -176,6 +176,7 @@ Schedules.Edit POST: signed-in
 Schedules.Index GET: Admin ReceptionAdmin ClinicAdmin
 Schedules.Mine GET: Admin Doctor Nutritionist
 Schedules.RemoveDate POST: signed-in
+System.Readiness GET: Admin
 Users.AddToGroup POST: Admin
 Users.Create GET: Admin
 Users.Create POST: Admin
