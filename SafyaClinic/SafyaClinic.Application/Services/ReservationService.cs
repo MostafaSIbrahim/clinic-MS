@@ -597,6 +597,47 @@ public class ReservationService : IReservationService
             })
             .ToListAsync();
     }
+    /// <summary>
+    /// Today's bookings that haven't been checked in yet. The queue lists them separately, so a doctor sees who
+    /// is expected before the front desk checks them in.
+    /// </summary>
+    public async Task<List<DoctorQueueEntryDto>> GetExpectedArrivalsAsync(int? clinicId = null, int? doctorId = null)
+    {
+        var today = _clock.Today;
+        var tomorrow = today.AddDays(1);
+
+        var query = _uow.Reservations.Query()
+            .Where(r =>
+                r.ReservationDate >= today &&
+                r.ReservationDate < tomorrow &&
+                (r.Status.StatusName == "Pending" || r.Status.StatusName == "Confirmed") &&
+                r.QueueStatus == PatientQueueStatus.NotCheckedIn);
+
+        if (clinicId.HasValue)
+            query = query.Where(r => r.ClinicId == clinicId.Value);
+        if (doctorId.HasValue)
+            query = query.Where(r => r.DoctorId == doctorId.Value);
+
+        return await query
+            .OrderBy(r => r.ReservationTime)
+            .ThenBy(r => r.Doctor.FullName)
+            .ThenBy(r => r.Id)
+            .Select(r => new DoctorQueueEntryDto
+            {
+                ReservationId = r.Id,
+                PatientId = r.PatientId,
+                PatientName = r.Patient.FirstName + " " + r.Patient.LastName,
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor.FullName,
+                ClinicId = r.ClinicId,
+                ClinicName = r.Clinic.Name,
+                TreatmentTypeName = r.TreatmentType.TypeName,
+                ReservationTime = r.ReservationTime,
+                QueueStatus = r.QueueStatus,
+            })
+            .ToListAsync();
+    }
+
     public async Task<ServiceResult<List<DoctorQueueEntryDto>>> GetDoctorQueueAsync(
       int? clinicId = null,
       int? doctorId = null)

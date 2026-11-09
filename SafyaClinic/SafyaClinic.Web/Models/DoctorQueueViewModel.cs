@@ -13,4 +13,7 @@ public class DoctorQueueViewModel
     public List<SelectListItem> Doctors { get; init; } = new();
 
     public List<DoctorQueueEntryDto> Entries { get; init; } = new();
+
+    /// <summary>Booked for today but not checked in yet (shown under the queue).</summary>
+    public List<DoctorQueueEntryDto> NotArrived { get; init; } = new();
 }

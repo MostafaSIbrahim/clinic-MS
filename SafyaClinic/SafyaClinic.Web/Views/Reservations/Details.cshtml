@@ -58,6 +58,7 @@
         }
         @* P2c: move to another free time of the same doctor. *@
         @if (Model.StatusName != "Cancelled" && Model.StatusName != "Completed" && Model.StatusName != "NoShow"
+             && Model.QueueStatus == PatientQueueStatus.NotCheckedIn
              && await Can.HasAsync(Permissions.Reservations.Manage))
         {
             <a asp-controller="Appointments" asp-action="Move" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">

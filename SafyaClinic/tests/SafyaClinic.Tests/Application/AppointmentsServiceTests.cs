@@ -207,4 +207,35 @@ public class AppointmentsServiceTests
         Assert.Equal(PatientQueueStatus.Waiting, Assert.Single(monaToday.Bookings).QueueStatus);   // P4: shown instead of Check in
         Assert.NotNull((await Service(w).GetMoveAsync(checkedIn.Id, null, null)).Data!.NotMovable);
     }
+
+    // ── The queue's "Not checked in yet" list (P4 follow-up) ─────
+
+    [Fact]
+    public async Task Todays_bookings_not_yet_checked_in_are_listed_for_the_queue()
+    {
+        var w = await WorldAsync();
+        w.Db.TreatmentTypes.Add(new SafyaClinic.Domain.Entities.MedicalRecord.TreatmentType { Id = 1, TypeName = "General Consultation" });
+        var confirmed = await w.Db.ReservationStatuses.Where(s => s.StatusName == "Confirmed").Select(s => s.Id).SingleAsync();
+        var cancelled = await w.Db.ReservationStatuses.Where(s => s.StatusName == "Cancelled").Select(s => s.Id).SingleAsync();
+        var today = new DateTime(2026, 11, 6);   // the clock's "today"
+        Reservation Booking(TimeSpan at, int doctor, int status, PatientQueueStatus queue = PatientQueueStatus.NotCheckedIn, DateTime? date = null) => new()
+        {
+            PatientId = w.Patient, DoctorId = doctor, ClinicId = w.Main, StatusId = status, TreatmentTypeId = 1,
+            ReservationDate = date ?? today, ReservationTime = at, DurationMinutes = 30, QueueStatus = queue,
+        };
+        w.Db.Reservations.AddRange(
+            Booking(At(11), w.Karim, confirmed),                                   // expected
+            Booking(At(10), w.Mona, confirmed),                                    // expected, earlier
+            Booking(At(12), w.Karim, confirmed, PatientQueueStatus.Waiting),        // already in the queue
+            Booking(At(13), w.Karim, cancelled),                                   // cancelled
+            Booking(At(9), w.Karim, confirmed, date: Sat));                        // another day
+        await w.Db.SaveChangesAsync();
+
+        var all = await Reservations(w).GetExpectedArrivalsAsync();
+        var karim = await Reservations(w).GetExpectedArrivalsAsync(doctorId: w.Karim);
+
+        Assert.Equal(new[] { At(10), At(11) }, all.Select(e => e.ReservationTime));
+        Assert.Equal(At(11), Assert.Single(karim).ReservationTime);
+        Assert.Equal("Dr Karim", karim[0].DoctorName);
+    }
 }
