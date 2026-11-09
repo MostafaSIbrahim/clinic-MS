@@ -46,7 +46,7 @@
                 <div class="col-md-6">
                     <label asp-for="ReservationDate" class="form-label">Date</label>
                     <input asp-for="ReservationDate" type="date"
-                           class="form-control" />
+                           class="form-control" data-not-past="ReservationTime" data-today="@Clock.Today.ToString("yyyy-MM-dd")" data-now="@Clock.Now.ToString("HH:mm")" data-message="Choose a current or future time; past times can't be booked." />
                 </div>
 
                 <div class="col-md-6">
@@ -71,4 +71,5 @@
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script src="~/js/booking-time-guard.js" asp-append-version="true"></script>
 }

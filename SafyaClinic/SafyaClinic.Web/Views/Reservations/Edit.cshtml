@@ -61,7 +61,7 @@
                 </div>
                 <div class="col-md-6">
                     <label asp-for="ReservationDate" class="form-label">Date *</label>
-                    <input asp-for="ReservationDate" type="date" class="form-control" required />
+                    <input asp-for="ReservationDate" type="date" class="form-control" required data-not-past="ReservationTime" data-today="@Clock.Today.ToString("yyyy-MM-dd")" data-now="@Clock.Now.ToString("HH:mm")" data-message="Choose a current or future time; past times can't be booked." data-keep-original />
                 </div>
                 <div class="col-md-6">
                     <label asp-for="ReservationTime" class="form-label">Time *</label>
@@ -103,6 +103,7 @@
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script src="~/js/booking-time-guard.js" asp-append-version="true"></script>
     <script>
         document.getElementById('treatmentTypeSelect').addEventListener('change', function () {
             var opt = this.options[this.selectedIndex];
