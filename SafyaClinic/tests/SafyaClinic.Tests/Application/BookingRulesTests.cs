@@ -49,6 +49,17 @@ public class BookingRulesTests
     }
 
     [Fact]
+    public void P2e_an_open_schedule_still_refuses_the_past()
+    {
+        // A clinic with no hours set and a doctor without a calendar can be booked at any time of day,
+        // but never before now.
+        Assert.Contains("past", Check(At(11), inputs: NoHoursSet, date: Now.Date.AddDays(-1)));
+        Assert.Contains("past", Check(At(11, 59), inputs: NoHoursSet, date: Now.Date));
+        Assert.Null(Check(At(12), inputs: NoHoursSet, date: Now.Date));
+        Assert.Null(Check(At(8), inputs: NoHoursSet, date: Now.Date.AddDays(1)));
+    }
+
+    [Fact]
     public void Outside_the_hours_is_refused_and_the_message_offers_free_times()
     {
         var problem = Check(At(13, 45));   // 13:45–14:15 runs past closing
