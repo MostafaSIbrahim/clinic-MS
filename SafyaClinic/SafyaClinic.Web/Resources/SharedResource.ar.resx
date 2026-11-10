@@ -822,4 +822,61 @@
   <data name="No visits yet." xml:space="preserve">
     <value>لا توجد زيارات بعد.</value>
   </data>
+  <data name="Records" xml:space="preserve">
+    <value>السجلات</value>
+  </data>
+  <data name="Medical records" xml:space="preserve">
+    <value>السجلات الطبية</value>
+  </data>
+  <data name="New record" xml:space="preserve">
+    <value>سجل جديد</value>
+  </data>
+  <data name="No medical records yet." xml:space="preserve">
+    <value>لا توجد سجلات طبية بعد.</value>
+  </data>
+  <data name="Category" xml:space="preserve">
+    <value>الفئة</value>
+  </data>
+  <data name="Internal Medicine" xml:space="preserve">
+    <value>الباطنة</value>
+  </data>
+  <data name="Nutritional" xml:space="preserve">
+    <value>التغذية</value>
+  </data>
+  <data name="Lab requests" xml:space="preserve">
+    <value>طلبات التحاليل</value>
+  </data>
+  <data name="No lab requests yet." xml:space="preserve">
+    <value>لا توجد طلبات تحاليل بعد.</value>
+  </data>
+  <data name="Print request form" xml:space="preserve">
+    <value>طباعة نموذج الطلب</value>
+  </data>
+  <data name="Request analysis" xml:space="preserve">
+    <value>طلب تحليل</value>
+  </data>
+  <data name="Requested on" xml:space="preserve">
+    <value>تاريخ الطلب</value>
+  </data>
+  <data name="Result date" xml:space="preserve">
+    <value>تاريخ النتيجة</value>
+  </data>
+  <data name="Record" xml:space="preserve">
+    <value>السجل</value>
+  </data>
+  <data name="Record #{0}" xml:space="preserve">
+    <value>السجل رقم {0}</value>
+  </data>
+  <data name="Urgent" xml:space="preserve">
+    <value>عاجل</value>
+  </data>
+  <data name="Requested" xml:space="preserve">
+    <value>مطلوب</value>
+  </data>
+  <data name="In Progress" xml:space="preserve">
+    <value>قيد التنفيذ</value>
+  </data>
+  <data name="opens in a new tab" xml:space="preserve">
+    <value>يفتح في علامة تبويب جديدة</value>
+  </data>
 </root>

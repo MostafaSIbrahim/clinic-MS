@@ -1,0 +1,81 @@
+@model SafyaClinic.Web.Models.PatientWorkspaceModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@{
+    // M1b: the Lab tab (was /Analysis/PatientAnalyses). Lab rules are unchanged (D9); this only lists.
+    var patient = Model.Dashboard.Patient;
+    var lab = Model.Lab ?? Array.Empty<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>();
+    var canRequest = await Can.HasAsync(Permissions.Analyses.Manage);
+    var none = new EmptyStateModel(T["No lab requests yet."].Value, Icon: "bi-clipboard-x");
+    string D(DateTime d) => d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+}
+<section aria-labelledby="lab-heading">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <h2 id="lab-heading" class="h5 mb-0">@T["Lab requests"]</h2>
+        <div class="d-flex flex-wrap gap-2">
+            @if (lab.Any(a => a.Status == "Requested"))
+            {
+                <a asp-controller="Analysis" asp-action="PrintPatientRequests" asp-route-patientId="@patient.Id" target="_blank" rel="noopener"
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-printer me-1" aria-hidden="true"></i>@T["Print request form"]<span class="visually-hidden"> (@T["opens in a new tab"])</span>
+                </a>
+            }
+            @if (canRequest)
+            {
+                <a asp-controller="Analysis" asp-action="Request" asp-route-patientId="@patient.Id" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>@T["Request analysis"]
+                </a>
+            }
+        </div>
+    </div>
+    @if (lab.Count == 0)
+    {
+        <partial name="_AppEmpty" model="none" />
+    }
+    else
+    {
+        <app-table caption="@T["Lab requests"].Value" caption-hidden="true" stack="true">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Analysis"]</th>
+                    <th scope="col">@T["Status"]</th>
+                    <th scope="col">@T["Requested on"]</th>
+                    <th scope="col">@T["Result date"]</th>
+                    <th scope="col">@T["Record"]</th>
+                    <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in lab)
+                {
+                    <tr>
+                        <th scope="row" data-label="@T["Analysis"]" dir="auto">
+                            @a.AnalysisTypeName
+                            @if (a.IsUrgent)
+                            {
+                                <span class="app-status app-status--due ms-1">@T["Urgent"]</span>
+                            }
+                        </th>
+                        <td data-label="@T["Status"]"><partial name="_StatusBadge" model="a.Status" /></td>
+                        <td data-label="@T["Requested on"]">@D(a.RequestDate)</td>
+                        <td data-label="@T["Result date"]">@(a.ResultDate is DateTime done ? D(done) : "—")</td>
+                        <td data-label="@T["Record"]">
+                            @if (a.RecordId is int recordId)
+                            {
+                                <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@recordId">@T["Record #{0}", recordId]</a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="app-table__actions">
+                            <a asp-controller="Analysis" asp-action="Details" asp-route-id="@a.Id"
+                               class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @a.AnalysisTypeName</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </app-table>
+    }
+</section>

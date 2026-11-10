@@ -53,12 +53,9 @@ namespace SafyaClinic.Web.Controllers
         }
 
         // ── Per-patient list ("Analyses" quick link on Patients/Details) ──
-        public async Task<IActionResult> PatientAnalyses(int patientId)
-        {
-            var result = await _analysisService.GetPatientAnalysesAsync(patientId);
-            ViewBag.PatientId = patientId;
-            return View(result.IsSuccess ? result.Data : Enumerable.Empty<MedicalAnalysisDto>());
-        }
+        // M1b: the patient's lab list is the Lab tab of the patient workspace; old links land there.
+        public IActionResult PatientAnalyses(int patientId) =>
+            RedirectToAction("Details", "Patients", new { id = patientId, tab = SafyaClinic.Web.Models.PatientTabs.Lab });
 
         public async Task<IActionResult> Details(int id)
         {

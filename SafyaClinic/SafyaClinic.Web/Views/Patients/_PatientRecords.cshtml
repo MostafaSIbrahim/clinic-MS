@@ -1,0 +1,68 @@
+@model SafyaClinic.Web.Models.PatientWorkspaceModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@{
+    // M1b: the Records tab (was /MedicalRecords/PatientRecords). Newest first.
+    var patient = Model.Dashboard.Patient;
+    var records = Model.Records ?? Array.Empty<PatientRecordDto>();
+    var canWrite = await Can.HasAsync(Permissions.Records.Write);
+    var none = new EmptyStateModel(T["No medical records yet."].Value, Icon: "bi-file-earmark-x");
+}
+<section aria-labelledby="records-heading">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <h2 id="records-heading" class="h5 mb-0">@T["Medical records"]</h2>
+        @if (canWrite)
+        {
+            <a asp-controller="MedicalRecords" asp-action="Create" asp-route-patientId="@patient.Id" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>@T["New record"]
+            </a>
+        }
+    </div>
+    @if (records.Count == 0)
+    {
+        <partial name="_AppEmpty" model="none" />
+    }
+    else
+    {
+        <app-table caption="@T["Medical records"].Value" caption-hidden="true" stack="true">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Date"]</th>
+                    <th scope="col">@T["Doctor"]</th>
+                    <th scope="col">@T["Category"]</th>
+                    <th scope="col">@T["Diagnosis"]</th>
+                    <th scope="col">@T["Locked"]</th>
+                    <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in records)
+                {
+                    var date = r.CreatedAt.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+                    <tr>
+                        <th scope="row" data-label="@T["Date"]">
+                            <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@r.Id">@date</a>
+                        </th>
+                        <td data-label="@T["Doctor"]" dir="auto">@r.DoctorName</td>
+                        <td data-label="@T["Category"]">@T[Labels.Humanize(r.Category)]</td>
+                        <td data-label="@T["Diagnosis"]" dir="auto">@(string.IsNullOrWhiteSpace(r.Diagnosis) ? "—" : r.Diagnosis)</td>
+                        <td data-label="@T["Locked"]">
+                            @if (r.IsLocked)
+                            {
+                                <i class="bi bi-lock-fill" aria-hidden="true"></i><span>@T["Locked"]</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="app-table__actions">
+                            <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@r.Id"
+                               class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @date</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </app-table>
+    }
+</section>
