@@ -450,7 +450,18 @@ public class ReservationService : IReservationService
                 StatusName = r.Status != null ? r.Status.StatusName : "Unknown",
                 StatusColor = r.Status != null ? r.Status.ColorCode : "#6c757d",
                 Category = r.Category.ToString(),
-                IsPaid = r.IsPaid
+                IsPaid = r.IsPaid,
+                // M1a: the patient's Visits tab checks in and collects from this list.
+                QueueStatus = r.QueueStatus,
+                HasCollectibleBalance =
+                (r.QueueStatus == PatientQueueStatus.InConsultation ||
+                 r.QueueStatus == PatientQueueStatus.Finished) &&
+                r.Status.StatusName != "Cancelled" &&
+                r.Status.StatusName != "NoShow" &&
+                (r.TotalAmount ?? 0m) >
+                    (r.Payments.AsQueryable()
+                        .Where(Coverage.Covers)
+                        .Sum(p => (decimal?)p.Amount) ?? 0m)
             }).ToListAsync();
         return ServiceResult<PagedResult<ReservationSummaryDto>>.Success(
             new PagedResult<ReservationSummaryDto>

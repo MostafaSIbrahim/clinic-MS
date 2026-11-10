@@ -810,4 +810,16 @@
   <data name="Drug suggestions are unavailable right now. You can type the name." xml:space="preserve">
     <value>اقتراحات الأدوية غير متاحة الآن. يمكنك كتابة الاسم.</value>
   </data>
+  <data name="Patient sections" xml:space="preserve">
+    <value>أقسام ملف المريض</value>
+  </data>
+  <data name="Overview" xml:space="preserve">
+    <value>نظرة عامة</value>
+  </data>
+  <data name="Visits" xml:space="preserve">
+    <value>الزيارات</value>
+  </data>
+  <data name="No visits yet." xml:space="preserve">
+    <value>لا توجد زيارات بعد.</value>
+  </data>
 </root>

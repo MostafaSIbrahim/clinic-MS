@@ -1,0 +1,57 @@
+using SafyaClinic.Application.DTOs.Common;
+using SafyaClinic.Application.DTOs.Patient;
+using SafyaClinic.Application.DTOs.Reservation;
+using SafyaClinic.Application.Security;
+
+namespace SafyaClinic.Web.Models;
+
+/// <summary>M1: a tab of the patient workspace, shown to people with its permission.</summary>
+public sealed record PatientTab(string Key, string Label, string Permission);
+
+/// <summary>
+/// M1: the tabs of the patient workspace (<c>/Patients/Details/5?tab=visits</c>). Each tab is its own page load,
+/// so a long history stays fast and every tab can be bookmarked. M1b–M1d add Records, Lab, Nutrition, Payments
+/// and Timeline.
+/// </summary>
+public static class PatientTabs
+{
+    public const string Overview = "overview";
+    public const string Visits = "visits";
+
+    public static readonly IReadOnlyList<PatientTab> All = new[]
+    {
+        new PatientTab(Overview, "Overview", Permissions.Patients.View),
+        new PatientTab(Visits, "Visits", Permissions.Reservations.View),
+    };
+
+    public static async Task<IReadOnlyList<PatientTab>> VisibleAsync(Func<string, Task<bool>> can)
+    {
+        var visible = new List<PatientTab>();
+        foreach (var tab in All)
+            if (await can(tab.Permission)) visible.Add(tab);
+        return visible;
+    }
+
+    /// <summary>
+    /// The requested tab if the person can see it. Otherwise the tab that fits their work: Visits for the
+    /// front desk (people who check patients in), else Overview.
+    /// </summary>
+    public static async Task<string> ChooseAsync(string? requested, IReadOnlyList<PatientTab> visible, Func<string, Task<bool>> can)
+    {
+        var key = requested?.Trim().ToLowerInvariant();
+        if (key is not null && visible.Any(t => t.Key == key)) return key;
+        if (visible.Any(t => t.Key == Visits) && await can(Permissions.Reservations.CheckIn)) return Visits;
+        return Overview;
+    }
+}
+
+/// <summary>M1: what the patient workspace page shows.</summary>
+public sealed class PatientWorkspaceModel
+{
+    public required PatientDashboardDto Dashboard { get; init; }
+    public required IReadOnlyList<PatientTab> Tabs { get; init; }
+    public required string ActiveTab { get; init; }
+
+    /// <summary>Visits tab: one page of the patient's reservations, newest first.</summary>
+    public PagedResult<ReservationSummaryDto>? Visits { get; init; }
+}

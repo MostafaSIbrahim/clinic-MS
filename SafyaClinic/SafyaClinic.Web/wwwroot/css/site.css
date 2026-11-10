@@ -1155,9 +1155,17 @@ a.app-kpi:focus-visible {
     color: var(--color-text);
 }
 
-.app-tabs__tab[aria-selected="true"] {
+.app-tabs__tab[aria-selected="true"],
+.app-tabs__tab[aria-current="page"] {
     border-bottom-color: var(--color-primary);
     color: var(--color-primary);
+}
+
+/* M1: tabs that are links to separate pages (the patient workspace). */
+a.app-tabs__tab {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
 }
 
 .app-tabs__tab:focus-visible,

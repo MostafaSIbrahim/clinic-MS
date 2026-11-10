@@ -48,17 +48,31 @@ public class PatientsController : BaseController
 
     // ── Detail ────────────────────────────────────────────────
 
-    public async Task<IActionResult> Details(int id)
+    // M1: the patient workspace. One tab is loaded at a time (?tab=visits); tabs a person can't use are hidden.
+    public async Task<IActionResult> Details(int id, string? tab = null, int page = 1,
+        [FromServices] IReservationService? reservations = null)
     {
         var result = await _patientService.GetPatientDashboardAsync(id);
 
-        if (!result.IsSuccess)
+        if (!result.IsSuccess || result.Data is null)
         {
             Error("Patient not found.");
             return RedirectToAction(nameof(Index));
         }
 
-        return View(result.Data);
+        var tabs = await PatientTabs.VisibleAsync(CanAsync);
+        var active = await PatientTabs.ChooseAsync(tab, tabs, CanAsync);
+
+        PagedResult<SafyaClinic.Application.DTOs.Reservation.ReservationSummaryDto>? visits = null;
+        if (active == PatientTabs.Visits && reservations is not null)
+        {
+            var found = await reservations.GetReservationsAsync(
+                new SafyaClinic.Application.DTOs.Reservation.ReservationFilterRequest { PatientId = id },
+                new PaginationRequest { Page = Math.Max(1, page), PageSize = 20 });
+            if (found.IsSuccess) visits = found.Data;
+        }
+
+        return View(new PatientWorkspaceModel { Dashboard = result.Data, Tabs = tabs, ActiveTab = active, Visits = visits });
     }
 
     [HttpGet]
