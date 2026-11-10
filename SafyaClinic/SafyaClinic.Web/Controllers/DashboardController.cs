@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Models;
 using SafyaClinic.Application.Common;
+using SafyaClinic.Application.DTOs.Reservation;
+using SafyaClinic.Application.Security;
+using SafyaClinic.Web.Security;
 
 namespace SafyaClinic.Web.Controllers;
 
@@ -12,31 +15,46 @@ public class DashboardController : BaseController
     private readonly IReservationService _reservationService;
     private readonly IPaymentService _paymentService;
     private readonly IClinicClock _clock;
+    private readonly ICurrentPermissions _can;
 
     public DashboardController(
         IReservationService reservationService,
         IPaymentService paymentService,
-        IClinicClock clock)
+        IClinicClock clock,
+        ICurrentPermissions can)
     {
         _reservationService = reservationService;
         _paymentService = paymentService;
         _clock = clock;
+        _can = can;
     }
 
     public async Task<IActionResult> Index()
     {
-        var doctorId = IsClinician ? CurrentUserId : (int?)null;
+        // P8a: today's list is for people who may see reservations; the money figures for people who
+        // may see payments. Clinicians see their own day (F4c).
+        var canSeeReservations = await _can.HasAsync(Permissions.Reservations.View);
+        var canSeeMoney = await _can.HasAsync(Permissions.Payments.View);
 
-        var todayResult = await _reservationService.GetTodayReservationsAsync(doctorId);
+        var reservations = new List<ReservationSummaryDto>();
+        if (canSeeReservations)
+        {
+            var doctorId = IsClinician ? CurrentUserId : (int?)null;
+            var todayResult = await _reservationService.GetTodayReservationsAsync(doctorId);
+            if (todayResult.IsSuccess && todayResult.Data is not null)
+                reservations = todayResult.Data.ToList();
+        }
 
-        var reservations = todayResult.IsSuccess
-            ? todayResult.Data?.ToList() ?? []
-            : [];
-        // F2: the clinic's day, as an exact UTC range (payments are stored in UTC).
-        var today = _clock.Today;
-        var todayPayments = await _paymentService.GetRevenueBetweenAsync(
-            _clock.DayStartUtc(today),
-            _clock.DayStartUtc(today.AddDays(1)));
+        var revenue = 0m;
+        if (canSeeMoney)
+        {
+            // F2: the clinic's day, as an exact UTC range (payments are stored in UTC).
+            var today = _clock.Today;
+            var todayPayments = await _paymentService.GetRevenueBetweenAsync(
+                _clock.DayStartUtc(today),
+                _clock.DayStartUtc(today.AddDays(1)));
+            if (todayPayments.IsSuccess) revenue = todayPayments.Data;
+        }
 
         var model = new DashboardViewModel
         {
@@ -44,9 +62,9 @@ public class DashboardController : BaseController
             TodayReservationCount = reservations.Count,
             TodayPendingCount = reservations.Count(r => r.StatusName == "Pending"),
             TodayUnpaidCount = reservations.Count(r => r.HasCollectibleBalance),
-            TodayRevenue = todayPayments.IsSuccess
-                ? todayPayments.Data
-                : 0m
+            TodayRevenue = revenue,
+            CanSeeReservations = canSeeReservations,
+            CanSeeMoney = canSeeMoney
         };
 
         return View(model);

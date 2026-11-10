@@ -488,6 +488,7 @@ public class ReservationService : IReservationService
                 StatusColor = r.Status != null ? r.Status.ColorCode : "#6c757d",
                 Category = r.Category.ToString(),
                 IsPaid = r.IsPaid,
+                QueueStatus = r.QueueStatus,
                 HasCollectibleBalance =
                 (r.QueueStatus == PatientQueueStatus.InConsultation ||
                  r.QueueStatus == PatientQueueStatus.Finished) &&

@@ -14,4 +14,8 @@ public class DashboardViewModel
     public int TodayUnpaidCount { get; set; }
 
     public decimal TodayRevenue { get; set; }
+
+    // P8a: the list and the money figures are shown only to people allowed to see them.
+    public bool CanSeeReservations { get; set; }
+    public bool CanSeeMoney { get; set; }
 }

@@ -27,7 +27,7 @@ public class NavigationCatalogueTests
     [InlineData(SystemGroups.ReceptionRole,
         "Dashboard|Patients|Appointments|Reservations|Doctor Queues|Follow-ups|Unpaid Payments|Payment Reports")]
     [InlineData(SystemGroups.ReceptionAdminRole,
-        "Dashboard|Doctor schedules|Unpaid Payments|Payment Reports")]
+        "Dashboard|Patients|Appointments|Reservations|Doctor Queues|Follow-ups|Doctor schedules|Unpaid Payments|Payment Reports")]
     public void Each_group_sees_its_pages(string role, string expected)
     {
         Assert.Equal(expected, Labels(MenuFor(role)));

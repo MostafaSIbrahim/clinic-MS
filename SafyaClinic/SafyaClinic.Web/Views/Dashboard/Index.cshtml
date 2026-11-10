@@ -1,126 +1,151 @@
 @model SafyaClinic.Web.Models.DashboardViewModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@using SafyaClinic.Domain.Enums
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = T["Dashboard"].Value;
+    // P8a: the dashboard is the front desk's starting point. Each shortcut and row action appears only
+    // for people allowed to use it.
+    var canFind = await Can.HasAsync(Permissions.Patients.View);
+    var canRegister = await Can.HasAsync(Permissions.Patients.Edit);
+    var canBook = await Can.HasAsync(Permissions.Reservations.Manage);
+    var canSeeQueue = await Can.HasAsync(Permissions.Reservations.ViewQueue);
+    var canSeeAllQueues = await Can.HasAsync(Permissions.Reservations.ViewAllQueues);
+    var canCheckIn = await Can.HasAsync(Permissions.Reservations.CheckIn);
+    var canCollect = await Can.HasAsync(Permissions.Payments.Collect);
+    var canSeeFullPayments = await Can.HasAsync(Permissions.Payments.ViewFullDashboard);
+    var here = Context.Request.Path + Context.Request.QueryString;
+    var nothingToday = new EmptyStateModel(T["No reservations scheduled for today."].Value, Icon: "bi-calendar-x");
 }
 <div class="page-toolbar">
-    <div><h1>Dashboard</h1><p class="text-muted mb-0">Choose your next task.</p></div>
+    <div><h1>@T["Dashboard"]</h1><p class="text-muted mb-0">@T["Choose your next task."]</p></div>
 </div>
-<nav class="workspace-shortcuts" aria-label="Dashboard shortcuts">
-    @if (await Can.HasAsync(Permissions.Reservations.ViewQueue))
+<nav class="workspace-shortcuts" aria-label="@T["Dashboard shortcuts"]">
+    @if (canBook)
     {
-        <a asp-controller="Reservations" asp-action="Queue" class="btn btn-outline-primary">
-            @(await Can.HasAsync(Permissions.Reservations.ViewAllQueues) ? "Doctor Queues" : "My Queue")
-        </a>
+        <a asp-controller="Appointments" asp-action="Index" class="btn btn-primary">@T["Book appointment"]</a>
     }
-    @if (await Can.HasAsync(Permissions.Reservations.CheckIn))
+    @if (canRegister)
     {
-        <a asp-controller="Patients" asp-action="Index" class="btn btn-outline-primary">Find Patient</a>
-        <a asp-controller="Reservations" asp-action="Create" class="btn btn-primary">Book Reservation</a>
-        <a asp-controller="Payments" asp-action="Dashboard" class="btn btn-outline-primary">Payments</a>
+        <a asp-controller="Patients" asp-action="Create" class="btn btn-outline-primary">@T["Register patient"]</a>
+    }
+    @if (canFind)
+    {
+        <a asp-controller="Patients" asp-action="Index" class="btn btn-outline-primary">@T["Find patient"]</a>
+    }
+    @if (canSeeQueue)
+    {
+        <a asp-controller="Reservations" asp-action="Queue" class="btn btn-outline-primary">@(canSeeAllQueues ? T["Doctor Queues"] : T["My Queue"])</a>
+    }
+    @if (Model.CanSeeMoney)
+    {
+        <a asp-controller="Payments" asp-action="Dashboard" class="btn btn-outline-primary">@(canSeeFullPayments ? T["Payment Dashboard"] : T["Unpaid Payments"])</a>
     }
 </nav>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="stat-card bg-primary-soft">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="small opacity-75">Today's Reservations</div>
-                    <div class="fs-3 fw-bold">
-                        @Model.TodayReservationCount
-                    </div>
+@if (Model.CanSeeReservations || Model.CanSeeMoney)
+{
+    <div class="row g-3 mb-4">
+        @if (Model.CanSeeReservations)
+        {
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card bg-primary-soft">
+                    <div class="small opacity-75">@T["Today's reservations"]</div>
+                    <div class="fs-3 fw-bold">@Model.TodayReservationCount</div>
                 </div>
-                <i class="bi bi-calendar2-week fs-1 opacity-50"></i>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card bg-teal-soft">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="small opacity-75">Today's Revenue</div>
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card bg-amber-soft">
+                    <div class="small opacity-75">@T["Pending"]</div>
+                    <div class="fs-3 fw-bold">@Model.TodayPendingCount</div>
+                </div>
+            </div>
+        }
+        @if (Model.CanSeeMoney)
+        {
+            <div class="col-sm-6 col-lg-3">
+                <div class="stat-card bg-teal-soft">
+                    <div class="small opacity-75">@T["Today's revenue"]</div>
                     <div class="fs-3 fw-bold">@Model.TodayRevenue.ToMoney()</div>
                 </div>
-                <i class="bi bi-cash-coin fs-1 opacity-50"></i>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="stat-card bg-amber-soft">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="small opacity-75">Pending</div>
-                    <div class="fs-3 fw-bold">
-                        @Model.TodayPendingCount
+            @if (Model.CanSeeReservations)
+            {
+                <div class="col-sm-6 col-lg-3">
+                    <div class="stat-card bg-rose-soft">
+                        <div class="small opacity-75">@T["Balance due today"]</div>
+                        <div class="fs-3 fw-bold">@Model.TodayUnpaidCount</div>
                     </div>
                 </div>
-                <i class="bi bi-hourglass-split fs-1 opacity-50"></i>
-            </div>
-        </div>
+            }
+        }
     </div>
-    <div class="col-md-3">
-        <div class="stat-card bg-rose-soft">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="small opacity-75">Today's Unpaid Reservations</div>
-                    <div class="fs-3 fw-bold">
-                        @Model.TodayUnpaidCount
-                    </div>
-                </div>
-                <i class="bi bi-exclamation-circle fs-1 opacity-50"></i>
-            </div>
-        </div>
-    </div>
-</div>
+}
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-calendar2-week me-2"></i>Today's Reservations</span>
-        <a asp-controller="Reservations" asp-action="Create" class="btn btn-sm btn-primary">
-            <i class="bi bi-plus-lg me-1"></i>New Reservation
-        </a>
-    </div>
-    <div class="card-body p-0">
+@if (Model.CanSeeReservations)
+{
+    <app-card id="today" title="@T["Today's reservations"].Value" level="2" icon="bi-calendar2-week">
         @if (!Model.TodayReservations.Any())
         {
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-calendar-x fs-1 d-block mb-2 opacity-50"></i>
-                No reservations scheduled for today.
-            </div>
+            <partial name="_AppEmpty" model="nothingToday" />
         }
         else
         {
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead>
+            <app-table caption="@T["Today's reservations"].Value" caption-hidden="true" stack="true">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Time"]</th>
+                        <th scope="col">@T["Patient"]</th>
+                        <th scope="col">@T["Doctor"]</th>
+                        <th scope="col">@T["Visit"]</th>
+                        <th scope="col">@T["Status"]</th>
+                        <th scope="col">@T["Payment coverage"]</th>
+                        <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.TodayReservations)
+                    {
+                        var closed = r.StatusName is "Completed" or "Cancelled" or "NoShow";
                         <tr>
-                            <th>Time</th>
-                            <th>Patient</th>
-                            <th>Doctor</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th>Payment coverage</th>
+                            <td data-label="@T["Time"]">@r.ReservationTime.ToString(@"hh\:mm")</td>
+                            <th scope="row" data-label="@T["Patient"]">
+                                <a asp-controller="Reservations" asp-action="Details" asp-route-id="@r.Id" dir="auto">@r.PatientName</a>
+                            </th>
+                            <td data-label="@T["Doctor"]" dir="auto">@r.DoctorName</td>
+                            <td data-label="@T["Visit"]" dir="auto">@r.TreatmentTypeName</td>
+                            <td data-label="@T["Status"]">
+                                <partial name="_StatusBadge" model="r.StatusName" />
+                                @if (r.QueueStatus != PatientQueueStatus.NotCheckedIn)
+                                {
+                                    <partial name="_StatusBadge" model="r.QueueStatus.ToString()" />
+                                }
+                            </td>
+                            <td data-label="@T["Payment coverage"]">
+                                @if (r.StatusName != "Cancelled")
+                                {
+                                    <partial name="_StatusBadge" model="@(r.IsPaid ? "Covered" : "Not fully covered")" />
+                                }
+                            </td>
+                            <td class="app-table__actions">
+                                @if (canCheckIn && !closed && r.QueueStatus == PatientQueueStatus.NotCheckedIn)
+                                {
+                                    <form asp-controller="Reservations" asp-action="CheckIn" asp-route-id="@r.Id" method="post" class="d-inline">
+                                        <input type="hidden" name="returnUrl" value="@here" />
+                                        <button type="submit" class="btn btn-sm btn-success">@T["Check in"]<span class="visually-hidden"> @r.PatientName</span></button>
+                                    </form>
+                                }
+                                @if (canCollect && r.HasCollectibleBalance)
+                                {
+                                    <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@r.PatientId" asp-route-reservationId="@r.Id"
+                                       class="btn btn-sm btn-outline-success">@T["Collect"]<span class="visually-hidden"> @r.PatientName</span></a>
+                                }
+                                <a asp-controller="Reservations" asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-outline-secondary">@T["Open"]<span class="visually-hidden"> @r.PatientName</span></a>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var r in Model.TodayReservations)
-                         {
-                            <tr>
-                                <td>@r.ReservationTime.ToString(@"hh\:mm")</td>
-                                <td>@r.PatientName</td>
-                                <td>@r.DoctorName</td>
-                                <td><span class="badge bg-secondary">@Labels.Humanize(r.Category)</span></td>
-                                <td>
-                                    <span class="badge" style="background-color:@r.StatusColor;color:#fff;">@r.StatusName</span>
-                                </td>
-                                <td>
-                                    @await Html.PartialAsync("_PaymentStatusToggle", (r.Id, r.PatientId, r.IsPaid))
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </app-table>
         }
-    </div>
-</div>
+    </app-card>
+}
