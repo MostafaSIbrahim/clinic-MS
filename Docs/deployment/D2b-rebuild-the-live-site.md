@@ -35,15 +35,70 @@ Control panel → **site83728** → **Stop**.
 
 ## Step 4: build the tables (SSMS)
 
-1. SSMS → **Connect** with the new database's server, user and password.
-2. Check the database name in the toolbar's drop-down is the **new** one.
-3. Open `D:\MyDevWork\migrations-idempotent.sql` → **Execute**. It must finish without errors.
-4. Check:
+This step runs the migration script against the **new, empty** database to create all the tables. It takes 1–2 minutes.
+
+### 4a. Find the connection details in the control panel
+
+Control panel → **Databases** → the database you created in Step 3. Note four things:
+
+| What | Looks like | In SSMS it goes in |
+|---|---|---|
+| Server (host) | e.g. `db12345.public.databaseasp.net`. Some panels add a port, e.g. `,1433` | Server name |
+| Database name | e.g. `db12345` | Connect to database |
+| User (login) | e.g. `db12345` | Login |
+| Password | the one you set or were given | Password |
+
+### 4b. Connect from SSMS
+
+1. Open **SQL Server Management Studio**. The **Connect to Server** window opens. If it doesn't: **File → Connect Object Explorer…**.
+2. Fill in:
+   - **Server type:** Database Engine
+   - **Server name:** the server from 4a, exactly as shown, including any `,port`
+   - **Authentication:** **SQL Server Authentication** (not Windows)
+   - **Login** and **Password:** from 4a. You can tick *Remember password* only if this is your own PC.
+3. Encryption, which depends on your SSMS version:
+   - **SSMS 20 or later:** set **Encryption** to *Mandatory* and tick **Trust server certificate**.
+   - **Older SSMS:** click **Options >>** → **Connection Properties** → tick **Encrypt connection** and **Trust server certificate**.
+4. Still under **Options >> → Connection Properties**, in **Connect to database**, type the **database name** from 4a. On shared hosting you may not be allowed to list or open other databases.
+5. Click **Connect**. In **Object Explorer** on the left, you see the server, and under *Databases* your database.
+
+If it fails:
+- *Login failed*: re-check the user and password.
+- *The certificate chain was issued by an authority that is not trusted*: tick **Trust server certificate**.
+- *Cannot connect* or *network-related error*: check the server name and port. Some hosts also require **remote access** to be switched on for the database in the panel; look for "Remote access" or "Allow remote connections".
+
+### 4c. Open the script against the right database
+
+1. In Object Explorer, right-click **your database** → **New Query**. A query window opens, connected to it.
+2. Check the **database drop-down** in the toolbar (top left, next to *Execute*). It must show the **new** database's name, not `master`. If it shows `master`, choose your database there.
+3. **File → Open → File…** → `D:\MyDevWork\migrations-idempotent.sql`. If SSMS asks which connection to use, choose the same server and database. Check the drop-down again: still the new database.
+4. **Ignore red underlines and the Error List at this point.** As soon as the file opens, SSMS's IntelliSense checks it against the database as it is now, which is empty. It underlines many column names and may list about 24 "errors" such as *Column name 'ClinicId' does not exist in the target table or view*. These are not real: the script creates those columns itself, earlier in the run. Only the **Messages** tab after you press Execute (4d) counts.
+
+### 4d. Run it
+
+1. Press **F5**, or click **Execute**.
+2. Wait. The status bar shows *Executing query…* and then *Query executed successfully*.
+3. In the **Messages** tab at the bottom you'll see many lines. The last ones say *Commands completed successfully* (or rows affected). There must be **no red error lines**.
+
+A real error in the Messages tab looks like `Msg 1911, Level 16, State 1, Line 345` followed by the message. If any appears: **stop here** and don't run it again. Copy the red message (it holds no passwords) and send it to me. Each migration in the script runs in its own transaction, so a failed one leaves nothing half-applied.
+
+### 4e. Check the result
+
+Open a **New Query** on the same database, paste the following, and press **F5**:
 
 ```sql
-SELECT TOP 1 MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId DESC;   -- ends with _WriteOffReasons
-SELECT COUNT(*) AS Tables FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';   -- about 40
+SELECT TOP 1 MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId DESC;
+SELECT COUNT(*) AS Tables FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
+SELECT COUNT(*) AS Migrations FROM __EFMigrationsHistory;
 ```
+
+| Result | Expected |
+|---|---|
+| First result | A value ending in `_WriteOffReasons` (the newest migration) |
+| Tables | Around 40 |
+| Migrations | The number of migration files, around 30. Any number is fine as long as the first result is right |
+
+The tables are empty apart from a few seed rows; the app adds the administrator, permission groups, visit types and a clinic when it first starts (Step 8). Close SSMS, or keep it open for later.
 
 ## Step 5: clear old files (File Manager)
 
@@ -107,7 +162,7 @@ If check 8 or 9 fails (no write access to `App_Data`): control panel → site �
 
 ## Step 10: remove the seed password
 
-1. **Users** → edit the admin account: your name and, if you want to stop using `0100`, your own phone number.
+1. Leave the `0100` account as it is for now. There's no screen to rename it; D2d step 4.1 replaces it with your own admin account.
 2. File Manager → `appsettings.json` → delete the whole `"Seed": { … },` block → Save.
 3. Control panel → **Restart**. `/System/Readiness` now shows no Review for the seed password.
 

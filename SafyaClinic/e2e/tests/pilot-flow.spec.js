@@ -64,10 +64,12 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
 
     await test.step('Patient arrives: reception checks them in (from the dashboard)', async () => {
         await page.goto('/');
+        screens['Dashboard'] = '/';
+        await checkA11y(page, 'Dashboard');
         clicks.reset();
-        await clicks.click(page.locator('#sidebar').getByRole('link', { name: 'Appointments', exact: true }));
+        // P8a: today's list on the dashboard has the check-in button.
         await clicks.click(page.getByRole('button', { name: `Check in ${patientName}` }));
-        await expect(page.locator('.app-day')).toContainText('Waiting');
+        await expect(page.locator('main')).toContainText('Waiting');
         recordMetric('Clicks from "patient arrives" to "checked in" (existing booking, from the dashboard)', clicks.count);
     });
 
@@ -141,6 +143,10 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
     const spage = supervisor.page;
 
     await test.step('Supervisor writes off the rest, with a reason', async () => {
+        // P8a: a supervisor needs no other group to work the front desk.
+        await spage.goto('/');
+        await expect(spage.getByRole('link', { name: 'Book appointment' })).toBeVisible();
+        await expect(spage.locator('main').getByRole('link', { name: new RegExp(`^${patientName}$`) })).toBeVisible();
         await spage.goto(`/Payments/PatientSummary?patientId=${patientId}`);
         await spage.locator('main').getByRole('link', { name: /Write off$/ }).first().click();
         await checkA11y(spage, 'Write off balance');

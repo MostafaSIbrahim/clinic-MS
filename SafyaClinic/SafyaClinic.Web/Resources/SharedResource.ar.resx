@@ -771,4 +771,37 @@
   <data name="Visits in this record" xml:space="preserve">
     <value>الزيارات في هذا السجل</value>
   </data>
+  <data name="Choose your next task." xml:space="preserve">
+    <value>اختر مهمتك التالية.</value>
+  </data>
+  <data name="Dashboard shortcuts" xml:space="preserve">
+    <value>اختصارات لوحة التحكم</value>
+  </data>
+  <data name="Register patient" xml:space="preserve">
+    <value>تسجيل مريض</value>
+  </data>
+  <data name="Find patient" xml:space="preserve">
+    <value>البحث عن مريض</value>
+  </data>
+  <data name="Today's reservations" xml:space="preserve">
+    <value>حجوزات اليوم</value>
+  </data>
+  <data name="Today's revenue" xml:space="preserve">
+    <value>إيرادات اليوم</value>
+  </data>
+  <data name="Balance due today" xml:space="preserve">
+    <value>زيارات اليوم بمبالغ مستحقة</value>
+  </data>
+  <data name="No reservations scheduled for today." xml:space="preserve">
+    <value>لا توجد حجوزات اليوم.</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>الحالة</value>
+  </data>
+  <data name="Payment coverage" xml:space="preserve">
+    <value>تغطية الدفع</value>
+  </data>
+  <data name="Collect" xml:space="preserve">
+    <value>تحصيل</value>
+  </data>
 </root>

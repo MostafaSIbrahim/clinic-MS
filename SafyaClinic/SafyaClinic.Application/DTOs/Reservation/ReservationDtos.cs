@@ -45,6 +45,7 @@ public class ReservationSummaryDto
     public string Category { get; init; } = string.Empty;
     public bool IsPaid { get; init; }
     public bool HasCollectibleBalance { get; init; }
+    public PatientQueueStatus QueueStatus { get; init; }   // P8a: the dashboard checks patients in
 }
 
 public class CreateReservationRequest

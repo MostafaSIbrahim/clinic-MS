@@ -10,12 +10,12 @@ Analysis.PrintRequestSlip GET: Admin Doctor
 Analysis.UpdateStatus POST: Admin Doctor
 Analysis.UploadAttachment POST: Admin Doctor
 Analysis.ViewAttachment GET: Admin Doctor
-Appointments.Book GET: Admin Doctor Nutritionist Reception
-Appointments.Book POST: Admin Doctor Nutritionist Reception
-Appointments.Index GET: Admin Doctor Nutritionist Reception
-Appointments.Move GET: Admin Doctor Nutritionist Reception
-Appointments.Move POST: Admin Doctor Nutritionist Reception
-Appointments.Week GET: Admin Doctor Nutritionist Reception
+Appointments.Book GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Appointments.Book POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Appointments.Index GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Appointments.Move GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Appointments.Move POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Appointments.Week GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Auth.AccessDenied GET: anyone
 Auth.ChangePassword GET: signed-in
 Auth.ChangePassword POST: signed-in
@@ -35,10 +35,10 @@ Clinics.RemoveAgreement POST: Admin ClinicAdmin
 Clinics.SaveAgreement POST: Admin ClinicAdmin
 Components.Index GET: Admin
 Dashboard.Index ANY: signed-in
-FollowUps.Book GET: Admin Doctor Reception
-FollowUps.Book POST: Admin Doctor Reception
-FollowUps.Dismiss POST: Admin Doctor Reception
-FollowUps.Index GET: Admin Doctor Reception
+FollowUps.Book GET: Admin Doctor Reception ReceptionAdmin ClinicAdmin
+FollowUps.Book POST: Admin Doctor Reception ReceptionAdmin ClinicAdmin
+FollowUps.Dismiss POST: Admin Doctor Reception ReceptionAdmin ClinicAdmin
+FollowUps.Index GET: Admin Doctor Reception ReceptionAdmin ClinicAdmin
 Home.Error ANY: anyone
 Home.Index ANY: anyone
 Language.Set POST: anyone
@@ -80,7 +80,7 @@ MedicalRecords.RemovePrescriptionItem POST: Admin Doctor
 MedicalRecords.RemoveTreatment POST: Admin Doctor
 MedicalRecords.UploadPrescriptionAttachment POST: Admin Doctor
 MedicalRecords.ViewAttachment GET: Admin Doctor
-Medicines.Search GET: Admin Doctor Nutritionist Reception
+Medicines.Search GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Nutrition.CompleteFollowUp POST: Admin Nutritionist
 Nutrition.CreateInjectionType GET: Admin
 Nutrition.CreateInjectionType POST: Admin
@@ -116,21 +116,21 @@ PatientSources.Delete POST: Admin
 PatientSources.Edit GET: Admin
 PatientSources.Edit POST: Admin
 PatientSources.Index ANY: Admin
-Patients.AddAddress POST: Admin Doctor Nutritionist Reception
-Patients.AddPhone POST: Admin Doctor Nutritionist Reception
-Patients.Create GET: Admin Doctor Nutritionist Reception
-Patients.Create POST: Admin Doctor Nutritionist Reception
-Patients.Details ANY: Admin Doctor Nutritionist Reception
-Patients.EditBasic GET: Admin Doctor Nutritionist Reception
-Patients.EditBasic POST: Admin Doctor Nutritionist Reception
+Patients.AddAddress POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Patients.AddPhone POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Patients.Create GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Patients.Create POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Patients.Details ANY: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Patients.EditBasic GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Patients.EditBasic POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Patients.EditMedical GET: Admin Doctor
 Patients.EditMedical POST: Admin Doctor
-Patients.Index ANY: Admin Doctor Nutritionist Reception
-Patients.RemoveAddress POST: Admin Doctor Nutritionist Reception
-Patients.RemovePhone POST: Admin Doctor Nutritionist Reception
+Patients.Index ANY: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Patients.RemoveAddress POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Patients.RemovePhone POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Patients.Timeline GET: Admin Doctor
-Patients.UseExisting GET: Admin Doctor Nutritionist Reception
-PatientsApi.Search GET: Admin Doctor Nutritionist Reception
+Patients.UseExisting GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+PatientsApi.Search GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Payments.Audit GET: Admin Reception ReceptionAdmin ClinicAdmin
 Payments.BackfillZeroCostPayments POST: Admin
 Payments.Cancel GET: Admin Reception ReceptionAdmin ClinicAdmin
@@ -156,20 +156,20 @@ PermissionGroups.Edit GET: Admin
 PermissionGroups.Edit POST: Admin
 PermissionGroups.Index ANY: Admin
 PermissionGroups.RemoveMember POST: Admin
-Reservations.Board GET: Admin Doctor Nutritionist Reception
-Reservations.Cancel POST: Admin Doctor Nutritionist Reception
-Reservations.CheckIn POST: Admin Reception
-Reservations.Create GET: Admin Doctor Nutritionist Reception
-Reservations.Create POST: Admin Doctor Nutritionist Reception
-Reservations.Details ANY: Admin Doctor Nutritionist Reception
-Reservations.Edit GET: Admin Doctor Nutritionist Reception
-Reservations.Edit POST: Admin Doctor Nutritionist Reception
-Reservations.Index ANY: Admin Doctor Nutritionist Reception
-Reservations.PatientReservationHistoryReport GET: Admin Doctor Nutritionist Reception
-Reservations.Queue GET: Admin Doctor Reception
+Reservations.Board GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.Cancel POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.CheckIn POST: Admin Reception ReceptionAdmin ClinicAdmin
+Reservations.Create GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.Create POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.Details ANY: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.Edit GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.Edit POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.Index ANY: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.PatientReservationHistoryReport GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.Queue GET: Admin Doctor Reception ReceptionAdmin ClinicAdmin
 Reservations.StartConsultation POST: Admin Doctor
-Reservations.Today ANY: Admin Doctor Nutritionist Reception
-Reservations.UpdateStatus POST: Admin Doctor Nutritionist Reception
+Reservations.Today ANY: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
+Reservations.UpdateStatus POST: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Schedules.AddDate POST: signed-in
 Schedules.Edit GET: signed-in
 Schedules.Edit POST: signed-in

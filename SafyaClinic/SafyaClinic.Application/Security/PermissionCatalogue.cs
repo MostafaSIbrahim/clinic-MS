@@ -212,8 +212,15 @@ public static class SystemGroups
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
         }),
 
-        new(ReceptionAdminRole, "Reception supervisors", "Payments, payment reports, write-offs and doctors' calendars", new[]
+        // P8a: supervisors and clinic managers also work the front desk, so each holds everything Reception
+        // has. One group is enough per person.
+        new(ReceptionAdminRole, "Reception supervisors", "Everything Reception does, plus write-offs and doctors' calendars", new[]
         {
+            Permissions.Patients.View, Permissions.Patients.Edit,
+            Permissions.Reservations.View, Permissions.Reservations.Manage, Permissions.Reservations.ViewQueue,
+            Permissions.Reservations.ViewAllQueues, Permissions.Reservations.CheckIn, Permissions.Reservations.ChangeAnyDoctorStatus,
+            Permissions.Medicines.Search,
+            Permissions.FollowUps.View, Permissions.FollowUps.Manage, Permissions.FollowUps.ViewAll,
             Permissions.Payments.View, Permissions.Payments.Collect, Permissions.Payments.Adjust,
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
             Permissions.Payments.WriteOff,
@@ -224,6 +231,11 @@ public static class SystemGroups
         // reports for any date and clinic settings (including opening hours). No users, permissions or records.
         new(ClinicAdminRole, "Clinic managers", "Everything Reception supervisors do, plus the full payment dashboard, any-date reports and clinic settings", new[]
         {
+            Permissions.Patients.View, Permissions.Patients.Edit,
+            Permissions.Reservations.View, Permissions.Reservations.Manage, Permissions.Reservations.ViewQueue,
+            Permissions.Reservations.ViewAllQueues, Permissions.Reservations.CheckIn, Permissions.Reservations.ChangeAnyDoctorStatus,
+            Permissions.Medicines.Search,
+            Permissions.FollowUps.View, Permissions.FollowUps.Manage, Permissions.FollowUps.ViewAll,
             Permissions.Payments.View, Permissions.Payments.Collect, Permissions.Payments.Adjust,
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
             Permissions.Payments.WriteOff, Permissions.Payments.ViewFullDashboard, Permissions.Payments.ReportAnyDate,
