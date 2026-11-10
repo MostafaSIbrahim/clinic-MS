@@ -62,6 +62,18 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         recordMetric('Clicks to book a known patient (patient page → booked)', clicks.count);
     });
 
+    await test.step('The patient workspace lists the booking on its Visits tab', async () => {
+        // M1a: the front desk opens a patient on Visits; the Overview tab holds the details.
+        await page.goto(`/Patients/Details/${patientId}`);
+        await expect(page.getByRole('link', { name: 'Visits' })).toHaveAttribute('aria-current', 'page');
+        await expect(page.locator('main')).toContainText(USERS.doctor.name);
+        screens['Patient visits'] = `/Patients/Details/${patientId}?tab=visits`;
+        screens['Patient overview'] = `/Patients/Details/${patientId}?tab=overview`;
+        await page.getByRole('link', { name: 'Overview' }).click();
+        await expect(page.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
+        await checkA11y(page, 'Patient overview');
+    });
+
     await test.step('Patient arrives: reception checks them in (from the dashboard)', async () => {
         await page.goto('/');
         screens['Dashboard'] = '/';
