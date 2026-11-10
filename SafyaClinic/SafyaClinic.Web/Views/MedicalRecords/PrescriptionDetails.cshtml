@@ -1,4 +1,5 @@
 ﻿@model PrescriptionDetailDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
     ViewData["Title"] = $"Prescription #{Model.Id}";
     // P5a: after an allergy refusal the drug stays filled in.
@@ -150,12 +151,19 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/medicine-autocomplete.js"></script>
+    <script src="~/js/medicine-autocomplete.js" asp-append-version="true"></script>
+    <script>
+        const drugMessages = {
+            noMatch: @Json.Serialize(T["No matching drug in the list. You can type the name."].Value),
+            unavailable: @Json.Serialize(T["Drug suggestions are unavailable right now. You can type the name."].Value)
+        };
+    </script>
     <script src="~/js/allergy-check.js" asp-append-version="true"></script>
     <script>
         document.querySelectorAll('.med-input').forEach(input => {
             attachMedicineAutocomplete(input, {
                 minLength: 2,
+                messages: drugMessages,
                 onSelect: function(med) {
                     input.value = med.tradeName;
                     input.dispatchEvent(new Event('input', { bubbles: true }));   // P5a: re-check allergies

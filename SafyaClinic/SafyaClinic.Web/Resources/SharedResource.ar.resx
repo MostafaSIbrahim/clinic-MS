@@ -804,4 +804,10 @@
   <data name="Collect" xml:space="preserve">
     <value>تحصيل</value>
   </data>
+  <data name="No matching drug in the list. You can type the name." xml:space="preserve">
+    <value>لا يوجد دواء مطابق في القائمة. يمكنك كتابة الاسم.</value>
+  </data>
+  <data name="Drug suggestions are unavailable right now. You can type the name." xml:space="preserve">
+    <value>اقتراحات الأدوية غير متاحة الآن. يمكنك كتابة الاسم.</value>
+  </data>
 </root>

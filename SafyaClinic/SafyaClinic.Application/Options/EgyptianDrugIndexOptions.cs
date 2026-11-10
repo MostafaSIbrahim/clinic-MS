@@ -8,8 +8,9 @@ public class EgyptianDrugIndexOptions
 {
     public const string SectionName = "EgyptianDrugIndex";
 
-    // "Local"  -> serve suggestions from the bundled offline dataset (default,
-    //             works out of the box, no external dependency or API key).
+    // "Local"  -> serve suggestions from the built-in list of about 25,000 medicines
+    //             registered in Egypt (P8b; default, no external dependency or API key).
+    // "DwaPrices" -> DwaPrices' API (needs their production address and key).
     // "Http"   -> call a real external Egyptian drug-index REST API.
     public string Provider { get; set; } = "Local";
 
