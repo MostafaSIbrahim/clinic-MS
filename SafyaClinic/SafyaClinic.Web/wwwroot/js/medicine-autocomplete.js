@@ -14,6 +14,8 @@
         options = options || {};
         const minLength = options.minLength || 2;
         const onSelect = options.onSelect || function () {};
+        // P8b: say so when nothing matches or the list can't be reached; the name can always be typed.
+        const messages = options.messages || {};
 
         // Wrap the input so the suggestion list can be positioned under it.
         if (getComputedStyle(inputEl.parentElement).position === 'static') {
@@ -42,9 +44,22 @@
             activeIndex = index;
         }
 
+        function note(text) {
+            activeItems = [];
+            activeIndex = -1;
+            if (!text) { hide(); return; }
+            list.innerHTML = '';
+            const item = document.createElement('div');
+            item.className = 'list-group-item small text-muted';
+            item.setAttribute('role', 'status');
+            item.textContent = text;
+            list.appendChild(item);
+            list.style.display = 'block';
+        }
+
         function render(items) {
             activeItems = items;
-            if (!items.length) { hide(); return; }
+            if (!items.length) { note(messages.noMatch); return; }
 
             list.innerHTML = '';
             items.forEach((med, i) => {
@@ -55,8 +70,9 @@
                     '<div class="d-flex justify-content-between">' +
                     '<span><strong>' + escapeHtml(med.tradeName) + '</strong>' +
                     '<span class="text-muted"> — ' + escapeHtml(med.scientificName) + '</span></span>' +
-                    '<span class="text-muted small">' + escapeHtml(med.publicPrice != null ? med.publicPrice + ' EGP' : '') + '</span>' +
+                    '<span class="text-muted small">' + escapeHtml(med.publicPrice > 0 ? med.publicPrice + ' EGP' : '') + '</span>' +
                     '</div>' +
+                    (med.arabicName ? '<div class="small" dir="rtl" lang="ar">' + escapeHtml(med.arabicName) + '</div>' : '') +
                     '<div class="small text-muted">' + escapeHtml(med.description) + (med.strength ? ' • ' + escapeHtml(med.strength) : '') +
                     (med.manufacturer ? ' • ' + escapeHtml(med.manufacturer) : '') + '</div>';
                 item.addEventListener('mousedown', function (e) {
@@ -79,9 +95,9 @@
 
         const search = debounce(function (term) {
             fetch('/api/medicines/search?query=' + encodeURIComponent(term), { credentials: 'same-origin' })
-                .then(r => r.ok ? r.json() : [])
-                .then(render)
-                .catch(() => hide());
+                .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+                .then(function (items) { if (inputEl.value.trim() === term) render(items); })
+                .catch(() => note(messages.unavailable));
         }, 300);
 
         inputEl.addEventListener('input', function () {

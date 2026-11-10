@@ -18,9 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Data\egyptian-medicines-seed.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <!-- P8b: the drug list is built into the assembly, so publishing can't leave it behind. -->
+    <EmbeddedResource Include="Data\egyptian-drugs.json.gz" LogicalName="SafyaClinic.Drugs.json.gz" />
   </ItemGroup>
 
   <ItemGroup>

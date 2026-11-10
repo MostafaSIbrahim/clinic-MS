@@ -54,7 +54,8 @@ public class EgyptianDrugService : IEgyptianDrugService
             // Autocomplete should degrade to "no suggestions", never break the
             // prescription form just because the drug index is unreachable.
             _logger.LogWarning(ex, "Egyptian drug index lookup failed for query '{Query}'", query);
-            results = Enumerable.Empty<EgyptianMedicineDto>();
+            // P8b: not cached, so the next keystroke tries again.
+            return Enumerable.Empty<EgyptianMedicineDto>();
         }
 
         var limited = results.Take(_options.MaxResults).ToList();

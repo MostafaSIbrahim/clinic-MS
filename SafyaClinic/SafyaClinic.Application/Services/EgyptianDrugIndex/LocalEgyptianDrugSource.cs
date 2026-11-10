@@ -1,104 +1,93 @@
+using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SafyaClinic.Application.DTOs.Medicine;
+using SafyaClinic.Application.Options;
 
 namespace SafyaClinic.Application.Services.EgyptianDrugIndex;
 
-// Default, dependency-free data source: searches a small bundled JSON
-// dataset of common Egyptian-market medicines shipped with the app
-// (see Data/egyptian-medicines-seed.json). This is deliberately a *starter*
-// dataset, not a claim of official/current EDA pricing — swap Provider to
-// "Http" in configuration once you've integrated with a licensed real-time
-// source, or replace the seed file with a fuller dataset (e.g. the open
-// CC0 Egyptian drug database published on GitHub) for a richer offline set.
+// P8b: the default source. A public-domain (CC0) list of about 25,000 medicines registered in Egypt, compiled by
+// the open "egyptian-drug-database" project (see Data/egyptian-drugs.SOURCE.md). It's built into this assembly,
+// so it works on any host with no outside service, file path or API key. Prices are a snapshot and the Arabic
+// names are the compiler's spellings: suggestions help typing, and the doctor still checks the name.
 public class LocalEgyptianDrugSource : IEgyptianDrugSource
 {
-    private static readonly object LoadLock = new();
-    private static IReadOnlyList<EgyptianMedicineDto>? _cachedDataset;
+    public const string ResourceName = "SafyaClinic.Drugs.json.gz";
 
+    private static readonly Lazy<DrugIndex> Index = new(Load, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private readonly EgyptianDrugIndexOptions _options;
     private readonly ILogger<LocalEgyptianDrugSource> _logger;
 
-    public LocalEgyptianDrugSource(ILogger<LocalEgyptianDrugSource> logger)
+    public LocalEgyptianDrugSource(IOptions<EgyptianDrugIndexOptions> options, ILogger<LocalEgyptianDrugSource> logger)
     {
+        _options = options.Value;
         _logger = logger;
     }
 
-    public Task<IEnumerable<EgyptianMedicineDto>> FetchAsync(
-        string normalizedQuery, CancellationToken cancellationToken)
+    /// <summary>The whole list, loaded once.</summary>
+    public static DrugIndex List => Index.Value;
+
+    public Task<IEnumerable<EgyptianMedicineDto>> FetchAsync(string normalizedQuery, CancellationToken cancellationToken)
     {
-        var dataset = LoadDataset();
-
-        var matches = dataset.Where(m =>
-            m.TradeName.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
-            m.ScientificName.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase));
-
-        // Trade-name matches first (what a doctor types most often), then by name.
-        var ordered = matches
-            .OrderByDescending(m => m.TradeName.StartsWith(normalizedQuery, StringComparison.OrdinalIgnoreCase))
-            .ThenBy(m => m.TradeName);
-
-        return Task.FromResult<IEnumerable<EgyptianMedicineDto>>(ordered.ToList());
+        var max = _options.MaxResults > 0 ? _options.MaxResults : 15;
+        var found = List.Find(normalizedQuery, max).Select(ToDto).ToList();
+        if (List.Count == 0) _logger.LogError("The built-in drug list is empty or could not be read ({Resource}).", ResourceName);
+        return Task.FromResult<IEnumerable<EgyptianMedicineDto>>(found);
     }
 
-    private IReadOnlyList<EgyptianMedicineDto> LoadDataset()
+    public static EgyptianMedicineDto ToDto(DrugEntry e) => new()
     {
-        if (_cachedDataset is not null) return _cachedDataset;
+        TradeName = e.Name,
+        ArabicName = e.ArabicName,
+        ScientificName = e.ScientificName,
+        Description = RouteLabel(e.Route),
+        DrugClass = e.DrugClass,
+        Strength = string.Empty,   // part of the trade name in this list, e.g. "AUGMENTIN 625 MG 10 F.C.TABS."
+        PublicPrice = e.Price,
+        Manufacturer = e.Manufacturer
+    };
 
-        lock (LoadLock)
-        {
-            if (_cachedDataset is not null) return _cachedDataset;
+    private static string RouteLabel(string route) => route switch
+    {
+        "ORAL.SOLID" => "Oral (solid)",
+        "ORAL.LIQUID" => "Oral (liquid)",
+        "EFF" => "Effervescent",
+        "INJECTION" => "Injection",
+        "TOPICAL" => "Topical",
+        "EYE" => "Eye",
+        "EAR" => "Ear",
+        "MOUTH" => "Mouth",
+        "RECTAL" => "Rectal",
+        "VAGINAL" => "Vaginal",
+        "SPRAY" => "Spray",
+        "SOAP" => "Soap",
+        _ => string.Empty
+    };
 
-            var path = FindDatasetPath();
-            if (path is null)
-            {
-                _logger.LogError(
-                    "Could not locate egyptian-medicines-seed.json under {BaseDirectory}. " +
-                    "Make sure SafyaClinic.Application/Data/egyptian-medicines-seed.json is set to " +
-                    "CopyToOutputDirectory=PreserveNewest, or set EgyptianDrugIndex:Provider to \"Http\" instead.",
-                    AppContext.BaseDirectory);
-                _cachedDataset = new List<EgyptianMedicineDto>();
-                return _cachedDataset;
-            }
-
-            try
-            {
-                var json = File.ReadAllText(path);
-                var items = JsonSerializer.Deserialize<List<EgyptianMedicineDto>>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-                _cachedDataset = items ?? new List<EgyptianMedicineDto>();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Could not parse the local Egyptian medicines dataset at {Path}", path);
-                _cachedDataset = new List<EgyptianMedicineDto>();
-            }
-
-            return _cachedDataset;
-        }
+    private static DrugIndex Load()
+    {
+        using var stream = typeof(LocalEgyptianDrugSource).Assembly.GetManifestResourceStream(ResourceName);
+        if (stream is null) return new DrugIndex(Array.Empty<DrugEntry>());
+        using var unzip = new GZipStream(stream, CompressionMode.Decompress);
+        var rows = JsonSerializer.Deserialize<List<Row>>(unzip) ?? new List<Row>();
+        return new DrugIndex(rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.Name))
+            .Select(r => new DrugEntry(
+                r.Name!.Trim(), r.Arabic?.Trim() ?? "", r.Scientific?.Trim() ?? "", r.Manufacturer?.Trim() ?? "",
+                r.DrugClass?.Trim() ?? "", r.Route?.Trim() ?? "", r.Price ?? 0m)));
     }
 
-    // The dataset ships as a "None, CopyToOutputDirectory" item in the Application
-    // project, which .NET SDK project-to-project references normally propagate
-    // into the final host's output directory automatically. These extra
-    // candidates are just a safety net in case a given build/publish setup
-    // doesn't carry it across (e.g. a custom publish profile).
-    private static string? FindDatasetPath()
+    private sealed class Row
     {
-        const string relative = "Data/egyptian-medicines-seed.json";
-
-        var candidates = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, relative),
-            Path.Combine(Directory.GetCurrentDirectory(), relative),
-            Path.Combine(Directory.GetCurrentDirectory(), "..", "SafyaClinic.Application", relative),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-                "SafyaClinic.Application", relative)
-        };
-
-        return candidates
-            .Select(Path.GetFullPath)
-            .FirstOrDefault(File.Exists);
+        [JsonPropertyName("commercial_name_en")] public string? Name { get; set; }
+        [JsonPropertyName("commercial_name_ar")] public string? Arabic { get; set; }
+        [JsonPropertyName("scientific_name")] public string? Scientific { get; set; }
+        [JsonPropertyName("manufacturer")] public string? Manufacturer { get; set; }
+        [JsonPropertyName("drug_class")] public string? DrugClass { get; set; }
+        [JsonPropertyName("route")] public string? Route { get; set; }
+        [JsonPropertyName("price_egp")] public decimal? Price { get; set; }
     }
 }
