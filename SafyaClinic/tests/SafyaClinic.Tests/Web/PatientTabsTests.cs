@@ -12,7 +12,8 @@ public class PatientTabsTests
 
     [Theory]
     [InlineData(SystemGroups.ReceptionRole, "overview|visits")]
-    [InlineData(SystemGroups.DoctorRole, "overview|visits")]
+    [InlineData(SystemGroups.DoctorRole, "overview|visits|records|lab")]
+    [InlineData(SystemGroups.AdminRole, "overview|visits|records|lab")]
     [InlineData(SystemGroups.ReceptionAdminRole, "overview|visits")]
     public async Task Each_group_sees_the_tabs_it_may_use(string role, string expected)
     {
@@ -35,10 +36,13 @@ public class PatientTabsTests
     [Theory]
     [InlineData(SystemGroups.ReceptionRole, null, "visits")]       // the front desk starts on Visits
     [InlineData(SystemGroups.ReceptionAdminRole, null, "visits")]
-    [InlineData(SystemGroups.DoctorRole, null, "overview")]
+    [InlineData(SystemGroups.DoctorRole, null, "records")]          // doctors start on Records (M1b)
+    [InlineData(SystemGroups.AdminRole, null, "visits")]
     [InlineData(SystemGroups.ReceptionRole, "Overview", "overview")] // a chosen tab wins, in any case
     [InlineData(SystemGroups.DoctorRole, "visits", "visits")]
     [InlineData(SystemGroups.ReceptionRole, "nonsense", "visits")]  // an unknown tab falls back
+    [InlineData(SystemGroups.ReceptionRole, "records", "visits")]   // so does a tab the person can't see
+    [InlineData(SystemGroups.DoctorRole, "LAB", "lab")]
     public async Task The_first_tab_fits_the_work_and_a_chosen_tab_wins(string role, string? requested, string expected)
     {
         var can = As(role);

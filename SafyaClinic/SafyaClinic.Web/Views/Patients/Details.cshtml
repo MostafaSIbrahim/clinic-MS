@@ -102,25 +102,7 @@
 </header>
 
 <nav class="workspace-shortcuts" aria-label="Patient workspace">
-    @if (await Can.HasAsync(Permissions.Records.View))
-    {
-        <a asp-controller="MedicalRecords"
-           asp-action="PatientRecords"
-           asp-route-patientId="@patient.Id"
-           class="btn btn-outline-secondary">
-            <i class="bi bi-file-medical me-1" aria-hidden="true"></i>
-            Medical Records
-        </a>
-
-        <a asp-controller="Analysis"
-           asp-action="PatientAnalyses"
-           asp-route-patientId="@patient.Id"
-           class="btn btn-outline-secondary">
-            <i class="bi bi-clipboard2-pulse me-1" aria-hidden="true"></i>
-            Analyses
-        </a>
-    }
-
+    @* M1b: Medical Records and Analyses are now the Records and Lab tabs. *@
     @if (await Can.HasAsync(Permissions.Nutrition.View))
     {
         <a asp-controller="Nutrition"
@@ -153,9 +135,23 @@
     }
 </nav>
 
+@if (PatientTabs.IsClinical(Model.ActiveTab))
+{
+    @* M1b: on clinical tabs the allergies are always in view. *@
+    @await Component.InvokeAsync("PatientHeader", new { patientId = patient.Id })
+}
+
 @if (Model.ActiveTab == PatientTabs.Visits)
 {
     <partial name="_PatientVisits" model="Model" />
+}
+else if (Model.ActiveTab == PatientTabs.Records)
+{
+    <partial name="_PatientRecords" model="Model" />
+}
+else if (Model.ActiveTab == PatientTabs.Lab)
+{
+    <partial name="_PatientLab" model="Model" />
 }
 else
 {

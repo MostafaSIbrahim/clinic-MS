@@ -36,12 +36,9 @@ namespace SafyaClinic.Web.Controllers
             _paymentService = paymentService;
         }
 
-        public async Task<IActionResult> PatientRecords(int patientId)
-        {
-            var result = await _recordService.GetPatientRecordsAsync(patientId);
-            ViewBag.PatientId = patientId;
-            return View(result.IsSuccess ? result.Data : Enumerable.Empty<PatientRecordDto>());
-        }
+        // M1b: the records list is the Records tab of the patient workspace; old links land there.
+        public IActionResult PatientRecords(int patientId) =>
+            RedirectToAction("Details", "Patients", new { id = patientId, tab = PatientTabs.Records });
 
         public async Task<IActionResult> Details(int id, string? tab = null, int? visit = null)
         {

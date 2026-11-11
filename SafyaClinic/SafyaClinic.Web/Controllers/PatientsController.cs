@@ -50,7 +50,9 @@ public class PatientsController : BaseController
 
     // M1: the patient workspace. One tab is loaded at a time (?tab=visits); tabs a person can't use are hidden.
     public async Task<IActionResult> Details(int id, string? tab = null, int page = 1,
-        [FromServices] IReservationService? reservations = null)
+        [FromServices] IReservationService? reservations = null,
+        [FromServices] IPatientRecordService? records = null,
+        [FromServices] IAnalysisService? analyses = null)
     {
         var result = await _patientService.GetPatientDashboardAsync(id);
 
@@ -72,7 +74,29 @@ public class PatientsController : BaseController
             if (found.IsSuccess) visits = found.Data;
         }
 
-        return View(new PatientWorkspaceModel { Dashboard = result.Data, Tabs = tabs, ActiveTab = active, Visits = visits });
+        // M1b: the clinical tabs. A tab is only chosen when the person may see it (above).
+        IReadOnlyList<SafyaClinic.Application.DTOs.MedicalRecord.PatientRecordDto>? recordList = null;
+        if (active == PatientTabs.Records && records is not null)
+        {
+            var found = await records.GetPatientRecordsAsync(id);
+            recordList = found.IsSuccess && found.Data is not null
+                ? found.Data.OrderByDescending(r => r.CreatedAt).ToList()
+                : new List<SafyaClinic.Application.DTOs.MedicalRecord.PatientRecordDto>();
+        }
+
+        IReadOnlyList<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>? labList = null;
+        if (active == PatientTabs.Lab && analyses is not null)
+        {
+            var found = await analyses.GetPatientAnalysesAsync(id);
+            labList = found.IsSuccess && found.Data is not null
+                ? found.Data.ToList()
+                : new List<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>();
+        }
+
+        return View(new PatientWorkspaceModel
+        {
+            Dashboard = result.Data, Tabs = tabs, ActiveTab = active, Visits = visits, Records = recordList, Lab = labList
+        });
     }
 
     [HttpGet]

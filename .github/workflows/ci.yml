@@ -116,6 +116,10 @@ jobs:
           export Database__MigrateOnStartup=true
           export ConnectionStrings__SafyaClinicDb="Server=localhost,1433;Database=SafyaClinicE2E;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True"
           export Seed__AdminPassword="$E2E_ADMIN_PASSWORD"
+          # M1b: run the clinic clock at about 10:00, whatever the hour, so today always has free times to book.
+          offset=$(( (10 - 10#$(date -u +%H) + 24) % 24 )); if [ "$offset" -gt 14 ]; then offset=$(( offset - 24 )); fi
+          if [ "$offset" -ge 0 ]; then export Clinic__TimeZone="Etc/GMT-$offset"; else export Clinic__TimeZone="Etc/GMT+$(( -offset ))"; fi
+          echo "Clinic time zone for this run: $Clinic__TimeZone"
           nohup dotnet run --project SafyaClinic/SafyaClinic.Web --configuration Release --no-build --no-launch-profile > app.log 2>&1 &
           for i in $(seq 1 90); do
             if curl -fsS http://localhost:5070/health | grep -q Healthy; then exit 0; fi

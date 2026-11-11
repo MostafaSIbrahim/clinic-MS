@@ -20,6 +20,9 @@ public static class StatusStyles
         ["InConsultation"] = "in-consultation",
         ["Finished"] = "completed",
         ["Left"] = "no-show",
+        // lab requests (M1b)
+        ["Requested"] = "booked",
+        ["InProgress"] = "in-consultation",
         // payments
         ["Covered"] = "paid",
         ["Paid"] = "paid",

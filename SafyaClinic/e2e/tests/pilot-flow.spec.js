@@ -131,6 +131,23 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await expect(dpage.locator('main')).not.toContainText(patientName);
     });
 
+    await test.step('The doctor opens the patient on the Records tab, with the allergies in view', async () => {
+        // M1b: doctors start on Records; the Lab tab lists lab requests. Both show the patient header.
+        await dpage.goto(`/Patients/Details/${patientId}`);
+        await expect(dpage.getByRole('link', { name: 'Records', exact: true })).toHaveAttribute('aria-current', 'page');
+        await expect(dpage.locator('main')).toContainText('Acute pharyngitis');
+        await expect(dpage.locator('.app-patient-header')).toContainText('Penicillin');
+        screens['Patient records'] = `/Patients/Details/${patientId}?tab=records`;
+        await checkA11y(dpage, 'Patient records');
+        await dpage.getByRole('link', { name: 'Lab', exact: true }).click();
+        await expect(dpage.getByRole('link', { name: 'Lab', exact: true })).toHaveAttribute('aria-current', 'page');
+        screens['Patient lab'] = `/Patients/Details/${patientId}?tab=lab`;
+        await checkA11y(dpage, 'Patient lab');
+        // The old records page lands on the tab.
+        await dpage.goto(`/MedicalRecords/PatientRecords?patientId=${patientId}`);
+        await expect(dpage).toHaveURL(new RegExp(`/Patients/Details/${patientId}\\?tab=records`));
+    });
+
     await test.step('Reception collects part of the balance', async () => {
         await page.goto(`/Payments/PatientSummary?patientId=${patientId}`);
         screens['Patient payments'] = `/Payments/PatientSummary?patientId=${patientId}`;

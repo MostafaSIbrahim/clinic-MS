@@ -243,8 +243,7 @@
                     {
                         <p class="small text-muted">Start an eligible consultation using the queue actions. Previous records remain available below.</p>
                     }
-                    <a asp-controller="MedicalRecords" asp-action="PatientRecords"
-                       asp-route-patientId="@Model.PatientId" class="btn btn-outline-secondary w-100 mt-2">Patient medical records</a>
+                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" asp-route-tab="records" class="btn btn-outline-secondary w-100 mt-2">Patient medical records</a>
                 </div>
             </div>
         }
