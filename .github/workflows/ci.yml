@@ -102,7 +102,7 @@ jobs:
           docker cp migrations-idempotent.sql sql:/tmp/migrations.sql
           docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -b -S localhost -U sa -P "$SA_PASSWORD" \
             -Q "CREATE DATABASE SafyaPerf COLLATE SQL_Latin1_General_CP1_CI_AS"
-          docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -b -S localhost -U sa -P "$SA_PASSWORD" -d SafyaPerf \
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -b -I -S localhost -U sa -P "$SA_PASSWORD" -d SafyaPerf \
             -i /tmp/migrations.sql > script-output.txt 2>&1 || { tail -n 40 script-output.txt; exit 1; }
           echo "Migration script ran without errors."
 
