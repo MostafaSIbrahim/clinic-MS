@@ -25,6 +25,7 @@ public static class PatientTabs
     public const string Lab = "lab";           // M1b
     public const string Nutrition = "nutrition"; // M1c
     public const string Payments = "payments";   // M1c
+    public const string Timeline = "timeline";   // M1d
 
     /// <summary>Tabs that show the patient header with allergies above them.</summary>
     public static bool IsClinical(string tab) => tab is Records or Lab;
@@ -37,6 +38,7 @@ public static class PatientTabs
         new PatientTab(Lab, "Lab", Permissions.Analyses.View),
         new PatientTab(Nutrition, "Nutrition", Permissions.Nutrition.View),
         new PatientTab(Payments, "Payments", Permissions.Payments.View),
+        new PatientTab(Timeline, "Timeline", Permissions.Patients.ViewTimeline),
     };
 
     public static async Task<IReadOnlyList<PatientTab>> VisibleAsync(Func<string, Task<bool>> can)
@@ -85,4 +87,7 @@ public sealed class PatientWorkspaceModel
 
     /// <summary>Payments tab (M1c): balances, collection and payment history.</summary>
     public PatientFinancialSummaryDto? Payments { get; init; }
+
+    /// <summary>Timeline tab (M1d): reservations and medical records, newest first, one page.</summary>
+    public PagedResult<PatientTimelineItemDto>? Timeline { get; init; }
 }

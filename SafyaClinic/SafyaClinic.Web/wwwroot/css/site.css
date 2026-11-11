@@ -1161,6 +1161,25 @@ a.app-kpi:focus-visible {
     color: var(--color-primary);
 }
 
+/* M1d: the patient timeline, newest first. */
+.patient-timeline__item {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.patient-timeline__icon {
+    flex: 0 0 auto;
+    font-size: 1.25rem;
+    color: var(--color-primary);
+}
+
+.patient-timeline__body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 /* M1: tabs that are links to separate pages (the patient workspace). */
 a.app-tabs__tab {
     display: inline-flex;

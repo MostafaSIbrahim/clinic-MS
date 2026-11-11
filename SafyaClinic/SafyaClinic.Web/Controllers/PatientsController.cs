@@ -112,40 +112,26 @@ public class PatientsController : BaseController
             if (found.IsSuccess) money = found.Data;
         }
 
+        // M1d: the timeline.
+        PagedResult<PatientTimelineItemDto>? timeline = null;
+        if (active == PatientTabs.Timeline)
+        {
+            var found = await _patientService.GetPatientTimelineAsync(id, new PaginationRequest { Page = Math.Max(1, page), PageSize = 20 });
+            if (found.IsSuccess) timeline = found.Data;
+        }
+
         return View(new PatientWorkspaceModel
         {
             Dashboard = result.Data, Tabs = tabs, ActiveTab = active, Visits = visits, Records = recordList, Lab = labList,
-            Enrollments = enrollments, Payments = money
+            Enrollments = enrollments, Payments = money, Timeline = timeline
         });
     }
 
     [HttpGet]
     [RequirePermission(Permissions.Patients.ViewTimeline)]
-    public async Task<IActionResult> Timeline(
-    int id,
-    [FromQuery] PaginationRequest pagination)
-    {
-        var patientResult = await _patientService.GetPatientByIdAsync(id);
-
-        if (!patientResult.IsSuccess || patientResult.Data is null)
-            return NotFound("Patient not found.");
-
-        var timelineResult =
-            await _patientService.GetPatientTimelineAsync(id, pagination);
-
-        if (!timelineResult.IsSuccess || timelineResult.Data is null)
-        {
-            Error("Could not load patient timeline.");
-            return RedirectToAction(nameof(Details), new { id });
-        }
-
-        return View(new PatientTimelineDto
-        {
-            PatientId = patientResult.Data.Id,
-            PatientName = patientResult.Data.FullName,
-            Timeline = timelineResult.Data
-        });
-    }
+    // M1d: the timeline is the Timeline tab of the patient workspace; old links land there.
+    public IActionResult Timeline(int id, [FromQuery] PaginationRequest pagination) =>
+        RedirectToAction(nameof(Details), new { id, tab = PatientTabs.Timeline, page = pagination.Page });
 
     // ── Create ────────────────────────────────────────────────
 

@@ -146,6 +146,14 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         // The old records page lands on the tab.
         await dpage.goto(`/MedicalRecords/PatientRecords?patientId=${patientId}`);
         await expect(dpage).toHaveURL(new RegExp(`/Patients/Details/${patientId}\\?tab=records`));
+        // M1d: the timeline is a tab too, listing the visit and its record; the old address lands on it.
+        await dpage.getByRole('link', { name: 'Timeline', exact: true }).click();
+        await expect(dpage.getByRole('link', { name: 'Timeline', exact: true })).toHaveAttribute('aria-current', 'page');
+        await expect(dpage.locator('.patient-timeline')).toContainText('Medical record');
+        screens['Patient timeline'] = `/Patients/Details/${patientId}?tab=timeline`;
+        await checkA11y(dpage, 'Patient timeline');
+        await dpage.goto(`/Patients/Timeline/${patientId}`);
+        await expect(dpage).toHaveURL(new RegExp(`/Patients/Details/${patientId}\\?tab=timeline`));
     });
 
     await test.step('Reception collects part of the balance', async () => {

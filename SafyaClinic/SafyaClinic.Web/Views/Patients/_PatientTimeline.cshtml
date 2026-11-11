@@ -1,0 +1,48 @@
+@model SafyaClinic.Web.Models.PatientWorkspaceModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@{
+    // M1d: the Timeline tab (was /Patients/Timeline, opened in a new browser tab). Reservations and medical
+    // records, newest first, 20 per page.
+    var timeline = Model.Timeline;
+    var none = new EmptyStateModel(T["No activity yet"].Value, Icon: "bi-clock-history",
+        Hint: T["Reservations and medical records will appear here when created."].Value);
+}
+<section aria-labelledby="timeline-heading">
+    <h2 id="timeline-heading" class="h5">@T["Timeline"]</h2>
+    @if (timeline is null || timeline.TotalCount == 0)
+    {
+        <partial name="_AppEmpty" model="none" />
+    }
+    else
+    {
+        <ol class="patient-timeline list-unstyled mb-3">
+            @foreach (var item in timeline.Items)
+            {
+                var isReservation = item.EventType == PatientTimelineEventType.Reservation;
+                var when = Clock.ToClinicTime(item.OccurredAt).ToString("dd MMM yyyy · HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                <li class="patient-timeline__item">
+                    <i class="bi @(isReservation ? "bi-calendar-event" : "bi-file-medical") patient-timeline__icon" aria-hidden="true"></i>
+                    <div class="patient-timeline__body">
+                        <div class="small text-muted">
+                            @when · @(isReservation ? T["Reservation"] : T["Medical record"])
+                        </div>
+                        <h3 class="h6 mb-1" dir="auto">@item.Title</h3>
+                        @if (!string.IsNullOrWhiteSpace(item.Status))
+                        {
+                            <partial name="_StatusBadge" model="item.Status" />
+                        }
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <p class="text-muted mb-2 mt-1" dir="auto">@item.Description</p>
+                        }
+                        <a asp-controller="@(isReservation ? "Reservations" : "MedicalRecords")" asp-action="Details" asp-route-id="@item.EntityId"
+                           class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @item.Title, @when</span></a>
+                    </div>
+                </li>
+            }
+        </ol>
+        var pager = new PagerModel(timeline.Page, timeline.PageSize, timeline.TotalCount, nameof(SafyaClinic.Web.Controllers.PatientsController.Details));
+        <partial name="_AppPagination" model="pager" />
+    }
+</section>
