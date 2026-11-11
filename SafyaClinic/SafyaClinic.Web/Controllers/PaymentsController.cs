@@ -158,16 +158,33 @@ public class PaymentsController : BaseController
 
     [HttpGet]
     [RequirePermission(Permissions.Payments.View)]
-    public async Task<IActionResult> Dashboard(DateTime? from, DateTime? to)
+    public async Task<IActionResult> Dashboard(DateTime? from, DateTime? to, bool all = false,
+        int completedPage = 1, int pendingPage = 1, [FromServices] IClinicClock? clock = null)
     {
         // Payment access: reception never loads paid totals or financial breakdowns.
         var fullDashboard = await CanAsync(Permissions.Payments.ViewFullDashboard);
-        var result = await _paymentService.GetPaymentDashboardAsync(fullDashboard ? from : null, fullDashboard ? to : null, unpaidOnly: !fullDashboard);
+
+        // M2b: the full dashboard's collected and written-off figures default to this month (clinic time);
+        // "All time" (?all=true) or any chosen range is still possible. Unpaid lists always cover every balance owed.
+        if (fullDashboard && !all && from is null && to is null)
+        {
+            var today = (clock ?? ClinicClock.Cairo).Today;
+            from = new DateTime(today.Year, today.Month, 1);
+            to = today;
+        }
+        if (!fullDashboard) { from = null; to = null; }
+
+        var result = await _paymentService.GetPaymentDashboardAsync(from, to, unpaidOnly: !fullDashboard,
+            pageSize: UnpaidPageSize, completedPage: completedPage, pendingPage: pendingPage);
         if (!result.IsSuccess) ModelState.AddModelError("", "Could not load unpaid balances. Please try again.");
         ViewBag.From = from;
         ViewBag.To = to;
+        ViewBag.All = all && from is null && to is null;
         return View(fullDashboard ? "Dashboard" : "Unpaid", result.IsSuccess ? result.Data : new PaymentDashboardDto());
     }
+
+    /// <summary>M2b: rows per page in the unpaid lists.</summary>
+    public const int UnpaidPageSize = 20;
 
     // ── Dashboard line drill-down (AJAX, rendered inside a modal) ─
     // Called when the user clicks a row in "Amount by Clinic" / "Amount by Patient

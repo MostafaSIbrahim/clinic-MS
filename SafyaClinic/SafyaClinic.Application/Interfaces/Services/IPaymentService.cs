@@ -24,7 +24,12 @@ public interface IPaymentService
 
     // ── Dashboard ────────────────────────────────────────────────
     // Payment access: unpaidOnly skips all revenue and breakdown queries.
-    Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null, bool unpaidOnly = false);
+    /// <summary>
+    /// M2b: with <paramref name="pageSize"/>, the unpaid lists hold one page each (newest first); their totals and
+    /// counts still cover every unpaid visit. Without it, the lists are complete.
+    /// </summary>
+    Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null, bool unpaidOnly = false,
+        int? pageSize = null, int completedPage = 1, int pendingPage = 1);
 
     // ── Collect-form helper ─────────────────────────────────────
     /// <summary>

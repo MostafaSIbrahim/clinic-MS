@@ -1,59 +1,71 @@
 @model PaymentDashboardDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
 @{
-    ViewData["Title"] = "Payment Dashboard";
+    ViewData["Title"] = T["Payment Dashboard"].Value;
+    var from = ViewBag.From as DateTime?;
+    var to = ViewBag.To as DateTime?;
+    var allTime = ViewBag.All == true;
+    string Iso(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "";
+    string D(DateTime d) => d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    var period = allTime ? T["All time"].Value
+        : from is DateTime f && to is DateTime t ? T["{0} to {1}", D(f), D(t)].Value
+        : from is DateTime f2 ? T["From {0}", D(f2)].Value
+        : to is DateTime t2 ? T["Until {0}", D(t2)].Value
+        : T["All time"].Value;
+    var noData = new EmptyStateModel(T["No payments in this period."].Value, Icon: "bi-inbox");
+    var noWriteOffs = new EmptyStateModel(T["No write-offs in this period."].Value, Icon: "bi-inbox");
 }
-
-<style>
-    .dashboard-drilldown-row { cursor: pointer; }
-    .dashboard-drilldown-row:hover { background-color: rgba(13, 110, 253, 0.06); }
-</style>
-
+@* M2b: the full payment dashboard (clinic managers and admin). Collected and written-off figures are for the
+   chosen period (this month by default); unpaid lists cover every balance owed, a page at a time. *@
 <div class="page-toolbar">
-    <h1 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Payment Dashboard</h1>
-</div>
-
-<div class="filter-panel card mb-3">
-    <div class="card-body">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label for="filterFrom" class="form-label small mb-1">From</label>
-                <input type="date" id="filterFrom" name="from" value="@(((DateTime?)ViewBag.From)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" placeholder="From" />
-            </div>
-            <div class="col-md-3">
-                <label for="filterTo" class="form-label small mb-1">To</label>
-                <input type="date" id="filterTo" name="to" value="@(((DateTime?)ViewBag.To)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" placeholder="To" />
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
-            </div>
-        </form>
-        <div class="small text-muted mt-2">
-            The date filter applies to payment totals.
-            Unpaid lists show current collectible balances across all dates.
-        </div>
+    <div>
+        <h1>@T["Payment Dashboard"]</h1>
+        <p class="text-muted mb-0">@T["Period: {0}", period]</p>
     </div>
 </div>
+
+<app-filter-bar label="@T["Payment period"].Value" submit-text="@T["Show"].Value" clear-url="@Url.Action("Dashboard")">
+    <div class="app-filter-bar__field">
+        <label for="filterFrom" class="form-label">@T["From"]</label>
+        <input type="date" id="filterFrom" name="from" value="@Iso(from)" class="form-control" />
+    </div>
+    <div class="app-filter-bar__field">
+        <label for="filterTo" class="form-label">@T["To"]</label>
+        <input type="date" id="filterTo" name="to" value="@Iso(to)" class="form-control" />
+    </div>
+</app-filter-bar>
+<p class="small text-muted">
+    @T["The period applies to collected and written-off amounts. Unpaid lists show every balance still owed."]
+    <a asp-action="Dashboard" asp-route-all="true">@T["Show all time"]</a>
+</p>
 
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-3">
         <div class="stat-card bg-rose-soft">
-            <div class="small opacity-75">Unpaid — Finished Visits</div>
+            <div class="small opacity-75">@T["Unpaid: finished visits"]</div>
             <div class="fs-3 fw-bold">@Model.TotalUnpaidCompleted.ToMoney()</div>
-            <div class="small">@Model.UnpaidCompletedReservations.Count() reservation(s)</div>
+            <div class="small">@T["{0} visit(s)", Model.UnpaidCompletedCount]</div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-3">
         <div class="stat-card bg-primary-soft">
-            <div class="small opacity-75">Unpaid — In Consultation</div>
+            <div class="small opacity-75">@T["Unpaid: in consultation"]</div>
             <div class="fs-3 fw-bold">@Model.TotalUnpaidPending.ToMoney()</div>
-            <div class="small">@Model.UnpaidPendingReservations.Count() reservation(s)</div>
+            <div class="small">@T["{0} visit(s)", Model.UnpaidPendingCount]</div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-3">
         <div class="stat-card bg-teal-soft">
-            <div class="small opacity-75">Fully Paid</div>
+            <div class="small opacity-75">@T["Fully paid"]</div>
             <div class="fs-3 fw-bold">@Model.TotalFullyPaid.ToMoney()</div>
-            <div class="small">@Model.FullyPaidPaymentCount payment(s)</div>
+            <div class="small">@T["{0} payment(s)", Model.FullyPaidPaymentCount]</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card bg-amber-soft">
+            <div class="small opacity-75">@T["Written off (not revenue)"]</div>
+            <div class="fs-3 fw-bold">@Model.TotalWrittenOff.ToMoney()</div>
         </div>
     </div>
 </div>
@@ -61,272 +73,162 @@
 <partial name="_UnpaidSections" model="Model" />
 
 <div class="row g-3">
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header"><i class="bi bi-diagram-3 me-2"></i>Amount by Patient Source</div>
-            <div class="card-body p-0">
-                @if (!Model.AmountBySource.Any())
-                {
-                    <div class="text-center text-muted py-4">No data for this period.</div>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead>
-                                <tr><th scope="col">Source</th><th scope="col"># Payments</th><th scope="col">Collected</th><th scope="col">Source Deduction</th></tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var s in Model.AmountBySource)
-                                {
-                                    <tr class="dashboard-drilldown-row" role="button"
-                                        data-group-type="source"
-                                        data-group-id="@(s.PatientSourceId?.ToString() ?? "")"
-                                        data-group-label="@s.PatientSourceName">
-                                        <td>@s.PatientSourceName</td>
-                                        <td>@s.PaymentCount</td>
-                                        <td class="fw-semibold">@s.TotalCollected.ToMoney()</td>
-                                        <td class="text-warning">@s.TotalSourceDeduction.ToMoney()</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            </div>
-        </div>
+    <div class="col-lg-6">
+        <app-card id="by-source" title="@T["Amount by patient source"].Value" level="2" icon="bi-diagram-3">
+            @if (!Model.AmountBySource.Any())
+            {
+                <partial name="_AppEmpty" model="noData" />
+            }
+            else
+            {
+                <app-table caption="@T["Amount by patient source"].Value" caption-hidden="true" stack="true">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Source"]</th>
+                            <th scope="col" class="app-table__num">@T["Payments"]</th>
+                            <th scope="col" class="app-table__num">@T["Collected"]</th>
+                            <th scope="col" class="app-table__num">@T["Source deduction"]</th>
+                            <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.AmountBySource)
+                        {
+                            var label = s.PatientSourceId is null ? T["No source"].Value : s.PatientSourceName;
+                            <tr>
+                                <th scope="row" data-label="@T["Source"]" dir="auto">@label</th>
+                                <td data-label="@T["Payments"]" class="app-table__num">@s.PaymentCount</td>
+                                <td data-label="@T["Collected"]" class="app-table__num fw-semibold">@s.TotalCollected.ToMoney()</td>
+                                <td data-label="@T["Source deduction"]" class="app-table__num">@s.TotalSourceDeduction.ToMoney()</td>
+                                <td class="app-table__actions">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-drilldown"
+                                            data-group-type="source" data-group-id="@(s.PatientSourceId?.ToString() ?? "")" data-group-label="@label">
+                                        @T["Details"]<span class="visually-hidden"> @label</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </app-table>
+            }
+        </app-card>
     </div>
 
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header"><i class="bi bi-hospital me-2"></i>Amount by Clinic</div>
-            <div class="card-body p-0">
-                @if (!Model.AmountByClinic.Any())
-                {
-                    <div class="text-center text-muted py-4">No data for this period.</div>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead>
-                                <tr><th scope="col">Clinic</th><th scope="col"># Payments</th><th scope="col">Collected</th><th scope="col">Clinic Net</th></tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var c in Model.AmountByClinic)
-                                {
-                                    <tr class="dashboard-drilldown-row" role="button"
-                                        data-group-type="clinic"
-                                        data-group-id="@(c.ClinicId?.ToString() ?? "")"
-                                        data-group-label="@c.ClinicName">
-                                        <td>@c.ClinicName</td>
-                                        <td>@c.PaymentCount</td>
-                                        <td class="fw-semibold">@c.TotalCollected.ToMoney()</td>
-                                        <td class="text-success">@c.TotalClinicNet.ToMoney()</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            </div>
-        </div>
+    <div class="col-lg-6">
+        <app-card id="by-clinic" title="@T["Amount by clinic"].Value" level="2" icon="bi-hospital">
+            @if (!Model.AmountByClinic.Any())
+            {
+                <partial name="_AppEmpty" model="noData" />
+            }
+            else
+            {
+                <app-table caption="@T["Amount by clinic"].Value" caption-hidden="true" stack="true">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Clinic"]</th>
+                            <th scope="col" class="app-table__num">@T["Payments"]</th>
+                            <th scope="col" class="app-table__num">@T["Collected"]</th>
+                            <th scope="col" class="app-table__num">@T["Clinic net"]</th>
+                            <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.AmountByClinic)
+                        {
+                            var label = c.ClinicId is null ? T["No clinic"].Value : c.ClinicName;
+                            <tr>
+                                <th scope="row" data-label="@T["Clinic"]" dir="auto">@label</th>
+                                <td data-label="@T["Payments"]" class="app-table__num">@c.PaymentCount</td>
+                                <td data-label="@T["Collected"]" class="app-table__num fw-semibold">@c.TotalCollected.ToMoney()</td>
+                                <td data-label="@T["Clinic net"]" class="app-table__num">@c.TotalClinicNet.ToMoney()</td>
+                                <td class="app-table__actions">
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-drilldown"
+                                            data-group-type="clinic" data-group-id="@(c.ClinicId?.ToString() ?? "")" data-group-label="@label">
+                                        @T["Details"]<span class="visually-hidden"> @label</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </app-table>
+            }
+        </app-card>
     </div>
 </div>
 
 @* P6b: write-offs in the period, by reason. Never counted as collected money. *@
-<div class="card mt-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-slash-circle me-2" aria-hidden="true"></i>Written off (not revenue)</span>
-        <span class="fw-semibold">@Model.TotalWrittenOff.ToMoney()</span>
-    </div>
-    <div class="card-body p-0">
-        @if (!Model.WrittenOffByReason.Any())
-        {
-            <div class="text-center text-muted py-4">No write-offs in this period.</div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead>
-                        <tr><th scope="col">Reason</th><th scope="col"># Write-offs</th><th scope="col">Amount</th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var r in Model.WrittenOffByReason)
-                        {
-                            <tr>
-                                <td>@Labels.Humanize(r.Reason)</td>
-                                <td>@r.Count</td>
-                                <td class="fw-semibold">@r.Amount.ToMoney()</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
-</div>
+<app-card id="written-off" title="@T["Written off by reason"].Value" level="2" icon="bi-slash-circle">
+    @if (!Model.WrittenOffByReason.Any())
+    {
+        <partial name="_AppEmpty" model="noWriteOffs" />
+    }
+    else
+    {
+        <app-table caption="@T["Written off by reason"].Value" caption-hidden="true" stack="true">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Reason"]</th>
+                    <th scope="col" class="app-table__num">@T["Write-offs"]</th>
+                    <th scope="col" class="app-table__num">@T["Amount"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.WrittenOffByReason)
+                {
+                    <tr>
+                        <th scope="row" data-label="@T["Reason"]">@T[Labels.Humanize(r.Reason)]</th>
+                        <td data-label="@T["Write-offs"]" class="app-table__num">@r.Count</td>
+                        <td data-label="@T["Amount"]" class="app-table__num fw-semibold">@r.Amount.ToMoney()</td>
+                    </tr>
+                }
+            </tbody>
+        </app-table>
+    }
+</app-card>
 
-<!-- ── Dashboard line drill-down modal ─────────────────────────────
-     Two-step flow inside a single modal:
-       Step 1: ask the user for the date range to run the detail report over
-                (pre-filled with the dashboard's current From/To filter).
-       Step 2: the detail report itself, loaded via AJAX from
-                Payments/DashboardLineDetails and rendered in-place.
-     Closing the modal (X, backdrop click, or Close button) simply returns the
-     user to the dashboard underneath — nothing navigates away from this page. -->
-<div class="modal fade" id="drilldownModal" tabindex="-1" aria-hidden="true">
+@* Line details: choose dates, then the report loads inside the dialog (Payments/DashboardLineDetails). *@
+<div class="modal fade" id="drilldownModal" tabindex="-1" aria-labelledby="drilldownModalTitle" aria-hidden="true"
+     data-url="@Url.Action("DashboardLineDetails", "Payments")"
+     data-from="@Iso(from)" data-to="@Iso(to)"
+     data-title="@T["Payment details: {0}", "{0}"]"
+     data-error-order="@T["The start date must be on or before the end date."]"
+     data-error-load="@T["Could not load the details. Please try again."]">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="drilldownModalTitle">Payment Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h2 class="modal-title fs-5" id="drilldownModalTitle">@T["Payment details"]</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
             </div>
             <div class="modal-body">
                 <div id="drilldownStepDuration">
-                    <p class="text-muted">
-                        Choose the date range for this report, or leave a field blank for no limit on that side
-                        (matching the dashboard's own filter that produced this line).
-                    </p>
-                    <form id="drilldownDurationForm" class="row g-2 align-items-end">
-                        <div class="col-sm-4">
-                            <label for="drilldownFrom" class="form-label small mb-1">From <span class="text-muted">(optional)</span></label>
-                            <input type="date" id="drilldownFrom" class="form-control form-control-sm" />
+                    <p class="text-muted">@T["Choose the dates for these details, or leave a date empty for no limit on that side."]</p>
+                    <form id="drilldownDurationForm" class="d-flex flex-wrap align-items-end gap-2">
+                        <div>
+                            <label for="drilldownFrom" class="form-label">@T["From"]</label>
+                            <input type="date" id="drilldownFrom" class="form-control" />
                         </div>
-                        <div class="col-sm-4">
-                            <label for="drilldownTo" class="form-label small mb-1">To <span class="text-muted">(optional)</span></label>
-                            <input type="date" id="drilldownTo" class="form-control form-control-sm" />
+                        <div>
+                            <label for="drilldownTo" class="form-label">@T["To"]</label>
+                            <input type="date" id="drilldownTo" class="form-control" />
                         </div>
-                        <div class="col-sm-2">
-                            <button type="submit" class="btn btn-sm btn-primary w-100">Generate</button>
-                        </div>
-                        <div class="col-sm-2">
-                            <button type="button" id="drilldownAllTimeBtn" class="btn btn-sm btn-outline-secondary w-100">All Time</button>
-                        </div>
+                        <button type="submit" class="btn btn-primary">@T["Show"]</button>
+                        <button type="button" id="drilldownAllTimeBtn" class="btn btn-outline-secondary">@T["All time"]</button>
                     </form>
                 </div>
-
-                <div id="drilldownStepLoading" class="text-center text-muted py-4 d-none">
-                    <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
-                    Loading report…
+                <div id="drilldownStepLoading" class="text-center text-muted py-4 d-none" role="status">
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>@T["Loading…"]
                 </div>
-
-                <div id="drilldownStepError" class="alert alert-danger d-none"></div>
-
-                <div id="drilldownStepReport" class="d-none"></div>
+                <div id="drilldownStepError" class="alert alert-danger d-none" role="alert"></div>
+                <div id="drilldownStepReport" class="d-none" aria-live="polite"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" id="drilldownBackBtn" class="btn btn-sm btn-outline-secondary d-none">
-                    <i class="bi bi-arrow-left me-1"></i>Change Dates
-                </button>
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="drilldownBackBtn" class="btn btn-outline-secondary d-none">@T["Change dates"]</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Close"]</button>
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>
-        (function () {
-            const modalEl = document.getElementById('drilldownModal');
-            const modal = new bootstrap.Modal(modalEl);
-            const titleEl = document.getElementById('drilldownModalTitle');
-
-            const stepDuration = document.getElementById('drilldownStepDuration');
-            const stepLoading = document.getElementById('drilldownStepLoading');
-            const stepError = document.getElementById('drilldownStepError');
-            const stepReport = document.getElementById('drilldownStepReport');
-            const backBtn = document.getElementById('drilldownBackBtn');
-
-            const fromInput = document.getElementById('drilldownFrom');
-            const toInput = document.getElementById('drilldownTo');
-            const durationForm = document.getElementById('drilldownDurationForm');
-            const allTimeBtn = document.getElementById('drilldownAllTimeBtn');
-
-            // The dashboard's own current From/To filter (if set). We pre-fill the popup
-            // with EXACTLY this — including leaving a field blank when the dashboard has
-            // no filter on that side — so the drill-down defaults to the same range that
-            // produced the summary count being clicked. Silently substituting a different
-            // default (e.g. "this month") here previously caused clicks on lines totalled
-            // over a wider/unfiltered range to come back empty.
-            const dashboardFrom = @Html.Raw(ViewBag.From is DateTime df ? $"\"{df:yyyy-MM-dd}\"" : "null");
-            const dashboardTo = @Html.Raw(ViewBag.To is DateTime dt ? $"\"{dt:yyyy-MM-dd}\"" : "null");
-
-            let currentGroupType = null;
-            let currentGroupId = null;
-
-            function showStep(step) {
-                [stepDuration, stepLoading, stepError, stepReport].forEach(el => el.classList.add('d-none'));
-                step.classList.remove('d-none');
-                backBtn.classList.toggle('d-none', step !== stepReport && step !== stepError);
-            }
-
-            document.querySelectorAll('.dashboard-drilldown-row').forEach(row => {
-                row.addEventListener('click', () => {
-                    currentGroupType = row.dataset.groupType;
-                    currentGroupId = row.dataset.groupId || '';
-                    titleEl.textContent = 'Payment Details — ' + row.dataset.groupLabel;
-
-                    fromInput.value = dashboardFrom || '';
-                    toInput.value = dashboardTo || '';
-
-                    showStep(stepDuration);
-                    modal.show();
-                });
-            });
-
-            durationForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-                loadReport();
-            });
-
-            allTimeBtn.addEventListener('click', () => {
-                fromInput.value = '';
-                toInput.value = '';
-                loadReport();
-            });
-
-            backBtn.addEventListener('click', () => showStep(stepDuration));
-
-            // Exposed so the "view all time" link inside the loaded report partial
-            // (see _DashboardLineDetails.cshtml) can clear the range and reload without
-            // the user having to go back to the duration step manually.
-            window.paymentDrilldown = {
-                viewAllTime: function () {
-                    fromInput.value = '';
-                    toInput.value = '';
-                    loadReport();
-                }
-            };
-
-            async function loadReport() {
-                if (fromInput.value && toInput.value && fromInput.value > toInput.value) {
-                    showStep(stepError);
-                    stepError.textContent = "'From' date must be before or equal to 'To' date.";
-                    return;
-                }
-
-                showStep(stepLoading);
-
-                const params = new URLSearchParams({ groupType: currentGroupType });
-                if (currentGroupId) params.set('groupId', currentGroupId);
-                if (fromInput.value) params.set('from', fromInput.value);
-                if (toInput.value) params.set('to', toInput.value);
-
-                try {
-                    const response = await fetch('@Url.Action("DashboardLineDetails", "Payments")?' + params.toString());
-                    if (!response.ok) {
-                        const text = await response.text();
-                        throw new Error(text || 'Failed to load report.');
-                    }
-                    stepReport.innerHTML = await response.text();
-                    showStep(stepReport);
-                } catch (err) {
-                    showStep(stepError);
-                    stepError.textContent = err.message || 'Failed to load report.';
-                }
-            }
-        })();
-    </script>
+    <script src="~/js/payment-dashboard.js" asp-append-version="true"></script>
 }

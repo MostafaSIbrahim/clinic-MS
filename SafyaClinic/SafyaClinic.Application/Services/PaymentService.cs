@@ -824,54 +824,19 @@ public class PaymentService : IPaymentService
     // rows for the unpaid lists); the collected, written-off and per-clinic/per-source figures are sums and groups
     // computed by SQL, not by loading every reservation and payment. The figures are the same as before M2,
     // proven by PaymentDashboardEquivalenceTests against LegacyPaymentDashboard.
-    public async Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null, bool unpaidOnly = false)
+    public async Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null, bool unpaidOnly = false,
+        int? pageSize = null, int completedPage = 1, int pendingPage = 1)
     {
         var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
+        completedPage = Math.Max(1, completedPage);
+        pendingPage = Math.Max(1, pendingPage);
 
         // Unpaid lists: visits that can have a balance (in consultation or finished, not cancelled or no-show)
         // and whose collected + written-off amount is below the price. Same rule as Coverage.Due.
-        var unpaid = await _uow.Reservations.Query()
-            .Where(r => r.Status.StatusName != "Cancelled" && r.Status.StatusName != "NoShow")
-            .Where(r => r.QueueStatus == PatientQueueStatus.InConsultation || r.QueueStatus == PatientQueueStatus.Finished)
-            .Select(r => new
-            {
-                r.Id,
-                r.PatientId,
-                PatientName = $"{r.Patient.FirstName} {r.Patient.LastName}",
-                DoctorName = r.Doctor.FullName,
-                ClinicName = r.Clinic.Name,
-                StatusName = r.Status.StatusName,
-                r.ReservationDate,
-                r.TotalAmount,
-                r.QueueStatus,
-                Paid = r.Payments.Where(p => p.Status == PaymentStatusEnum.Active).Sum(p => (decimal?)p.Amount) ?? 0m,
-                WrittenOff = r.Payments.Where(p => p.Status == PaymentStatusEnum.WrittenOff).Sum(p => (decimal?)p.Amount) ?? 0m
-            })
-            .Where(r => (r.TotalAmount ?? 0m) > r.Paid + r.WrittenOff)
-            .OrderByDescending(r => r.ReservationDate)
-            .ThenBy(r => r.Id)
-            .ToListAsync();
-
-        var unpaidCompleted = new List<UnpaidReservationDto>();
-        var unpaidPending = new List<UnpaidReservationDto>();
-        foreach (var r in unpaid)
-        {
-            var dto = new UnpaidReservationDto
-            {
-                ReservationId = r.Id,
-                PatientId = r.PatientId,
-                PatientName = r.PatientName,
-                DoctorName = r.DoctorName,
-                ClinicName = r.ClinicName,
-                ReservationDate = r.ReservationDate,
-                StatusName = r.StatusName,
-                TotalAmount = r.TotalAmount,
-                AmountPaid = r.Paid,
-                WrittenOff = r.WrittenOff
-            };
-            if (r.QueueStatus == PatientQueueStatus.Finished) unpaidCompleted.Add(dto);
-            else unpaidPending.Add(dto);
-        }
+        var finished = await UnpaidListAsync(PatientQueueStatus.Finished, pageSize, completedPage);
+        var pending = await UnpaidListAsync(PatientQueueStatus.InConsultation, pageSize, pendingPage);
+        var unpaidCompleted = finished.Rows;
+        var unpaidPending = pending.Rows;
 
         // Payment access: stop before querying payment totals, sources, or clinic breakdowns.
         if (unpaidOnly)
@@ -879,8 +844,13 @@ public class PaymentService : IPaymentService
             {
                 UnpaidCompletedReservations = unpaidCompleted,
                 UnpaidPendingReservations = unpaidPending,
-                TotalUnpaidCompleted = unpaidCompleted.Sum(r => r.Balance),
-                TotalUnpaidPending = unpaidPending.Sum(r => r.Balance)
+                TotalUnpaidCompleted = finished.Balance,
+                TotalUnpaidPending = pending.Balance,
+                UnpaidCompletedCount = finished.Count,
+                UnpaidPendingCount = pending.Count,
+                CompletedPage = completedPage,
+                PendingPage = pendingPage,
+                PageSize = pageSize ?? 0
             });
 
         var paymentsQuery = _uow.Payments.Query();
@@ -972,9 +942,14 @@ public class PaymentService : IPaymentService
         {
             UnpaidCompletedReservations = unpaidCompleted,
             UnpaidPendingReservations = unpaidPending,
+            UnpaidCompletedCount = finished.Count,
+            UnpaidPendingCount = pending.Count,
+            CompletedPage = completedPage,
+            PendingPage = pendingPage,
+            PageSize = pageSize ?? 0,
             FullyPaidPaymentCount = settledCount,
-            TotalUnpaidCompleted = unpaidCompleted.Sum(r => r.Balance),
-            TotalUnpaidPending = unpaidPending.Sum(r => r.Balance),
+            TotalUnpaidCompleted = finished.Balance,
+            TotalUnpaidPending = pending.Balance,
             TotalFullyPaid = settledAmount,
             AmountBySource = bySource,
             AmountByClinic = byClinic,
@@ -982,6 +957,55 @@ public class PaymentService : IPaymentService
             WrittenOffByReason = writeOffsByReason
         });
     }
+    // M2b: one unpaid list. The count and the balance cover every unpaid visit in it, as plain database aggregates
+    // (price total minus the covering payments of those visits: each balance is positive, so the sum of balances
+    // is exactly that difference). Only the rows of the requested page are loaded.
+    private async Task<(List<UnpaidReservationDto> Rows, int Count, decimal Balance)> UnpaidListAsync(
+        PatientQueueStatus queue, int? pageSize, int page)
+    {
+        var visits = _uow.Reservations.Query()
+            .Where(r => r.QueueStatus == queue)
+            .Where(r => r.Status.StatusName != "Cancelled" && r.Status.StatusName != "NoShow")
+            .Where(r => (r.TotalAmount ?? 0m) >
+                        (r.Payments
+                            .Where(p => p.Status == PaymentStatusEnum.Active || p.Status == PaymentStatusEnum.WrittenOff)
+                            .Sum(p => (decimal?)p.Amount) ?? 0m));
+
+        var count = await visits.CountAsync();
+        if (count == 0) return (new List<UnpaidReservationDto>(), 0, 0m);
+
+        var price = await visits.SumAsync(r => r.TotalAmount ?? 0m);
+        var ids = visits.Select(r => r.Id);
+        var covered = await _uow.Payments.Query()
+            .Where(p => p.Status == PaymentStatusEnum.Active || p.Status == PaymentStatusEnum.WrittenOff)
+            .Where(p => p.ReservationId != null && ids.Contains(p.ReservationId.Value))
+            .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+
+        IQueryable<SafyaClinic.Domain.Entities.Reservation.Reservation> ordered = visits
+            .OrderByDescending(r => r.ReservationDate)
+            .ThenBy(r => r.Id);
+        if (pageSize is int size && size > 0)
+            ordered = ordered.Skip((page - 1) * size).Take(size);
+
+        var rows = await ordered
+            .Select(r => new UnpaidReservationDto
+            {
+                ReservationId = r.Id,
+                PatientId = r.PatientId,
+                PatientName = $"{r.Patient.FirstName} {r.Patient.LastName}",
+                DoctorName = r.Doctor.FullName,
+                ClinicName = r.Clinic.Name,
+                ReservationDate = r.ReservationDate,
+                StatusName = r.Status.StatusName,
+                TotalAmount = r.TotalAmount,
+                AmountPaid = r.Payments.Where(p => p.Status == PaymentStatusEnum.Active).Sum(p => (decimal?)p.Amount) ?? 0m,
+                WrittenOff = r.Payments.Where(p => p.Status == PaymentStatusEnum.WrittenOff).Sum(p => (decimal?)p.Amount) ?? 0m
+            })
+            .ToListAsync();
+
+        return (rows, count, price - covered);
+    }
+
     // ── Collect-form helper ─────────────────────────────────────
 
     public async Task<ServiceResult<decimal>> GetDueAmountAsync(int patientId, int? reservationId, int? enrollmentId)

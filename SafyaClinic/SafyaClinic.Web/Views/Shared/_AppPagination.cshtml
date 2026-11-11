@@ -8,12 +8,13 @@
         var values = new RouteValueDictionary();
         foreach (var pair in ViewContext.HttpContext.Request.Query)
         {
-            if (pair.Key.Equals("page", StringComparison.OrdinalIgnoreCase) ||
+            if (pair.Key.Equals(Model.PageParameter, StringComparison.OrdinalIgnoreCase) ||
                 pair.Key.Equals("pageSize", StringComparison.OrdinalIgnoreCase)) continue;
             values[pair.Key] = pair.Value.ToString();
         }
-        values["page"] = number;
-        values["pageSize"] = Model.PageSize;
+        // M2b: a page with two lists names each list's page parameter (e.g. completedPage).
+        values[Model.PageParameter] = number;
+        if (Model.PageParameter == "page") values["pageSize"] = Model.PageSize;
         return Url.Action(Model.Action, values) ?? "#";
     }
     var window = Model.Window;
