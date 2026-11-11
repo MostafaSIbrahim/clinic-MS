@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
+<ItemGroup><ProjectReference Include="../../SafyaClinic.Infrastructure/SafyaClinic.Infrastructure.csproj" /></ItemGroup>
+<!-- M2a: the same test data and the pre-M2 dashboard as the unit tests, compiled in. -->
+<ItemGroup>
+  <Compile Include="../SafyaClinic.Tests/Application/DashboardTestData.cs" Link="DashboardTestData.cs" />
+  <Compile Include="../SafyaClinic.Tests/Application/LegacyPaymentDashboard.cs" Link="LegacyPaymentDashboard.cs" />
+</ItemGroup>
+</Project>
