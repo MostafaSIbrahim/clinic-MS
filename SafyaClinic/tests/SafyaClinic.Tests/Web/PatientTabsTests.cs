@@ -11,10 +11,11 @@ public class PatientTabsTests
     private static Func<string, Task<bool>> As(params string[] roles) => new RolePermissions(roles).HasAsync;
 
     [Theory]
-    [InlineData(SystemGroups.ReceptionRole, "overview|visits")]
+    [InlineData(SystemGroups.ReceptionRole, "overview|visits|payments")]
     [InlineData(SystemGroups.DoctorRole, "overview|visits|records|lab")]
-    [InlineData(SystemGroups.AdminRole, "overview|visits|records|lab")]
-    [InlineData(SystemGroups.ReceptionAdminRole, "overview|visits")]
+    [InlineData(SystemGroups.NutritionistRole, "overview|visits|nutrition")]
+    [InlineData(SystemGroups.AdminRole, "overview|visits|records|lab|nutrition|payments")]
+    [InlineData(SystemGroups.ReceptionAdminRole, "overview|visits|payments")]
     public async Task Each_group_sees_the_tabs_it_may_use(string role, string expected)
     {
         var tabs = await PatientTabs.VisibleAsync(As(role));
@@ -43,6 +44,9 @@ public class PatientTabsTests
     [InlineData(SystemGroups.ReceptionRole, "nonsense", "visits")]  // an unknown tab falls back
     [InlineData(SystemGroups.ReceptionRole, "records", "visits")]   // so does a tab the person can't see
     [InlineData(SystemGroups.DoctorRole, "LAB", "lab")]
+    [InlineData(SystemGroups.NutritionistRole, null, "nutrition")]    // nutritionists start on Nutrition (M1c)
+    [InlineData(SystemGroups.ReceptionRole, "payments", "payments")]
+    [InlineData(SystemGroups.DoctorRole, "payments", "records")]      // doctors don't see payments
     public async Task The_first_tab_fits_the_work_and_a_chosen_tab_wins(string role, string? requested, string expected)
     {
         var can = As(role);

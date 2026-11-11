@@ -85,12 +85,9 @@ namespace SafyaClinic.Web.Controllers
 
         // ── Enrollments ──────────────────────────────────────────
 
-        public async Task<IActionResult> PatientEnrollments(int patientId)
-        {
-            var result = await _nutritionService.GetPatientEnrollmentsAsync(patientId);
-            ViewBag.PatientId = patientId;
-            return View(result.IsSuccess ? result.Data : Enumerable.Empty<PatientEnrollmentDto>());
-        }
+        // M1c: the enrollments list is the Nutrition tab of the patient workspace; old links land there.
+        public IActionResult PatientEnrollments(int patientId) =>
+            RedirectToAction("Details", "Patients", new { id = patientId, tab = SafyaClinic.Web.Models.PatientTabs.Nutrition });
 
         public async Task<IActionResult> EnrollmentDetails(int id)
         {

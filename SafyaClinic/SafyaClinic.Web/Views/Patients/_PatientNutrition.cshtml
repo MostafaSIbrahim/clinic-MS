@@ -1,0 +1,61 @@
+@model SafyaClinic.Web.Models.PatientWorkspaceModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@{
+    // M1c: the Nutrition tab (was /Nutrition/PatientEnrollments). Enrollment rules are unchanged.
+    var patient = Model.Dashboard.Patient;
+    var enrollments = Model.Enrollments ?? Array.Empty<SafyaClinic.Application.DTOs.Nutrition.PatientEnrollmentDto>();
+    var canEnroll = await Can.HasAsync(Permissions.Nutrition.Manage);
+    var none = new EmptyStateModel(T["No enrollments yet."].Value, Icon: "bi-capsule");
+    string D(DateTime d) => d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+}
+<section aria-labelledby="nutrition-heading">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+        <h2 id="nutrition-heading" class="h5 mb-0">@T["Nutrition enrollments"]</h2>
+        @if (canEnroll)
+        {
+            <a asp-controller="Nutrition" asp-action="Enroll" asp-route-patientId="@patient.Id" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>@T["Enroll in a package"]
+            </a>
+        }
+    </div>
+    @if (enrollments.Count == 0)
+    {
+        <partial name="_AppEmpty" model="none" />
+    }
+    else
+    {
+        <app-table caption="@T["Nutrition enrollments"].Value" caption-hidden="true" stack="true">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Package"]</th>
+                    <th scope="col">@T["Doctor"]</th>
+                    <th scope="col">@T["Start"]</th>
+                    <th scope="col">@T["End"]</th>
+                    <th scope="col" class="app-table__num">@T["Price"]</th>
+                    <th scope="col">@T["Status"]</th>
+                    <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in enrollments)
+                {
+                    <tr>
+                        <th scope="row" data-label="@T["Package"]" dir="auto">
+                            <a asp-controller="Nutrition" asp-action="EnrollmentDetails" asp-route-id="@e.Id">@e.PackageName</a>
+                        </th>
+                        <td data-label="@T["Doctor"]" dir="auto">@e.DoctorName</td>
+                        <td data-label="@T["Start"]">@D(e.StartDate)</td>
+                        <td data-label="@T["End"]">@D(e.EndDate)</td>
+                        <td data-label="@T["Price"]" class="app-table__num">@e.FinalPrice.ToMoney()</td>
+                        <td data-label="@T["Status"]"><partial name="_StatusBadge" model="e.Status" /></td>
+                        <td class="app-table__actions">
+                            <a asp-controller="Nutrition" asp-action="EnrollmentDetails" asp-route-id="@e.Id"
+                               class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @e.PackageName</span></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </app-table>
+    }
+</section>

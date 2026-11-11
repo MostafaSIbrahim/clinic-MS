@@ -879,4 +879,37 @@
   <data name="opens in a new tab" xml:space="preserve">
     <value>يفتح في علامة تبويب جديدة</value>
   </data>
+  <data name="Nutrition enrollments" xml:space="preserve">
+    <value>اشتراكات التغذية</value>
+  </data>
+  <data name="No enrollments yet." xml:space="preserve">
+    <value>لا توجد اشتراكات بعد.</value>
+  </data>
+  <data name="Enroll in a package" xml:space="preserve">
+    <value>الاشتراك في باقة</value>
+  </data>
+  <data name="Package" xml:space="preserve">
+    <value>الباقة</value>
+  </data>
+  <data name="Start" xml:space="preserve">
+    <value>البداية</value>
+  </data>
+  <data name="End" xml:space="preserve">
+    <value>النهاية</value>
+  </data>
+  <data name="Price" xml:space="preserve">
+    <value>السعر</value>
+  </data>
+  <data name="Active" xml:space="preserve">
+    <value>نشط</value>
+  </data>
+  <data name="On Hold" xml:space="preserve">
+    <value>معلّق</value>
+  </data>
+  <data name="Payments" xml:space="preserve">
+    <value>المدفوعات</value>
+  </data>
+  <data name="Could not load the payment summary. Reload the page to try again." xml:space="preserve">
+    <value>تعذر تحميل ملخص المدفوعات. أعد تحميل الصفحة للمحاولة مرة أخرى.</value>
+  </data>
 </root>

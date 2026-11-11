@@ -52,7 +52,9 @@ public class PatientsController : BaseController
     public async Task<IActionResult> Details(int id, string? tab = null, int page = 1,
         [FromServices] IReservationService? reservations = null,
         [FromServices] IPatientRecordService? records = null,
-        [FromServices] IAnalysisService? analyses = null)
+        [FromServices] IAnalysisService? analyses = null,
+        [FromServices] INutritionService? nutrition = null,
+        [FromServices] IPaymentService? payments = null)
     {
         var result = await _patientService.GetPatientDashboardAsync(id);
 
@@ -93,9 +95,27 @@ public class PatientsController : BaseController
                 : new List<SafyaClinic.Application.DTOs.Analysis.MedicalAnalysisDto>();
         }
 
+        // M1c: nutrition and payments.
+        IReadOnlyList<SafyaClinic.Application.DTOs.Nutrition.PatientEnrollmentDto>? enrollments = null;
+        if (active == PatientTabs.Nutrition && nutrition is not null)
+        {
+            var found = await nutrition.GetPatientEnrollmentsAsync(id);
+            enrollments = found.IsSuccess && found.Data is not null
+                ? found.Data.ToList()
+                : new List<SafyaClinic.Application.DTOs.Nutrition.PatientEnrollmentDto>();
+        }
+
+        SafyaClinic.Application.DTOs.Payment.PatientFinancialSummaryDto? money = null;
+        if (active == PatientTabs.Payments && payments is not null)
+        {
+            var found = await payments.GetPatientFinancialSummaryAsync(id);
+            if (found.IsSuccess) money = found.Data;
+        }
+
         return View(new PatientWorkspaceModel
         {
-            Dashboard = result.Data, Tabs = tabs, ActiveTab = active, Visits = visits, Records = recordList, Lab = labList
+            Dashboard = result.Data, Tabs = tabs, ActiveTab = active, Visits = visits, Records = recordList, Lab = labList,
+            Enrollments = enrollments, Payments = money
         });
     }
 

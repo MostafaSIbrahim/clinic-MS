@@ -1,21 +1,8 @@
 @model PatientFinancialSummaryDto
-@{
-    ViewData["Title"] = "Payment Summary";
-}
-
-<div class="page-toolbar">
-    <div>
-        <h1>@Model.PatientName</h1>
-        <p class="text-muted mb-0">Payment summary</p>
-    </div>
-    <div class="page-actions">
-        <a asp-controller="Patients" asp-action="Details"
-           asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">Patient workspace</a>
-        <a asp-action="Dashboard" class="btn btn-outline-secondary">Payment dashboard</a>
-    </div>
-</div>
-
-
+@* M1c: the Payments tab of the patient workspace (was /Payments/PatientSummary). Content moved unchanged;
+   links name the Payments controller because the page is now served by Patients. *@
+<section aria-labelledby="payments-heading">
+<h2 id="payments-heading" class="h5">Payments</h2>
 <div class="row g-3 mb-4">
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card bg-primary-soft">
@@ -111,7 +98,7 @@
                                     @item.AmountDue.ToMoney()
                                 </td>
                                 <td class="text-end">
-                                    <a asp-action="Collect"
+                                    <a asp-controller="Payments" asp-action="Collect"
                                        asp-route-patientId="@Model.PatientId"
                                        asp-route-reservationId="@item.ReservationId"
                                        asp-route-enrollmentId="@item.EnrollmentId"
@@ -121,7 +108,7 @@
                                     @* P6b: excuse the balance (or part of it), with a reason. *@
                                     @if (item.ReservationId.HasValue && await Can.HasAsync(Permissions.Payments.WriteOff))
                                     {
-                                        <a asp-action="WriteOff"
+                                        <a asp-controller="Payments" asp-action="WriteOff"
                                            asp-route-patientId="@Model.PatientId"
                                            asp-route-reservationId="@item.ReservationId"
                                            class="btn btn-sm btn-outline-warning">
@@ -217,16 +204,16 @@
                                 
                                 @if (p.Status == "WrittenOff" && await Can.HasAsync(Permissions.Payments.WriteOff))
                                 {
-                                    <a asp-action="CancelWriteOff" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger" title="Undo write-off">
+                                    <a asp-controller="Payments" asp-action="CancelWriteOff" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger" title="Undo write-off">
                                         <i class="bi bi-arrow-counterclockwise"></i><span class="visually-hidden">Undo write-off</span>
                                     </a>
                                 }
                                 @if (p.Status == "Active")
                                 {
-                                    <a asp-action="ChangeAmount" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-primary" title="Change amount">
+                                    <a asp-controller="Payments" asp-action="ChangeAmount" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-primary" title="Change amount">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <a asp-action="Cancel" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger" title="Cancel payment">
+                                    <a asp-controller="Payments" asp-action="Cancel" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger" title="Cancel payment">
                                         <i class="bi bi-x-lg"></i>
                                     </a>
                                 }
@@ -268,84 +255,4 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        (() => {
-            const modalElement = document.getElementById('paymentAuditModal');
-            const body = document.getElementById('paymentAuditBody');
-            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-            let activeRequest = null;
-
-            async function loadAudit(url) {
-                activeRequest?.abort();
-                const request = new AbortController();
-                activeRequest = request;
-
-                body.innerHTML = `
-                            <div class="text-center text-muted py-5" role="status">
-                                <span class="spinner-border spinner-border-sm me-2"
-                                      aria-hidden="true"></span>
-                                Loading audit history…
-                            </div>`;
-
-                try {
-                    const response = await fetch(url, {
-                        credentials: 'same-origin',
-                        signal: request.signal
-                    });
-
-                    if (response.redirected ||
-                        response.status === 401 ||
-                        response.status === 403) {
-                        throw new Error(
-                            'Your session expired or you do not have access. Refresh the page and sign in again.');
-                    }
-
-                    if (!response.ok) {
-                        throw new Error('Could not load payment audit history.');
-                    }
-
-                    const html = await response.text();
-
-                    if (activeRequest !== request) return;
-
-                    body.innerHTML = html;
-                    body.scrollTop = 0;
-                } catch (error) {
-                    if (request.signal.aborted || activeRequest !== request) return;
-
-                    body.replaceChildren();
-                    const alert = document.createElement('div');
-                    alert.className = 'alert alert-danger mb-0';
-                    alert.setAttribute('role', 'alert');
-                    alert.textContent = error.message ||
-                        'Could not load payment audit history.';
-                    body.appendChild(alert);
-                }
-            }
-
-            document.querySelectorAll('.js-payment-audit').forEach(button => {
-                button.addEventListener('click', () => {
-                    modal.show();
-                    loadAudit(button.dataset.auditUrl);
-                });
-            });
-
-            body.addEventListener('click', event => {
-                const link = event.target.closest('nav a');
-
-                if (!link || !body.contains(link)) return;
-
-                event.preventDefault();
-                loadAudit(link.href);
-            });
-
-            modalElement.addEventListener('hidden.bs.modal', () => {
-                activeRequest?.abort();
-                activeRequest = null;
-                body.replaceChildren();
-            });
-        })();
-    </script>
-}
+</section>

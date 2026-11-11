@@ -101,30 +101,7 @@
     </div>
 </header>
 
-<nav class="workspace-shortcuts" aria-label="Patient workspace">
-    @* M1b: Medical Records and Analyses are now the Records and Lab tabs. *@
-    @if (await Can.HasAsync(Permissions.Nutrition.View))
-    {
-        <a asp-controller="Nutrition"
-           asp-action="PatientEnrollments"
-           asp-route-patientId="@patient.Id"
-           class="btn btn-outline-secondary">
-            <i class="bi bi-capsule me-1" aria-hidden="true"></i>
-            Nutrition Enrollments
-        </a>
-    }
-
-    @if (await Can.HasAsync(Permissions.Payments.View))
-    {
-        <a asp-controller="Payments"
-           asp-action="PatientSummary"
-           asp-route-patientId="@patient.Id"
-           class="btn btn-outline-secondary">
-            <i class="bi bi-cash-coin me-1" aria-hidden="true"></i>
-            Payments
-        </a>
-    }
-</nav>
+@* M1c: Records, Lab, Nutrition and Payments are tabs now; the row of section buttons is gone. *@
 
 @* M1a: the workspace tabs. Each is a link to its own page load (?tab=…), marked as the current page. *@
 <nav class="app-tabs__list patient-tabs" aria-label="@T["Patient sections"]">
@@ -153,6 +130,21 @@ else if (Model.ActiveTab == PatientTabs.Lab)
 {
     <partial name="_PatientLab" model="Model" />
 }
+else if (Model.ActiveTab == PatientTabs.Nutrition)
+{
+    <partial name="_PatientNutrition" model="Model" />
+}
+else if (Model.ActiveTab == PatientTabs.Payments)
+{
+    @if (Model.Payments is not null)
+    {
+        <partial name="_PatientPayments" model="Model.Payments" />
+    }
+    else
+    {
+        <p class="text-danger" role="alert">@T["Could not load the payment summary. Reload the page to try again."]</p>
+    }
+}
 else
 {
     <partial name="_PatientOverview" model="Model.Dashboard" />
@@ -160,5 +152,6 @@ else
 
 @section Scripts {
     <script src="~/js/contact-modal-forms.js" asp-append-version="true"></script>
+    <script src="~/js/payment-audit.js" asp-append-version="true"></script>
 }
 

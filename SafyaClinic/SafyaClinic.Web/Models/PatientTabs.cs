@@ -1,6 +1,8 @@
 using SafyaClinic.Application.DTOs.Analysis;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.MedicalRecord;
+using SafyaClinic.Application.DTOs.Nutrition;
+using SafyaClinic.Application.DTOs.Payment;
 using SafyaClinic.Application.DTOs.Patient;
 using SafyaClinic.Application.DTOs.Reservation;
 using SafyaClinic.Application.Security;
@@ -21,6 +23,8 @@ public static class PatientTabs
     public const string Visits = "visits";
     public const string Records = "records";   // M1b
     public const string Lab = "lab";           // M1b
+    public const string Nutrition = "nutrition"; // M1c
+    public const string Payments = "payments";   // M1c
 
     /// <summary>Tabs that show the patient header with allergies above them.</summary>
     public static bool IsClinical(string tab) => tab is Records or Lab;
@@ -31,6 +35,8 @@ public static class PatientTabs
         new PatientTab(Visits, "Visits", Permissions.Reservations.View),
         new PatientTab(Records, "Records", Permissions.Records.View),
         new PatientTab(Lab, "Lab", Permissions.Analyses.View),
+        new PatientTab(Nutrition, "Nutrition", Permissions.Nutrition.View),
+        new PatientTab(Payments, "Payments", Permissions.Payments.View),
     };
 
     public static async Task<IReadOnlyList<PatientTab>> VisibleAsync(Func<string, Task<bool>> can)
@@ -43,7 +49,8 @@ public static class PatientTabs
 
     /// <summary>
     /// The requested tab if the person can see it. Otherwise the tab that fits their work: Visits for the
-    /// front desk (people who check patients in), Records for doctors (people who read records), else Overview.
+    /// front desk (people who check patients in), Records for doctors (people who read records), Nutrition for
+    /// nutritionists, Payments for people who only handle money, else Overview.
     /// </summary>
     public static async Task<string> ChooseAsync(string? requested, IReadOnlyList<PatientTab> visible, Func<string, Task<bool>> can)
     {
@@ -51,6 +58,8 @@ public static class PatientTabs
         if (key is not null && visible.Any(t => t.Key == key)) return key;
         if (visible.Any(t => t.Key == Visits) && await can(Permissions.Reservations.CheckIn)) return Visits;
         if (visible.Any(t => t.Key == Records)) return Records;
+        if (visible.Any(t => t.Key == Nutrition)) return Nutrition;
+        if (visible.Any(t => t.Key == Payments)) return Payments;
         return Overview;
     }
 }
@@ -70,4 +79,10 @@ public sealed class PatientWorkspaceModel
 
     /// <summary>Lab tab (M1b): the patient's lab requests.</summary>
     public IReadOnlyList<MedicalAnalysisDto>? Lab { get; init; }
+
+    /// <summary>Nutrition tab (M1c): the patient's enrollments.</summary>
+    public IReadOnlyList<PatientEnrollmentDto>? Enrollments { get; init; }
+
+    /// <summary>Payments tab (M1c): balances, collection and payment history.</summary>
+    public PatientFinancialSummaryDto? Payments { get; init; }
 }
