@@ -12,9 +12,9 @@ public class PatientTabsTests
 
     [Theory]
     [InlineData(SystemGroups.ReceptionRole, "overview|visits|payments")]
-    [InlineData(SystemGroups.DoctorRole, "overview|visits|records|lab")]
+    [InlineData(SystemGroups.DoctorRole, "overview|visits|records|lab|timeline")]
     [InlineData(SystemGroups.NutritionistRole, "overview|visits|nutrition")]
-    [InlineData(SystemGroups.AdminRole, "overview|visits|records|lab|nutrition|payments")]
+    [InlineData(SystemGroups.AdminRole, "overview|visits|records|lab|nutrition|payments|timeline")]
     [InlineData(SystemGroups.ReceptionAdminRole, "overview|visits|payments")]
     public async Task Each_group_sees_the_tabs_it_may_use(string role, string expected)
     {
@@ -47,6 +47,8 @@ public class PatientTabsTests
     [InlineData(SystemGroups.NutritionistRole, null, "nutrition")]    // nutritionists start on Nutrition (M1c)
     [InlineData(SystemGroups.ReceptionRole, "payments", "payments")]
     [InlineData(SystemGroups.DoctorRole, "payments", "records")]      // doctors don't see payments
+    [InlineData(SystemGroups.DoctorRole, "timeline", "timeline")]     // M1d
+    [InlineData(SystemGroups.ReceptionRole, "timeline", "visits")]
     public async Task The_first_tab_fits_the_work_and_a_chosen_tab_wins(string role, string? requested, string expected)
     {
         var can = As(role);

@@ -12,17 +12,17 @@
     <div class="workspace-heading">
         <a asp-action="Index" class="workspace-back">
             <i class="bi bi-arrow-left" aria-hidden="true"></i>
-            Patients
+            @T["Patients"]
         </a>
 
-        <h1 class="workspace-title">@patient.FullName</h1>
+        <h1 class="workspace-title" dir="auto">@patient.FullName</h1>
 
         <div class="workspace-meta">
-            <span>Patient #@patient.Id</span>
+            <span>@T["Patient #{0}", patient.Id]</span>
 
             @if (!string.IsNullOrWhiteSpace(patient.NationalId))
             {
-                <span>National ID: @patient.NationalId</span>
+                <span>@T["National ID: {0}", patient.NationalId]</span>
             }
         </div>
     </div>
@@ -34,30 +34,17 @@
            asp-route-patientId="@patient.Id"
            class="btn btn-primary">
             <i class="bi bi-calendar-plus me-1" aria-hidden="true"></i>
-            Book appointment
+            @T["Book appointment"]
         </a>
 
-        @if (await Can.HasAsync(Permissions.Patients.ViewTimeline))
-        {
-            <a asp-action="Timeline"
-               asp-route-id="@patient.Id"
-               target="_blank"
-               rel="noopener"
-               class="btn btn-outline-primary">
-                <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
-                Timeline
-                <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
-                <span class="visually-hidden">(opens in a new tab)</span>
-            </a>
-        }
-
+        @* M1d: the timeline is a tab now, not a page in a new browser tab. *@
         <div class="dropdown">
             <button type="button"
                     class="btn btn-outline-secondary dropdown-toggle"
                     id="patientActionsMenu"
                     data-bs-toggle="dropdown"
                     aria-expanded="false">
-                More Actions
+                @T["More actions"]
             </button>
 
             <ul class="dropdown-menu dropdown-menu-end"
@@ -66,7 +53,7 @@
                     <a class="dropdown-item"
                        asp-action="EditBasic"
                        asp-route-id="@patient.Id">
-                        Edit Basic Information
+                        @T["Edit basic information"]
                     </a>
                 </li>
 
@@ -76,7 +63,7 @@
                         <a class="dropdown-item"
                            asp-action="EditMedical"
                            asp-route-id="@patient.Id">
-                            Edit Medical Information
+                            @T["Edit medical information"]
                         </a>
                     </li>
                     <li><hr class="dropdown-divider" /></li>
@@ -87,12 +74,9 @@
                            asp-route-patientId="@patient.Id"
                            target="_blank"
                            rel="noopener">
-                            Reservation History Report
-                            <i class="bi bi-box-arrow-up-right ms-1"
-                               aria-hidden="true"></i>
-                            <span class="visually-hidden">
-                                (opens in a new tab)
-                            </span>
+                            @T["Reservation history report"]
+                            <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                            <span class="visually-hidden">(@T["opens in a new tab"])</span>
                         </a>
                     </li>
                 }
@@ -133,6 +117,10 @@ else if (Model.ActiveTab == PatientTabs.Lab)
 else if (Model.ActiveTab == PatientTabs.Nutrition)
 {
     <partial name="_PatientNutrition" model="Model" />
+}
+else if (Model.ActiveTab == PatientTabs.Timeline)
+{
+    <partial name="_PatientTimeline" model="Model" />
 }
 else if (Model.ActiveTab == PatientTabs.Payments)
 {
