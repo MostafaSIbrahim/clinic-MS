@@ -1,28 +1,44 @@
 @model CancelPaymentRequest
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
-    ViewData["Title"] = "Cancel Payment";
+    // P6a, M2c: cancel (void) a payment, with a reason. In English and Arabic. Rules unchanged.
+    ViewData["Title"] = T["Cancel payment"].Value;
+    var payment = ViewBag.Payment as PaymentDto;
+}
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Cancel payment"]</h1>
+        @if (payment is not null)
+        {
+            <p class="text-muted mb-0">@T["Payment #{0}: {1}", payment.Id, payment.Amount.ToMoney()]</p>
+        }
+    </div>
+</div>
+
+@if (payment is not null)
+{
+    @await Component.InvokeAsync("PatientHeader", new { patientId = payment.PatientId })
 }
 
-<div class="card" style="max-width:600px;">
-    <div class="card-header bg-danger text-white"><i class="bi bi-x-circle me-2"></i>Cancel Payment</div>
+<div class="card payment-form-card">
     <div class="card-body">
         <div class="alert alert-warning">
-            Cancelling <strong>voids</strong> this payment, as if it was never collected: it stops counting
-            as revenue <strong>and the amount becomes due again</strong> on the visit. Use it for a payment
-            entered by mistake. This is recorded in the payment's audit trail and cannot be undone from here.
+            @T["Cancelling voids this payment, as if it was never collected: it stops counting as revenue and the amount becomes due again on the visit. Use it for a payment entered by mistake. This is recorded in the payment's history and cannot be undone from here."]
         </div>
         <form asp-action="Cancel" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
             <input type="hidden" asp-for="PaymentId" />
 
-            <div class="mb-3">
-                <label asp-for="Reason" class="form-label">Cancellation Reason *</label>
-                <textarea asp-for="Reason" class="form-control" rows="3" required></textarea>
-            </div>
+            <app-field asp-for="Reason" label="@T["Reason for cancelling"].Value" type="textarea" rows="3" required="true" />
 
-            <button type="submit" class="btn btn-danger"><i class="bi bi-x-lg me-1"></i>Confirm Cancellation</button>
-            <a asp-action="Report" class="btn btn-outline-secondary">Back</a>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">@T["Cancel this payment"]</button>
+                @if (payment is not null)
+                {
+                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@payment.PatientId" asp-route-tab="payments" class="btn btn-outline-secondary">@T["Back to payments"]</a>
+                }
+            </div>
         </form>
     </div>
 </div>

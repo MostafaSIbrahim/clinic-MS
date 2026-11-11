@@ -1,33 +1,48 @@
 @model ChangePaymentAmountRequest
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
-    ViewData["Title"] = "Change Payment Amount";
+    // M2c: change a collected payment's amount, with a reason. In English and Arabic. Rules unchanged.
+    ViewData["Title"] = T["Change payment amount"].Value;
+    var payment = ViewBag.Payment as PaymentDto;
+}
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Change payment amount"]</h1>
+        @if (payment is not null)
+        {
+            <p class="text-muted mb-0">@T["Payment #{0}", payment.Id]</p>
+        }
+    </div>
+</div>
+
+@if (payment is not null)
+{
+    @await Component.InvokeAsync("PatientHeader", new { patientId = payment.PatientId })
 }
 
-<div class="card" style="max-width:600px;">
-    <div class="card-header"><i class="bi bi-pencil-square me-2"></i>Change Payment Amount</div>
+<div class="card payment-form-card">
     <div class="card-body">
-        <div class="alert alert-info">
-            Current amount: <strong>@(((decimal)ViewBag.CurrentAmount).ToMoney())</strong>.
-            If a first-visit source/clinic deduction was applied, it will be recalculated proportionally
-            against the new amount.
-        </div>
+        @if (payment is not null)
+        {
+            <div class="alert alert-info">
+                @T["Current amount: {0}. If a first-visit source or clinic deduction was applied, it is recalculated in proportion to the new amount.", payment.Amount.ToMoney()]
+            </div>
+        }
         <form asp-action="ChangeAmount" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
             <input type="hidden" asp-for="PaymentId" />
 
-            <div class="mb-3">
-                <label asp-for="NewAmount" class="form-label">New Amount *</label>
-                <input asp-for="NewAmount" type="number" step="0.01" class="form-control" required />
-            </div>
+            <app-field asp-for="NewAmount" label="@T["New amount"].Value" type="number" required="true" />
+            <app-field asp-for="Reason" label="@T["Reason for the change"].Value" type="textarea" rows="3" required="true" />
 
-            <div class="mb-3">
-                <label asp-for="Reason" class="form-label">Reason for Change *</label>
-                <textarea asp-for="Reason" class="form-control" rows="3" required></textarea>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">@T["Save change"]</button>
+                @if (payment is not null)
+                {
+                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@payment.PatientId" asp-route-tab="payments" class="btn btn-outline-secondary">@T["Back to payments"]</a>
+                }
             </div>
-
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Change</button>
-            <a asp-action="Report" class="btn btn-outline-secondary">Back</a>
         </form>
     </div>
 </div>

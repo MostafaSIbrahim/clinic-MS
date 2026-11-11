@@ -1,258 +1,220 @@
 @model PatientFinancialSummaryDto
-@* M1c: the Payments tab of the patient workspace (was /Payments/PatientSummary). Content moved unchanged;
-   links name the Payments controller because the page is now served by Patients. *@
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@* M1c: the Payments tab of the patient workspace. M2c: in English and Arabic, shared tables. Figures and actions
+   unchanged; links name the Payments controller because the page is served by Patients. *@
+@{
+    var canWriteOff = await Can.HasAsync(Permissions.Payments.WriteOff);
+    string D(DateTime d) => d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    var noPayments = new EmptyStateModel(T["No payments recorded."].Value, Icon: "bi-receipt-cutoff");
+}
 <section aria-labelledby="payments-heading">
-<h2 id="payments-heading" class="h5">Payments</h2>
-<div class="row g-3 mb-4">
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="stat-card bg-primary-soft">
-            <div class="small opacity-75">Total Charged</div>
-            <div class="fs-3 fw-bold">@Model.TotalCharged.ToMoney()</div>
-        </div>
-    </div>
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="stat-card bg-teal-soft">
-            <div class="small opacity-75">Total Paid</div>
-            <div class="fs-3 fw-bold">@Model.TotalPaid.ToMoney()</div>
-        </div>
-    </div>
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="stat-card bg-amber-soft">
-            <div class="small opacity-75">Written Off</div>
-            <div class="fs-3 fw-bold">@Model.TotalWrittenOff.ToMoney()</div>
-        </div>
-    </div>
-    <div class="col-12 col-sm-6 col-xl-3">
-        <div class="stat-card @(Model.CollectibleBalance > 0 ? "bg-rose-soft" : "bg-teal-soft")">
-            <div class="small opacity-75">Collectible Balance</div>
+    <h2 id="payments-heading" class="h5">@T["Payments"]</h2>
 
-            @if (Model.UnallocatedCoverage > 0)
-            {
-                <div class="fw-semibold mt-2">Needs reconciliation</div>
-                <div class="small mt-1">
-                    Existing payments need to be linked before collecting more.
-                </div>
-            }
-            else
-            {
-                <div class="fs-3 fw-bold">
-                    @Model.CollectibleBalance.ToMoney()
-                </div>
-            }
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card bg-primary-soft">
+                <div class="small opacity-75">@T["Total charged"]</div>
+                <div class="fs-3 fw-bold">@Model.TotalCharged.ToMoney()</div>
+            </div>
         </div>
-    </div>
-</div>
-<div class="card mb-4">
-    <div class="card-header">
-        <i class="bi bi-cash-coin me-2"></i>Ready for collection
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card bg-teal-soft">
+                <div class="small opacity-75">@T["Total paid"]</div>
+                <div class="fs-3 fw-bold">@Model.TotalPaid.ToMoney()</div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card bg-amber-soft">
+                <div class="small opacity-75">@T["Written off"]</div>
+                <div class="fs-3 fw-bold">@Model.TotalWrittenOff.ToMoney()</div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="stat-card @(Model.CollectibleBalance > 0 ? "bg-rose-soft" : "bg-teal-soft")">
+                <div class="small opacity-75">@T["Collectible balance"]</div>
+                @if (Model.UnallocatedCoverage > 0)
+                {
+                    <div class="fw-semibold mt-2">@T["Needs reconciliation"]</div>
+                    <div class="small mt-1">@T["Existing payments need to be linked before collecting more."]</div>
+                }
+                else
+                {
+                    <div class="fs-3 fw-bold">@Model.CollectibleBalance.ToMoney()</div>
+                }
+            </div>
+        </div>
     </div>
 
-    <div class="card-body">
-        <p class="small text-muted">Balances currently eligible for collection.</p>
+    <app-card id="ready-for-collection" title="@T["Ready for collection"].Value" level="3" icon="bi-cash-coin">
         @if (Model.UnallocatedCoverage > 0)
         {
             <div class="alert alert-warning mb-0">
-                This patient has
-                <strong>@Model.UnallocatedCoverage.ToMoney()</strong>
-                in payments or write-offs that are not linked to a reservation
-                or nutrition enrollment. Reconcile these records before
-                collecting additional payment.
+                @T["This patient has {0} in payments or write-offs that are not linked to a reservation or nutrition enrollment. Reconcile these records before collecting more.", Model.UnallocatedCoverage.ToMoney()]
             </div>
         }
         else if (Model.PendingPayments.Count == 0)
         {
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <span class="text-muted">No collectible balance at this time.</span>
-                <button type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        disabled>
-                    <i class="bi bi-check-circle me-1"></i>No Payment Due
-                </button>
-            </div>
+            <p class="text-muted mb-0"><i class="bi bi-check-circle me-1" aria-hidden="true"></i>@T["No collectible balance at this time."]</p>
         }
         else
         {
-            @* Review fix: distinguish the collectible balances table from payment history. *@
-            <div class="table-responsive" tabindex="0" role="region" aria-label="Ready for collection">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
+            <app-table caption="@T["Ready for collection"].Value" caption-hidden="true" stack="true">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Date"]</th>
+                        <th scope="col">@T["Service"]</th>
+                        <th scope="col">@T["Clinic"]</th>
+                        <th scope="col" class="app-table__num">@T["Remaining amount"]</th>
+                        <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.PendingPayments)
+                    {
                         <tr>
-                            <th scope="col">Date</th>
-                            <th scope="col">Service</th>
-                            <th scope="col">Clinic</th>
-                            <th scope="col">Remaining Amount</th>
-                            @* Review fix: name the action column for assistive technology. *@
-                            <th scope="col"><span class="visually-hidden">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.PendingPayments)
-                        {
-                            <tr>
-                                <td class="text-nowrap">
-                                    @item.Date.ToString("dd MMM yyyy")
-                                </td>
-                                <td>@item.Description</td>
-                                <td>@(item.ClinicName ?? "Select during collection")</td>
-                                <td class="fw-semibold text-danger">
-                                    @item.AmountDue.ToMoney()
-                                </td>
-                                <td class="text-end">
-                                    <a asp-controller="Payments" asp-action="Collect"
+                            <th scope="row" data-label="@T["Date"]">@D(item.Date)</th>
+                            <td data-label="@T["Service"]" dir="auto">@item.Description</td>
+                            <td data-label="@T["Clinic"]" dir="auto">@(item.ClinicName ?? T["Chosen when collecting"].Value)</td>
+                            <td data-label="@T["Remaining amount"]" class="app-table__num fw-semibold">@item.AmountDue.ToMoney()</td>
+                            <td class="app-table__actions">
+                                <a asp-controller="Payments" asp-action="Collect"
+                                   asp-route-patientId="@Model.PatientId"
+                                   asp-route-reservationId="@item.ReservationId"
+                                   asp-route-enrollmentId="@item.EnrollmentId"
+                                   class="btn btn-sm btn-success">@T["Collect"]</a>
+                                @* P6b: excuse the balance (or part of it), with a reason. *@
+                                @if (item.ReservationId.HasValue && canWriteOff)
+                                {
+                                    <a asp-controller="Payments" asp-action="WriteOff"
                                        asp-route-patientId="@Model.PatientId"
                                        asp-route-reservationId="@item.ReservationId"
-                                       asp-route-enrollmentId="@item.EnrollmentId"
-                                       class="btn btn-sm btn-success">
-                                        <i class="bi bi-cash-coin me-1" aria-hidden="true"></i>Collect
-                                    </a>
-                                    @* P6b: excuse the balance (or part of it), with a reason. *@
-                                    @if (item.ReservationId.HasValue && await Can.HasAsync(Permissions.Payments.WriteOff))
-                                    {
-                                        <a asp-controller="Payments" asp-action="WriteOff"
-                                           asp-route-patientId="@Model.PatientId"
-                                           asp-route-reservationId="@item.ReservationId"
-                                           class="btn btn-sm btn-outline-warning">
-                                            <i class="bi bi-slash-circle me-1" aria-hidden="true"></i>Write off
-                                        </a>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                                       class="btn btn-sm btn-outline-warning">@T["Write off"]</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </app-table>
         }
-    </div>
-</div>
-<div class="card">
-    <div class="card-header">
-        <span><i class="bi bi-receipt me-2"></i>Payment History</span>
-    </div>
-    
-    <div class="card-body p-0">
+    </app-card>
+
+    <app-card id="payment-history" title="@T["Payment history"].Value" level="3" icon="bi-receipt">
         @if (!Model.Payments.Any())
         {
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-receipt-cutoff fs-1 d-block mb-2 opacity-50"></i>
-                No payments recorded.
-            </div>
+            <partial name="_AppEmpty" model="noPayments" />
         }
         else
         {
-            <div class="table-responsive" tabindex="0" role="region" aria-label="Payment history">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead>
-                        <tr>
-                            <th scope="col">Date</th><th scope="col">Amount</th><th scope="col">Method</th><th scope="col">Clinic</th><th scope="col">Source</th>
-                            <th scope="col">Deduction</th><th scope="col">Clinic Net</th><th scope="col">Status</th><th scope="col">Collected By</th>
-                            <th scope="col"><span class="visually-hidden">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <app-table caption="@T["Payment history"].Value" caption-hidden="true" stack="true">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Date"]</th>
+                        <th scope="col" class="app-table__num">@T["Amount"]</th>
+                        <th scope="col">@T["Method"]</th>
+                        <th scope="col">@T["Clinic"]</th>
+                        <th scope="col">@T["Source"]</th>
+                        <th scope="col">@T["Deduction"]</th>
+                        <th scope="col" class="app-table__num">@T["Clinic net"]</th>
+                        <th scope="col">@T["Status"]</th>
+                        <th scope="col">@T["Collected by"]</th>
+                        <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
                     @foreach (var p in Model.Payments)
                     {
-                        <tr class="@(p.Status == "Cancelled" ? "text-muted text-decoration-line-through" : "")">
-                            <td>@p.PaymentDate.ToString("dd MMM yyyy HH:mm")</td>
-                            <td class="fw-semibold">
+                        var when = Clock.ToClinicTime(p.PaymentDate).ToString("dd MMM yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+                        <tr class="@(p.Status == "Cancelled" ? "payment-row--void" : "")">
+                            <th scope="row" data-label="@T["Date"]">@when</th>
+                            <td data-label="@T["Amount"]" class="app-table__num fw-semibold">
                                 @p.Amount.ToMoney()
                                 @if (p.OriginalAmount.HasValue && p.OriginalAmount.Value != p.Amount)
                                 {
-                                    <br /><small class="text-muted">was @p.OriginalAmount.Value.ToMoney()</small>
+                                    <div class="small text-muted">@T["was {0}", p.OriginalAmount.Value.ToMoney()]</div>
                                 }
                             </td>
-                            <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
-                            <td>@(p.ClinicName ?? "—")</td>
-                            <td>@(p.PatientSourceName ?? "—")</td>
-                            <td>
+                            <td data-label="@T["Method"]">@T[Labels.Humanize(p.PaymentMethod)]</td>
+                            <td data-label="@T["Clinic"]" dir="auto">@(p.ClinicName ?? "—")</td>
+                            <td data-label="@T["Source"]" dir="auto">@(p.PatientSourceName ?? "—")</td>
+                            <td data-label="@T["Deduction"]">
                                 @if (p.IsFirstVisitDeduction)
                                 {
-                                    <span class="badge bg-warning text-dark">@p.DeductionPercentage%  (@p.SourceDeductionAmount.ToMoney())</span>
+                                    <span>@p.DeductionPercentage% (@p.SourceDeductionAmount.ToMoney())</span>
                                 }
                                 else
                                 {
                                     <span class="text-muted">—</span>
                                 }
                             </td>
-                            <td>@p.ClinicNetAmount.ToMoney()</td>
-                            <td>
+                            <td data-label="@T["Clinic net"]" class="app-table__num">@p.ClinicNetAmount.ToMoney()</td>
+                            <td data-label="@T["Status"]">
                                 @if (p.Status == "Active")
                                 {
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="app-status app-status--paid">@T["Active"]</span>
                                 }
                                 else if (p.Status == "WrittenOff")
                                 {
                                     @* P6: an excused balance; covers the visit, not revenue. *@
-                                    <span class="badge bg-warning text-dark" title="@p.Notes">Written off</span>
+                                    <span class="app-status app-status--write-off">@T["Written off"]</span>
                                     @if (p.WriteOffReason is not null)
                                     {
-                                        <div class="small text-muted">@Labels.Humanize(p.WriteOffReason)</div>
+                                        <div class="small text-muted">@T[Labels.Humanize(p.WriteOffReason)]</div>
                                     }
                                 }
                                 else
                                 {
                                     @* P6: a void; doesn't cover the visit. *@
-                                    <span class="badge bg-secondary" title="@p.CancellationReason">Cancelled (void)</span>
+                                    <span class="app-status app-status--cancelled">@T["Cancelled (void)"]</span>
+                                    @if (!string.IsNullOrWhiteSpace(p.CancellationReason))
+                                    {
+                                        <div class="small text-muted" dir="auto">@p.CancellationReason</div>
+                                    }
                                 }
                             </td>
-                            <td>@p.CollectorName</td>
-                            <td class="text-nowrap">
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-secondary js-payment-audit"
+                            <td data-label="@T["Collected by"]" dir="auto">@p.CollectorName</td>
+                            <td class="app-table__actions">
+                                <button type="button" class="btn btn-sm btn-outline-secondary js-payment-audit"
                                         data-audit-url="@Url.Action("Audit", "Payments", new { paymentId = p.Id })">
-                                    <i class="bi bi-clock-history me-1"></i>Audit History
+                                    <i class="bi bi-clock-history" aria-hidden="true"></i> @T["History"]<span class="visually-hidden"> @when</span>
                                 </button>
-                                
-                                @if (p.Status == "WrittenOff" && await Can.HasAsync(Permissions.Payments.WriteOff))
+                                @if (p.Status == "WrittenOff" && canWriteOff)
                                 {
-                                    <a asp-controller="Payments" asp-action="CancelWriteOff" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger" title="Undo write-off">
-                                        <i class="bi bi-arrow-counterclockwise"></i><span class="visually-hidden">Undo write-off</span>
+                                    <a asp-controller="Payments" asp-action="CancelWriteOff" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger">
+                                        @T["Undo write-off"]<span class="visually-hidden"> @when</span>
                                     </a>
                                 }
                                 @if (p.Status == "Active")
                                 {
-                                    <a asp-controller="Payments" asp-action="ChangeAmount" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-primary" title="Change amount">
-                                        <i class="bi bi-pencil"></i>
+                                    <a asp-controller="Payments" asp-action="ChangeAmount" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-primary">
+                                        @T["Change amount"]<span class="visually-hidden"> @when</span>
                                     </a>
-                                    <a asp-controller="Payments" asp-action="Cancel" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger" title="Cancel payment">
-                                        <i class="bi bi-x-lg"></i>
+                                    <a asp-controller="Payments" asp-action="Cancel" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-danger">
+                                        @T["Cancel payment"]<span class="visually-hidden"> @when</span>
                                     </a>
                                 }
                             </td>
                         </tr>
                     }
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </app-table>
         }
-    </div>
-</div>
-<div class="modal fade"
-     id="paymentAuditModal"
-     tabindex="-1"
-     aria-labelledby="paymentAuditTitle"
-     aria-hidden="true">
+    </app-card>
+</section>
+
+<div class="modal fade" id="paymentAuditModal" tabindex="-1" aria-labelledby="paymentAuditTitle" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="paymentAuditTitle">
-                    <i class="bi bi-clock-history me-2"></i>Payment Audit History
-                </h5>
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                <h2 class="modal-title fs-5" id="paymentAuditTitle">@T["Payment history"]</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
             </div>
-
-            <div class="modal-body" id="paymentAuditBody" aria-live="polite"></div>
-
+            <div class="modal-body" id="paymentAuditBody" aria-live="polite"
+                 data-loading="@T["Loading…"]" data-error="@T["Could not load the payment history."]"
+                 data-expired="@T["Your session expired or you don't have access. Reload the page and sign in again."]"></div>
             <div class="modal-footer">
-                <button type="button"
-                        class="btn btn-outline-secondary"
-                        data-bs-dismiss="modal">
-                    Close
-                </button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T["Close"]</button>
             </div>
         </div>
     </div>
 </div>
-</section>

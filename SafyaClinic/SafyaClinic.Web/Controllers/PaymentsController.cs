@@ -311,6 +311,7 @@ public class PaymentsController : BaseController
     {
         var result = await _paymentService.GetPaymentByIdAsync(paymentId);
         if (!result.IsSuccess) { Error("Payment not found."); return RedirectToAction(nameof(Report)); }
+        ViewBag.Payment = result.Data;   // M2c: the patient header and the way back to their Payments tab
         return View(new CancelPaymentRequest { PaymentId = paymentId });
     }
 
@@ -319,9 +320,9 @@ public class PaymentsController : BaseController
     [RequirePermission(Permissions.Payments.Adjust)]
     public async Task<IActionResult> Cancel(CancelPaymentRequest model)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid) return await PaymentFormAgainAsync(model.PaymentId, model);
         var result = await _paymentService.CancelPaymentAsync(model, CurrentUserId);
-        if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+        if (!result.IsSuccess) { ApplyErrors(result); return await PaymentFormAgainAsync(model.PaymentId, model); }
         return RedirectWithSuccess(
             "Payment cancelled.",
             nameof(PatientSummary),
@@ -403,8 +404,17 @@ public class PaymentsController : BaseController
     {
         var result = await _paymentService.GetPaymentByIdAsync(paymentId);
         if (!result.IsSuccess) { Error("Payment not found."); return RedirectToAction(nameof(Report)); }
-        ViewBag.CurrentAmount = result.Data!.Amount;
-        return View(new ChangePaymentAmountRequest { PaymentId = paymentId, NewAmount = result.Data.Amount });
+        ViewBag.Payment = result.Data;   // M2c
+        return View(new ChangePaymentAmountRequest { PaymentId = paymentId, NewAmount = result.Data!.Amount });
+    }
+
+    // M2c: a refused cancel or amount change shows the form again with the payment it's about (before, the
+    // amount-change form failed to show again, because the current amount was missing).
+    private async Task<IActionResult> PaymentFormAgainAsync(int paymentId, object model)
+    {
+        var payment = await _paymentService.GetPaymentByIdAsync(paymentId);
+        ViewBag.Payment = payment.IsSuccess ? payment.Data : null;
+        return View(model);
     }
 
     [HttpPost]
@@ -412,9 +422,9 @@ public class PaymentsController : BaseController
     [RequirePermission(Permissions.Payments.Adjust)]
     public async Task<IActionResult> ChangeAmount(ChangePaymentAmountRequest model)
     {
-        if (!ModelState.IsValid) return View(model);
+        if (!ModelState.IsValid) return await PaymentFormAgainAsync(model.PaymentId, model);
         var result = await _paymentService.ChangePaymentAmountAsync(model, CurrentUserId);
-        if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+        if (!result.IsSuccess) { ApplyErrors(result); return await PaymentFormAgainAsync(model.PaymentId, model); }
         return RedirectWithSuccess(
             "Payment amount updated.",
             nameof(PatientSummary),

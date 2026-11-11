@@ -1161,6 +1161,23 @@ a.app-kpi:focus-visible {
     color: var(--color-primary);
 }
 
+.audit-reason {
+    min-width: 12rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* M2c: a voided payment stays in the history, struck through. */
+.payment-row--void > * {
+    color: var(--color-text-muted);
+    text-decoration: line-through;
+}
+
+.payment-row--void .app-table__actions,
+.payment-row--void .app-status {
+    text-decoration: none;
+}
+
 /* M1d: the patient timeline, newest first. */
 .patient-timeline__item {
     display: flex;

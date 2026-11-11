@@ -24,6 +24,9 @@ public class PaymentServiceSpy : DispatchProxy
                 Task.FromResult(ServiceResult<PaymentDashboardDto>.Success(new PaymentDashboardDto())),
             "GetRevenueBetweenAsync" =>
                 Task.FromResult(ServiceResult<decimal>.Success(0m)),
+            // M2c: a payment to show on the amount-change and cancel forms.
+            "GetPaymentByIdAsync" =>
+                Task.FromResult(ServiceResult<PaymentDto>.Success(new PaymentDto { Id = (int)args![0]!, PatientId = 7, Amount = 500m })),
             _ => throw new NotSupportedException(targetMethod.Name)
         };
     }

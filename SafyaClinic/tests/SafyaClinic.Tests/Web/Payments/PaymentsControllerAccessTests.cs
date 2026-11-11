@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using SafyaClinic.Application.DTOs.Payment;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Controllers;
 using Xunit;
@@ -130,6 +131,20 @@ public class PaymentsControllerAccessTests
         await controller.Report(new DateTime(2026, 1, 1), new DateTime(2026, 1, 2));
 
         Assert.Null(Assert.Single(spy.Calls).Args[2]);
+    }
+
+    // M2c: a refused amount change shows the form again, with the payment (it used to fail: no current amount).
+    [Fact]
+    public async Task A_refused_amount_change_shows_the_form_again_with_the_payment()
+    {
+        var (controller, _) = Create("Reception");
+        controller.ModelState.AddModelError("Reason", "Required");
+
+        var view = Assert.IsType<ViewResult>(await controller.ChangeAmount(new ChangePaymentAmountRequest { PaymentId = 12, NewAmount = 400m }));
+
+        var payment = Assert.IsType<PaymentDto>(controller.ViewBag.Payment);
+        Assert.Equal(7, payment.PatientId);
+        Assert.IsType<ChangePaymentAmountRequest>(view.Model);
     }
 
     [Fact]
