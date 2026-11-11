@@ -149,8 +149,12 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
     });
 
     await test.step('Reception collects part of the balance', async () => {
+        // M1c: the old payment summary address lands on the patient's Payments tab.
         await page.goto(`/Payments/PatientSummary?patientId=${patientId}`);
-        screens['Patient payments'] = `/Payments/PatientSummary?patientId=${patientId}`;
+        await expect(page).toHaveURL(new RegExp(`/Patients/Details/${patientId}\\?tab=payments`));
+        await expect(page.getByRole('link', { name: 'Payments', exact: true })).toHaveAttribute('aria-current', 'page');
+        screens['Patient payments'] = `/Patients/Details/${patientId}?tab=payments`;
+        screens['Patient nutrition'] = `/Patients/Details/${patientId}?tab=nutrition`;
         await checkA11y(page, 'Patient payments');
         // Icon fonts can add a character to a link's name, so match the end of it.
         const collect = page.locator('main').getByRole('link', { name: /Collect$/ }).first();

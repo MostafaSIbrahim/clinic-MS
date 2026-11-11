@@ -25,12 +25,10 @@ public class PaymentsController : BaseController
     }
 
     [RequirePermission(Permissions.Payments.View)]
-    public async Task<IActionResult> PatientSummary(int patientId)
-    {
-        var result = await _paymentService.GetPatientFinancialSummaryAsync(patientId);
-        if (!result.IsSuccess) return RedirectToAction("Details", "Patients", new { id = patientId });
-        return View(result.Data);
-    }
+    // M1c: the payment summary is the Payments tab of the patient workspace; collect, write off and the
+    // payment adjustments come back here and land on the tab.
+    public IActionResult PatientSummary(int patientId) =>
+        RedirectToAction("Details", "Patients", new { id = patientId, tab = SafyaClinic.Web.Models.PatientTabs.Payments });
 
     [HttpGet]
     [RequirePermission(Permissions.Payments.View)]
