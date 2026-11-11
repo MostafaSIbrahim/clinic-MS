@@ -60,6 +60,57 @@ jobs:
           name: test-results
           path: TestResults
 
+  # M2a: the payment dashboard with 50,000 reservations in a real SQL Server, timed (target p95 under 1 s),
+  # and checked against the pre-M2 figures. The schema is built by running the reviewed idempotent migration
+  # script on an empty database, so a script that fails on a fresh database (as on 9 Nov) is caught here.
+  # Report-only for now (continue-on-error). Passwords are generated per run.
+  performance:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET (8 runtime, 10 SDK)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Generate a password for this run
+        run: |
+          SA_PASSWORD="Sa1!$(openssl rand -hex 16)"
+          echo "::add-mask::$SA_PASSWORD"
+          echo "SA_PASSWORD=$SA_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Start SQL Server
+        run: |
+          docker run -d --name sql -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=$SA_PASSWORD" -p 1433:1433 \
+            mcr.microsoft.com/mssql/server:2022-latest
+          for i in $(seq 1 60); do
+            if docker logs sql 2>&1 | grep -q "SQL Server is now ready for client connections"; then exit 0; fi
+            sleep 2
+          done
+          docker logs sql; exit 1
+
+      - name: Build the empty database from the idempotent migration script
+        run: |
+          dotnet run --project SafyaClinic/tests/DeploymentChecks --configuration Release -- migrations-idempotent.sql
+          docker cp migrations-idempotent.sql sql:/tmp/migrations.sql
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -b -S localhost -U sa -P "$SA_PASSWORD" \
+            -Q "CREATE DATABASE SafyaPerf COLLATE SQL_Latin1_General_CP1_CI_AS"
+          docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -b -S localhost -U sa -P "$SA_PASSWORD" -d SafyaPerf \
+            -i /tmp/migrations.sql > script-output.txt 2>&1 || { tail -n 40 script-output.txt; exit 1; }
+          echo "Migration script ran without errors."
+
+      - name: Time the payment dashboard with 50,000 reservations
+        run: |
+          export PERF_DB="Server=localhost,1433;Database=SafyaPerf;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True"
+          dotnet run --project SafyaClinic/tests/PerformanceChecks --configuration Release -- 50000
+
   # P7: the pilot flow end to end in a browser (Playwright), with axe and screen-size checks, against a
   # fresh SQL Server in a container. Report-only for now (continue-on-error): once it is reliably green,
   # mark "e2e" as required in the branch protection rules. All passwords are generated per run.

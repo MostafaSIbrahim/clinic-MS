@@ -820,34 +820,19 @@ public class PaymentService : IPaymentService
     }
     // ── Payment dashboard ─────────────────────────────────────────
 
+    // M2a: the dashboard adds up in the database. Only reservations that still owe something are loaded (as
+    // rows for the unpaid lists); the collected, written-off and per-clinic/per-source figures are sums and groups
+    // computed by SQL, not by loading every reservation and payment. The figures are the same as before M2,
+    // proven by PaymentDashboardEquivalenceTests against LegacyPaymentDashboard.
     public async Task<ServiceResult<PaymentDashboardDto>> GetPaymentDashboardAsync(DateTime? from = null, DateTime? to = null, bool unpaidOnly = false)
     {
         var (fromInclusive, toInclusive) = NormalizeDateRange(from, to);
 
-        var reservationsQuery = _uow.Reservations.Query();
-        // Payment access: reception only needs reservations whose queue can have a collectible balance.
-        if (unpaidOnly)
-            reservationsQuery = reservationsQuery.Where(r =>
-                r.Status.StatusName != "Cancelled" && r.Status.StatusName != "NoShow" &&
-                (r.QueueStatus == PatientQueueStatus.InConsultation || r.QueueStatus == PatientQueueStatus.Finished));
-
-        var paymentsQuery = _uow.Payments.Query();
-
-        if (fromInclusive.HasValue)
-        {
-            paymentsQuery = paymentsQuery
-                .Where(p => p.PaymentDate >= fromInclusive.Value);
-        }
-
-        if (toInclusive.HasValue)
-        {
-            paymentsQuery = paymentsQuery
-                .Where(p => p.PaymentDate <= toInclusive.Value);
-        }
-
-
-
-        var reservations = await reservationsQuery
+        // Unpaid lists: visits that can have a balance (in consultation or finished, not cancelled or no-show)
+        // and whose collected + written-off amount is below the price. Same rule as Coverage.Due.
+        var unpaid = await _uow.Reservations.Query()
+            .Where(r => r.Status.StatusName != "Cancelled" && r.Status.StatusName != "NoShow")
+            .Where(r => r.QueueStatus == PatientQueueStatus.InConsultation || r.QueueStatus == PatientQueueStatus.Finished)
             .Select(r => new
             {
                 r.Id,
@@ -859,33 +844,18 @@ public class PaymentService : IPaymentService
                 r.ReservationDate,
                 r.TotalAmount,
                 r.QueueStatus,
-
-                Paid = r.Payments
-                    .Where(p => p.Status == PaymentStatusEnum.Active)
-                    .Sum(p => (decimal?)p.Amount) ?? 0m,
-
-                WrittenOff = r.Payments
-                    .Where(p => p.Status == PaymentStatusEnum.WrittenOff)
-                    .Sum(p => (decimal?)p.Amount) ?? 0m
+                Paid = r.Payments.Where(p => p.Status == PaymentStatusEnum.Active).Sum(p => (decimal?)p.Amount) ?? 0m,
+                WrittenOff = r.Payments.Where(p => p.Status == PaymentStatusEnum.WrittenOff).Sum(p => (decimal?)p.Amount) ?? 0m
             })
+            .Where(r => (r.TotalAmount ?? 0m) > r.Paid + r.WrittenOff)
+            .OrderByDescending(r => r.ReservationDate)
+            .ThenBy(r => r.Id)
             .ToListAsync();
 
         var unpaidCompleted = new List<UnpaidReservationDto>();
         var unpaidPending = new List<UnpaidReservationDto>();
-
-        foreach (var r in reservations)
+        foreach (var r in unpaid)
         {
-            if (r.StatusName is "Cancelled" or "NoShow")
-                continue;
-
-            if (r.QueueStatus != PatientQueueStatus.InConsultation &&
-                r.QueueStatus != PatientQueueStatus.Finished)
-                continue;
-
-            // P6: the same rule as everywhere else (Paid = Active, WrittenOff = WrittenOff).
-            if (Coverage.Due(r.TotalAmount, r.Paid + r.WrittenOff) <= 0m)
-                continue;
-
             var dto = new UnpaidReservationDto
             {
                 ReservationId = r.Id,
@@ -899,11 +869,8 @@ public class PaymentService : IPaymentService
                 AmountPaid = r.Paid,
                 WrittenOff = r.WrittenOff
             };
-
-            if (r.QueueStatus == PatientQueueStatus.Finished)
-                unpaidCompleted.Add(dto);
-            else
-                unpaidPending.Add(dto);
+            if (r.QueueStatus == PatientQueueStatus.Finished) unpaidCompleted.Add(dto);
+            else unpaidPending.Add(dto);
         }
 
         // Payment access: stop before querying payment totals, sources, or clinic breakdowns.
@@ -916,125 +883,102 @@ public class PaymentService : IPaymentService
                 TotalUnpaidPending = unpaidPending.Sum(r => r.Balance)
             });
 
-        var payments = await paymentsQuery
-            .Select(p => new
-            {
-                p.Id,
-                p.ReservationId,
-                p.Amount,
-                p.ClinicId,
-                p.PatientSourceId,
-                p.SourceDeductionAmount,
-                p.ClinicNetAmount,
-                p.Status,
-                p.WriteOffReason
-            })
-            .ToListAsync();
+        var paymentsQuery = _uow.Payments.Query();
+        if (fromInclusive.HasValue) paymentsQuery = paymentsQuery.Where(p => p.PaymentDate >= fromInclusive.Value);
+        if (toInclusive.HasValue) paymentsQuery = paymentsQuery.Where(p => p.PaymentDate <= toInclusive.Value);
+        var active = paymentsQuery.Where(p => p.Status == PaymentStatusEnum.Active);
 
-        var activePayments = payments
-            .Where(p => p.Status == PaymentStatusEnum.Active)
-            .ToList();
+        // Collected money that settles its visit (or belongs to no visit): the visit's collected + written-off
+        // amount reaches its price. Same test as before, now as a database condition.
+        var settledQuery = active
+            .Where(p => p.ReservationId == null ||
+                        (p.Reservation!.Payments
+                            .Where(x => x.Status == PaymentStatusEnum.Active || x.Status == PaymentStatusEnum.WrittenOff)
+                            .Sum(x => (decimal?)x.Amount) ?? 0m) >= (p.Reservation.TotalAmount ?? 0m));
+        var settledCount = await settledQuery.CountAsync();
+        var settledAmount = await settledQuery.SumAsync(p => (decimal?)p.Amount) ?? 0m;
 
         // P6b: write-offs in the period, by reason; shown separately, never as collected money.
-        var writeOffs = payments.Where(p => p.Status == PaymentStatusEnum.WrittenOff).ToList();
-        var writeOffsByReason = writeOffs
-            .GroupBy(p => p.WriteOffReason?.ToString() ?? "Before P6 (cancelled payment)")
-            .Select(g => new WriteOffReasonAmountDto(g.Key, g.Count(), g.Sum(p => p.Amount)))
+        var writeOffGroups = await paymentsQuery
+            .Where(p => p.Status == PaymentStatusEnum.WrittenOff)
+            .GroupBy(p => p.WriteOffReason)
+            .Select(g => new { Reason = g.Key, Count = g.Count(), Amount = g.Sum(p => p.Amount) })
+            .ToListAsync();
+        var writeOffsByReason = writeOffGroups
+            .Select(g => new WriteOffReasonAmountDto(g.Reason?.ToString() ?? "Before P6 (cancelled payment)", g.Count, g.Amount))
             .OrderByDescending(r => r.Amount)
+            .ThenBy(r => r.Reason, StringComparer.Ordinal)
             .ToList();
 
-        var reservationsDict = reservations.ToDictionary(r => r.Id, r => r);
-
-        var fullyPaidPayments = activePayments
-                .Where(p =>
-                    !p.ReservationId.HasValue ||
-                    (
-                        reservationsDict.TryGetValue(
-                            p.ReservationId.Value, out var reservation) &&
-                        reservation.Paid + reservation.WrittenOff >=
-                            (reservation.TotalAmount ?? 0m)
-                    ))
-                .ToList();
-
         // ── Amount by source ─────────────────────────────────────
-        var sourceIds = activePayments
-             .Where(p => p.PatientSourceId.HasValue)
-             .Select(p => p.PatientSourceId!.Value)
-             .Distinct()
-             .ToList();
+        var sourceGroups = await active
+            .GroupBy(p => p.PatientSourceId)
+            .Select(g => new
+            {
+                SourceId = g.Key,
+                Collected = g.Sum(p => p.Amount),
+                Deduction = g.Sum(p => p.SourceDeductionAmount),
+                Count = g.Count()
+            })
+            .ToListAsync();
+        var sourceIds = sourceGroups.Where(g => g.SourceId.HasValue).Select(g => g.SourceId!.Value).ToList();
+        var sourceNames = await _uow.PatientSources.Query()
+            .Where(s => sourceIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.Name);
+        var bySource = sourceGroups
+            .Select(g => new SourceAmountDto
+            {
+                PatientSourceId = g.SourceId,
+                PatientSourceName = !g.SourceId.HasValue ? "No Source"
+                    : sourceNames.TryGetValue(g.SourceId.Value, out var name) ? name : "Unknown Source",
+                TotalCollected = g.Collected,
+                TotalSourceDeduction = g.Deduction,
+                PaymentCount = g.Count
+            })
+            .OrderByDescending(s => s.TotalCollected)
+            .ThenBy(s => s.PatientSourceName, StringComparer.Ordinal)
+            .ToList();
 
-                var sourceNames = await _uow.PatientSources.Query()
-                    .Where(s => sourceIds.Contains(s.Id))
-                    .ToDictionaryAsync(s => s.Id, s => s.Name);
-
-                var bySource = new List<SourceAmountDto>();
-
-                foreach (var grp in activePayments.GroupBy(p => p.PatientSourceId))
-                {
-                    string name = "No Source";
-
-                    if (grp.Key.HasValue)
-                    {
-                        name = sourceNames.TryGetValue(grp.Key.Value, out var sourceName)
-                            ? sourceName
-                            : "Unknown Source";
-                    }
-
-                    bySource.Add(new SourceAmountDto
-                    {
-                        PatientSourceId = grp.Key,
-                        PatientSourceName = name,
-                        TotalCollected = grp.Sum(p => p.Amount),
-                        TotalSourceDeduction = grp.Sum(p => p.SourceDeductionAmount),
-                        PaymentCount = grp.Count()
-                    });
-                }
-       
         // ── Amount by clinic ─────────────────────────────────────
-        var clinicIds = activePayments
-                .Where(p => p.ClinicId.HasValue)
-                .Select(p => p.ClinicId!.Value)
-                .Distinct()
-                .ToList();
-
-                var clinicNames = await _uow.Clinics.Query()
-                    .Where(c => clinicIds.Contains(c.Id))
-                    .ToDictionaryAsync(c => c.Id, c => c.Name);
-
-                var byClinic = new List<ClinicAmountDto>();
-
-                foreach (var grp in activePayments.GroupBy(p => p.ClinicId))
-                {
-                    string name = "No Clinic";
-
-                    if (grp.Key.HasValue)
-                    {
-                        name = clinicNames.TryGetValue(grp.Key.Value, out var clinicName)
-                            ? clinicName
-                            : "Unknown Clinic";
-                    }
-
-                    byClinic.Add(new ClinicAmountDto
-                    {
-                        ClinicId = grp.Key,
-                        ClinicName = name,
-                        TotalCollected = grp.Sum(p => p.Amount),
-                        TotalClinicNet = grp.Sum(p => p.ClinicNetAmount),
-                        PaymentCount = grp.Count()
-                    });
-                }
+        var clinicGroups = await active
+            .GroupBy(p => p.ClinicId)
+            .Select(g => new
+            {
+                ClinicId = g.Key,
+                Collected = g.Sum(p => p.Amount),
+                Net = g.Sum(p => p.ClinicNetAmount),
+                Count = g.Count()
+            })
+            .ToListAsync();
+        var clinicIds = clinicGroups.Where(g => g.ClinicId.HasValue).Select(g => g.ClinicId!.Value).ToList();
+        var clinicNames = await _uow.Clinics.Query()
+            .Where(c => clinicIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => c.Name);
+        var byClinic = clinicGroups
+            .Select(g => new ClinicAmountDto
+            {
+                ClinicId = g.ClinicId,
+                ClinicName = !g.ClinicId.HasValue ? "No Clinic"
+                    : clinicNames.TryGetValue(g.ClinicId.Value, out var name) ? name : "Unknown Clinic",
+                TotalCollected = g.Collected,
+                TotalClinicNet = g.Net,
+                PaymentCount = g.Count
+            })
+            .OrderByDescending(c => c.TotalCollected)
+            .ThenBy(c => c.ClinicName, StringComparer.Ordinal)
+            .ToList();
 
         return ServiceResult<PaymentDashboardDto>.Success(new PaymentDashboardDto
         {
-            UnpaidCompletedReservations = unpaidCompleted.OrderByDescending(r => r.ReservationDate),
-            UnpaidPendingReservations = unpaidPending.OrderByDescending(r => r.ReservationDate),
-            FullyPaidPaymentCount = fullyPaidPayments.Count,
+            UnpaidCompletedReservations = unpaidCompleted,
+            UnpaidPendingReservations = unpaidPending,
+            FullyPaidPaymentCount = settledCount,
             TotalUnpaidCompleted = unpaidCompleted.Sum(r => r.Balance),
             TotalUnpaidPending = unpaidPending.Sum(r => r.Balance),
-            TotalFullyPaid = fullyPaidPayments.Sum(p => p.Amount),
-            AmountBySource = bySource.OrderByDescending(s => s.TotalCollected),
-            AmountByClinic = byClinic.OrderByDescending(c => c.TotalCollected),
-            TotalWrittenOff = writeOffs.Sum(p => p.Amount),
+            TotalFullyPaid = settledAmount,
+            AmountBySource = bySource,
+            AmountByClinic = byClinic,
+            TotalWrittenOff = writeOffGroups.Sum(g => g.Amount),
             WrittenOffByReason = writeOffsByReason
         });
     }
