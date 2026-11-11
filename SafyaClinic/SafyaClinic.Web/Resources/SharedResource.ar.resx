@@ -1062,4 +1062,130 @@
   <data name="Unlocked" xml:space="preserve">
     <value>غير مقفل</value>
   </data>
+  <data name="All time" xml:space="preserve">
+    <value>كل الفترات</value>
+  </data>
+  <data name="Amount" xml:space="preserve">
+    <value>المبلغ</value>
+  </data>
+  <data name="Amount by clinic" xml:space="preserve">
+    <value>المبالغ حسب العيادة</value>
+  </data>
+  <data name="Amount by patient source" xml:space="preserve">
+    <value>المبالغ حسب مصدر المريض</value>
+  </data>
+  <data name="Balance" xml:space="preserve">
+    <value>المتبقي</value>
+  </data>
+  <data name="Change dates" xml:space="preserve">
+    <value>تغيير التواريخ</value>
+  </data>
+  <data name="Choose the dates for these details, or leave a date empty for no limit on that side." xml:space="preserve">
+    <value>اختر تواريخ هذه التفاصيل، أو اترك التاريخ فارغًا بلا حد من هذه الجهة.</value>
+  </data>
+  <data name="Clinic net" xml:space="preserve">
+    <value>صافي العيادة</value>
+  </data>
+  <data name="Collected" xml:space="preserve">
+    <value>المحصّل</value>
+  </data>
+  <data name="Could not load the details. Please try again." xml:space="preserve">
+    <value>تعذر تحميل التفاصيل. حاول مرة أخرى.</value>
+  </data>
+  <data name="Every balance still owed, newest first." xml:space="preserve">
+    <value>كل المبالغ المستحقة، الأحدث أولًا.</value>
+  </data>
+  <data name="From" xml:space="preserve">
+    <value>من</value>
+  </data>
+  <data name="From {0}" xml:space="preserve">
+    <value>من {0}</value>
+  </data>
+  <data name="Fully paid" xml:space="preserve">
+    <value>مدفوع بالكامل</value>
+  </data>
+  <data name="Loading…" xml:space="preserve">
+    <value>جارٍ التحميل…</value>
+  </data>
+  <data name="No balances to collect for consultations in progress." xml:space="preserve">
+    <value>لا توجد مبالغ للتحصيل لكشوفات جارية.</value>
+  </data>
+  <data name="No balances to collect for finished visits." xml:space="preserve">
+    <value>لا توجد مبالغ للتحصيل لزيارات منتهية.</value>
+  </data>
+  <data name="No clinic" xml:space="preserve">
+    <value>بدون عيادة</value>
+  </data>
+  <data name="No payments in this period." xml:space="preserve">
+    <value>لا توجد مدفوعات في هذه الفترة.</value>
+  </data>
+  <data name="No source" xml:space="preserve">
+    <value>بدون مصدر</value>
+  </data>
+  <data name="No write-offs in this period." xml:space="preserve">
+    <value>لا توجد إعفاءات في هذه الفترة.</value>
+  </data>
+  <data name="Payment details" xml:space="preserve">
+    <value>تفاصيل المدفوعات</value>
+  </data>
+  <data name="Payment details: {0}" xml:space="preserve">
+    <value>تفاصيل المدفوعات: {0}</value>
+  </data>
+  <data name="Payment period" xml:space="preserve">
+    <value>فترة المدفوعات</value>
+  </data>
+  <data name="Period: {0}" xml:space="preserve">
+    <value>الفترة: {0}</value>
+  </data>
+  <data name="Show all time" xml:space="preserve">
+    <value>عرض كل الفترات</value>
+  </data>
+  <data name="Source" xml:space="preserve">
+    <value>المصدر</value>
+  </data>
+  <data name="Source deduction" xml:space="preserve">
+    <value>خصم المصدر</value>
+  </data>
+  <data name="The period applies to collected and written-off amounts. Unpaid lists show every balance still owed." xml:space="preserve">
+    <value>تنطبق الفترة على المبالغ المحصلة والمعفاة. تعرض قوائم غير المدفوع كل المبالغ المستحقة.</value>
+  </data>
+  <data name="The start date must be on or before the end date." xml:space="preserve">
+    <value>يجب أن يكون تاريخ البداية في تاريخ النهاية أو قبله.</value>
+  </data>
+  <data name="To" xml:space="preserve">
+    <value>إلى</value>
+  </data>
+  <data name="Today&#x27;s payments" xml:space="preserve">
+    <value>مدفوعات اليوم</value>
+  </data>
+  <data name="Unpaid: finished visits" xml:space="preserve">
+    <value>غير مدفوع: زيارات منتهية</value>
+  </data>
+  <data name="Unpaid: in consultation" xml:space="preserve">
+    <value>غير مدفوع: داخل الكشف</value>
+  </data>
+  <data name="Until {0}" xml:space="preserve">
+    <value>حتى {0}</value>
+  </data>
+  <data name="Write-offs" xml:space="preserve">
+    <value>الإعفاءات</value>
+  </data>
+  <data name="Written off" xml:space="preserve">
+    <value>معفى</value>
+  </data>
+  <data name="Written off (not revenue)" xml:space="preserve">
+    <value>المعفى (ليس إيرادًا)</value>
+  </data>
+  <data name="Written off by reason" xml:space="preserve">
+    <value>الإعفاءات حسب السبب</value>
+  </data>
+  <data name="{0} payment(s)" xml:space="preserve">
+    <value>{0} عملية دفع</value>
+  </data>
+  <data name="{0} to {1}" xml:space="preserve">
+    <value>من {0} إلى {1}</value>
+  </data>
+  <data name="{0} visit(s)" xml:space="preserve">
+    <value>{0} زيارة</value>
+  </data>
 </root>

@@ -1,16 +1,34 @@
 @model PaymentDashboardDto
-@{ ViewData["Title"] = "Unpaid Payments"; }
-@* Payment access: reception receives only current collectible balances. *@
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@{ ViewData["Title"] = T["Unpaid Payments"].Value; }
+@* Payment access: reception receives only current collectible balances. M2b: in English and Arabic. *@
 <div class="page-toolbar">
-    <h1>Unpaid Payments</h1>
-    <a asp-action="Report" class="btn btn-outline-primary">Today's Payments</a>
+    <div>
+        <h1>@T["Unpaid Payments"]</h1>
+        <p class="text-muted mb-0">@T["Every balance still owed, newest first."]</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="Report" class="btn btn-outline-primary">@T["Today's payments"]</a>
+    </div>
 </div>
 <div asp-validation-summary="All" class="text-danger" role="alert"></div>
 @if (ViewData.ModelState.IsValid)
 {
     <div class="row g-3 mb-4">
-        <div class="col-md-6"><div class="stat-card bg-rose-soft"><div>Unpaid � Finished Visits</div><strong class="fs-3">@Model.TotalUnpaidCompleted.ToMoney()</strong></div></div>
-        <div class="col-md-6"><div class="stat-card bg-primary-soft"><div>Unpaid � In Consultation</div><strong class="fs-3">@Model.TotalUnpaidPending.ToMoney()</strong></div></div>
+        <div class="col-md-6">
+            <div class="stat-card bg-rose-soft">
+                <div class="small opacity-75">@T["Unpaid: finished visits"]</div>
+                <div class="fs-3 fw-bold">@Model.TotalUnpaidCompleted.ToMoney()</div>
+                <div class="small">@T["{0} visit(s)", Model.UnpaidCompletedCount]</div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stat-card bg-primary-soft">
+                <div class="small opacity-75">@T["Unpaid: in consultation"]</div>
+                <div class="fs-3 fw-bold">@Model.TotalUnpaidPending.ToMoney()</div>
+                <div class="small">@T["{0} visit(s)", Model.UnpaidPendingCount]</div>
+            </div>
+        </div>
     </div>
     <partial name="_UnpaidSections" model="Model" />
 }

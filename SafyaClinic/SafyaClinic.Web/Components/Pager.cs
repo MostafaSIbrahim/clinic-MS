@@ -7,7 +7,7 @@ namespace SafyaClinic.Web.Components;
 /// F8c: what the pagination component needs. Use with
 /// <c>&lt;partial name="_AppPagination" model="PagerModel.From(Model)" /&gt;</c>.
 /// </summary>
-public sealed record PagerModel(int Page, int PageSize, int TotalCount, string Action = "Index")
+public sealed record PagerModel(int Page, int PageSize, int TotalCount, string Action = "Index", string PageParameter = "page")
 {
     public int TotalPages => PageSize < 1 ? 0 : (int)Math.Ceiling(TotalCount / (double)PageSize);
     public int First => TotalCount == 0 ? 0 : (Page - 1) * PageSize + 1;

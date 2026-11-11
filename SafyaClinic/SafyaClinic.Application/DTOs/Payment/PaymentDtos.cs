@@ -112,6 +112,13 @@ public class PaymentDashboardDto
 {
     public IEnumerable<UnpaidReservationDto> UnpaidCompletedReservations { get; init; } = Enumerable.Empty<UnpaidReservationDto>();
     public IEnumerable<UnpaidReservationDto> UnpaidPendingReservations { get; init; } = Enumerable.Empty<UnpaidReservationDto>();
+    /// <summary>M2b: how many unpaid visits there are in each list (the lists may hold one page only).</summary>
+    public int UnpaidCompletedCount { get; init; }
+    public int UnpaidPendingCount { get; init; }
+    /// <summary>M2b: the page shown of each list, and its size (0 = complete lists).</summary>
+    public int CompletedPage { get; init; } = 1;
+    public int PendingPage { get; init; } = 1;
+    public int PageSize { get; init; }
     public int FullyPaidPaymentCount { get; init; }
 
     public decimal TotalUnpaidCompleted { get; init; }

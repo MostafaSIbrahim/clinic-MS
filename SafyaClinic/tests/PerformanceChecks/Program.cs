@@ -47,37 +47,42 @@ var scenarios = new (string Name, DateTime? From, DateTime? To, bool UnpaidOnly)
 var report = new StringBuilder();
 report.AppendLine($"### Payment dashboard with {count:N0} reservations");
 report.AppendLine();
-report.AppendLine("| View | Before M2, one run | Now, median | Now, p95 | Same figures | Within 1 s |");
+report.AppendLine("| View | Before M2, one run | Now (20 rows a page), median | Now, p95 | Same figures | Within 1 s |");
 report.AppendLine("|---|---|---|---|---|---|");
 var failed = false;
 
 foreach (var s in scenarios)
 {
-    async Task<(double Ms, ServiceResult<PaymentDashboardDto> Result)> TimeAsync(bool legacy)
+    // "legacy": the pre-M2 code; "full": today's code with complete lists (to compare figures);
+    // "paged": what the screens ask for since M2b, one page of 20 rows per list (timed).
+    async Task<(double Ms, ServiceResult<PaymentDashboardDto> Result)> TimeAsync(string mode)
     {
         await using var db = new SafyaDbContext(options);
         var uow = new UnitOfWork(db);
         var watch = Stopwatch.StartNew();
-        var result = legacy
-            ? await LegacyPaymentDashboard.ComputeAsync(uow, s.From, s.To, s.UnpaidOnly)
-            : await new PaymentService(uow).GetPaymentDashboardAsync(s.From, s.To, s.UnpaidOnly);
+        var result = mode switch
+        {
+            "legacy" => await LegacyPaymentDashboard.ComputeAsync(uow, s.From, s.To, s.UnpaidOnly),
+            "full" => await new PaymentService(uow).GetPaymentDashboardAsync(s.From, s.To, s.UnpaidOnly),
+            _ => await new PaymentService(uow).GetPaymentDashboardAsync(s.From, s.To, s.UnpaidOnly, pageSize: 20),
+        };
         return (watch.Elapsed.TotalMilliseconds, result);
     }
 
-    var (legacyMs, before) = await TimeAsync(legacy: true);
-    await TimeAsync(legacy: false);   // warm-up
+    var (legacyMs, before) = await TimeAsync("legacy");
+    var (_, after) = await TimeAsync("full");
+    await TimeAsync("paged");   // warm-up
     var times = new List<double>();
-    ServiceResult<PaymentDashboardDto>? after = null;
     for (var i = 0; i < runs; i++)
     {
-        var (ms, result) = await TimeAsync(legacy: false);
+        var (ms, paged) = await TimeAsync("paged");
         times.Add(ms);
-        after = result;
+        if (!paged.IsSuccess || paged.Data!.TotalUnpaidCompleted != after.Data!.TotalUnpaidCompleted) after = paged;
     }
     times.Sort();
     var median = times[runs / 2];
     var p95 = times[(int)Math.Ceiling(0.95 * runs) - 1];
-    var same = before.IsSuccess && after!.IsSuccess && DashboardTestData.Figures(before.Data!) == DashboardTestData.Figures(after.Data!);
+    var same = before.IsSuccess && after.IsSuccess && DashboardTestData.Figures(before.Data!) == DashboardTestData.Figures(after.Data!);
     var fast = p95 < targetMs;
     failed |= !same || !fast;
     report.AppendLine($"| {s.Name} | {legacyMs:N0} ms | {median:N0} ms | {p95:N0} ms | {(same ? "yes" : "**no**")} | {(fast ? "yes" : "**no**")} |");

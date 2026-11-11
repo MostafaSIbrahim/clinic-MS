@@ -67,6 +67,29 @@ public class PaymentDashboardEquivalenceTests
         Assert.Contains(d.AmountBySource, s => s.PatientSourceId is null);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_page_of_the_unpaid_lists_keeps_the_totals_of_all_of_them(bool unpaidOnly)
+    {
+        // M2b: the screens show 20 rows at a time; the totals and counts still cover every unpaid visit.
+        var db = await WorldAsync();
+        var service = new PaymentService(new UnitOfWork(db));
+
+        var all = (await service.GetPaymentDashboardAsync(unpaidOnly: unpaidOnly)).Data!;
+        var page2 = (await service.GetPaymentDashboardAsync(unpaidOnly: unpaidOnly, pageSize: 5, completedPage: 2, pendingPage: 2)).Data!;
+
+        Assert.Equal(all.TotalUnpaidCompleted, page2.TotalUnpaidCompleted);
+        Assert.Equal(all.TotalUnpaidPending, page2.TotalUnpaidPending);
+        Assert.Equal(all.UnpaidCompletedReservations.Count(), page2.UnpaidCompletedCount);
+        Assert.Equal(all.UnpaidPendingReservations.Count(), page2.UnpaidPendingCount);
+        Assert.Equal(all.UnpaidCompletedReservations.Skip(5).Take(5).Select(r => r.ReservationId),
+            page2.UnpaidCompletedReservations.Select(r => r.ReservationId));
+        Assert.Equal(all.UnpaidPendingReservations.Skip(5).Take(5).Select(r => r.ReservationId),
+            page2.UnpaidPendingReservations.Select(r => r.ReservationId));
+        Assert.Equal(5, page2.PageSize);
+    }
+
     [Fact]
     public async Task Unpaid_lists_come_newest_first()
     {
