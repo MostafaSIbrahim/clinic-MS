@@ -1,161 +1,163 @@
 ﻿@model PrescriptionDetailDto
 @inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Application.Clinical
 @{
-    ViewData["Title"] = $"Prescription #{Model.Id}";
-    // P5a: after an allergy refusal the drug stays filled in.
+    // M3b: a prescription. Shared layout, English and Arabic, labelled add-drug fields. P5a: after an allergy
+    // refusal the drug stays filled in.
+    ViewData["Title"] = T["Prescription #{0}", Model.Id].Value;
     var pending = ViewData["PendingItem"] as AddPrescriptionItemRequest;
+    var date = Model.PrescriptionDate.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    string? Route(string? stored) => AdministrationRoutes.Label(stored) is { } label ? T[label].Value : null;
 }
-
-@await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
-
-<div class="d-flex justify-content-between align-items-start mb-3">
+<div class="page-toolbar">
     <div>
-        <h4 class="mb-0">Prescription #@Model.Id</h4>
-        <small class="text-muted">@Model.PatientName • @Model.PrescriptionDate.ToString("dd MMM yyyy")</small>
+        <h1>@T["Prescription #{0}", Model.Id]</h1>
+        <p class="text-muted mb-0"><span dir="auto">@Model.PatientName</span> · @date</p>
     </div>
-    <div class="d-flex gap-2">
-        <a asp-action="PrintPrescription" asp-route-prescriptionId="@Model.Id" target="_blank" class="btn btn-sm btn-primary">
-            <i class="bi bi-printer me-1"></i>Print
+    <div class="page-actions">
+        <a asp-action="PrintPrescription" asp-route-prescriptionId="@Model.Id" target="_blank" rel="noopener" class="btn btn-primary">
+            <i class="bi bi-printer" aria-hidden="true"></i> @T["Print"]<span class="visually-hidden"> (@T["opens in a new tab"])</span>
         </a>
-        <a asp-action="Details" asp-route-id="@Model.RecordId" asp-route-tab="prescriptions" class="btn btn-sm btn-outline-secondary">Back to Record</a>
+        <a asp-action="Details" asp-route-id="@Model.RecordId" asp-route-tab="prescriptions" class="btn btn-outline-secondary">@T["Back to the record"]</a>
     </div>
 </div>
 
+@await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
+
 <div class="row g-3">
-    <div class="col-md-8">
-        <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-capsule-pill me-2"></i>Drugs</div>
-            <div class="card-body">
-                <table class="table table-sm">
-                    <thead>
+    <div class="col-lg-8">
+        <app-card id="drugs" title="@T["Drugs"].Value" level="2" icon="bi-capsule-pill">
+            <app-table caption="@T["Drugs"].Value" caption-hidden="true" stack="true">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Medication"]</th>
+                        <th scope="col">@T["Dosage"]</th>
+                        <th scope="col">@T["Frequency"]</th>
+                        <th scope="col">@T["Duration"]</th>
+                        <th scope="col">@T["Route"]</th>
+                        <th scope="col">@T["Instructions"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
                         <tr>
-                            <th>Medication</th>
-                            <th>Dosage</th>
-                            <th>Frequency</th>
-                            <th>Duration</th>
-                            <th>Route</th>
+                            <th scope="row" data-label="@T["Medication"]" dir="auto">@item.MedicationName</th>
+                            <td data-label="@T["Dosage"]" dir="auto">@(item.Dosage ?? "—")</td>
+                            <td data-label="@T["Frequency"]" dir="auto">@(item.Frequency ?? "—")</td>
+                            <td data-label="@T["Duration"]" dir="auto">@(item.Duration ?? "—")</td>
+                            <td data-label="@T["Route"]">@(Route(item.RouteOfAdministration) ?? "—")</td>
+                            <td data-label="@T["Instructions"]" dir="auto">@(string.IsNullOrWhiteSpace(item.Instructions) ? "—" : item.Instructions)</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.Items)
+                    }
+                </tbody>
+            </app-table>
+            @if (!string.IsNullOrWhiteSpace(Model.Notes))
+            {
+                <p class="mt-3 mb-0"><strong>@T["Notes"]:</strong> <span dir="auto">@Model.Notes</span></p>
+            }
+        </app-card>
+
+        <app-card id="add-drug" title="@T["Add another drug"].Value" level="2" icon="bi-plus-lg">
+            <form asp-action="AddPrescriptionItem" method="post" class="row g-2 align-items-end" data-allergy-check data-draft-key="prescription-add-@Model.Id" data-draft-restore="@(pending == null ? "true" : "false")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="prescriptionId" value="@Model.Id" />
+                <div class="col-12 col-md-4 position-relative">
+                    <label for="add-medication" class="form-label small mb-1">@T["Medication"]</label>
+                    <input type="text" id="add-medication" name="MedicationName" class="form-control form-control-sm med-input" value="@pending?.MedicationName" required />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="add-dosage" class="form-label small mb-1">@T["Dosage"]</label>
+                    <input type="text" id="add-dosage" name="Dosage" class="form-control form-control-sm" value="@pending?.Dosage" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="add-frequency" class="form-label small mb-1">@T["Frequency"]</label>
+                    <input type="text" id="add-frequency" name="Frequency" class="form-control form-control-sm" value="@pending?.Frequency" />
+                </div>
+                <div class="col-6 col-md-2">
+                    <label for="add-duration" class="form-label small mb-1">@T["Duration"]</label>
+                    <input type="text" id="add-duration" name="Duration" class="form-control form-control-sm" value="@pending?.Duration" />
+                </div>
+                <div class="col-6 col-md-2">
+                    @* P9a: the route is chosen from the list. *@
+                    <label for="add-route" class="form-label small mb-1">@T["Route"]</label>
+                    <select id="add-route" name="RouteOfAdministration" class="form-select form-select-sm">
+                        <option value="">—</option>
+                        @foreach (var route in AdministrationRoutes.All)
                         {
-                            <tr>
-                                <td><strong>@item.MedicationName</strong></td>
-                                <td>@item.Dosage</td>
-                                <td>@item.Frequency</td>
-                                <td>@item.Duration</td>
-                                <td>@(SafyaClinic.Application.Clinical.AdministrationRoutes.Label(item.RouteOfAdministration) is { } route ? T[route].Value : "—")</td>
-                            </tr>
-                            @if (!string.IsNullOrWhiteSpace(item.Instructions))
-                            {
-                                <tr>
-                                    <td colspan="5" class="text-muted small ps-4">↳ @item.Instructions</td>
-                                </tr>
-                            }
+                            <option value="@route.Value" selected="@(pending?.RouteOfAdministration == route.Value)">@T[route.Label]</option>
                         }
-                    </tbody>
-                </table>
-
-                @if (!string.IsNullOrWhiteSpace(Model.Notes))
-                {
-                    <div class="alert alert-light border mt-3">
-                        <strong>Notes:</strong> @Model.Notes
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- Add more drugs to existing prescription -->
-        <div class="card">
-            <div class="card-header"><i class="bi bi-plus-lg me-2"></i>Add Another Drug</div>
-            <div class="card-body">
-                <form asp-action="AddPrescriptionItem" method="post" class="row g-2" data-allergy-check>
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="prescriptionId" value="@Model.Id" />
-                    <div class="col-md-3 position-relative">
-                        <input type="text" name="MedicationName" class="form-control form-control-sm med-input" placeholder="Medication" value="@pending?.MedicationName" required />
-                    </div>
-                    <div class="col-md-2"><input type="text" name="Dosage" class="form-control form-control-sm" placeholder="Dosage" value="@pending?.Dosage" /></div>
-                    <div class="col-md-2"><input type="text" name="Frequency" class="form-control form-control-sm" placeholder="Frequency" value="@pending?.Frequency" /></div>
-                    <div class="col-md-2"><input type="text" name="Duration" class="form-control form-control-sm" placeholder="Duration" value="@pending?.Duration" /></div>
-                    <div class="col-md-2">
-                        @* P9a: the route is chosen from the list. *@
-                        <select name="RouteOfAdministration" class="form-select form-select-sm" aria-label="@T["Route"]">
-                            <option value="">@T["Route"]</option>
-                            @foreach (var route in SafyaClinic.Application.Clinical.AdministrationRoutes.All)
-                            {
-                                <option value="@route.Value" selected="@(pending?.RouteOfAdministration == route.Value)">@T[route.Label]</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-md-1"><button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus"></i></button></div>
-                    <div class="col-12"><input type="text" name="Instructions" class="form-control form-control-sm" placeholder="Instructions" value="@pending?.Instructions" /></div>
-                    <div class="col-12">
-                        <partial name="_AllergyConfirm" model="@(ViewData["AllergyMatches"] as IReadOnlyList<SafyaClinic.Application.Clinical.AllergyMatch>)" />
-                    </div>
-                </form>
-            </div>
-        </div>
+                    </select>
+                </div>
+                <div class="col-12 col-md-10">
+                    <label for="add-instructions" class="form-label small mb-1">@T["Instructions"]</label>
+                    <input type="text" id="add-instructions" name="Instructions" class="form-control form-control-sm" value="@pending?.Instructions" />
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">@T["Add drug"]</button>
+                </div>
+                <div class="col-12">
+                    <partial name="_AllergyConfirm" model="@(ViewData["AllergyMatches"] as IReadOnlyList<AllergyMatch>)" />
+                </div>
+            </form>
+        </app-card>
     </div>
 
-    <div class="col-md-4">
-        <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-person me-2"></i>Patient</div>
-            <div class="card-body">
-                <p class="mb-1"><strong>@Model.PatientName</strong></p>
-                <p class="text-muted small mb-0">@(Model.PatientAge?.ToString() ?? "—") yrs / @(Model.PatientGender ?? "—")</p>
-                <p class="text-muted small mb-0">Diagnosis: @(Model.Diagnosis ?? "—")</p>
-            </div>
-        </div>
+    <div class="col-lg-4">
+        <app-card id="prescription-patient" title="@T["Patient"].Value" level="2" icon="bi-person">
+            <p class="mb-1"><strong dir="auto">@Model.PatientName</strong></p>
+            <p class="text-muted small mb-0">
+                @(Model.PatientAge is int age ? T["{0} y", age].Value : "—") · @(Model.PatientGender is { } g ? T[g].Value : "—")
+            </p>
+            <p class="text-muted small mb-0">@T["Diagnosis"]: <span dir="auto">@(Model.Diagnosis ?? "—")</span></p>
+        </app-card>
 
-        <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-clipboard2-pulse me-2"></i>Doctor</div>
-            <div class="card-body">
-                <p class="mb-1"><strong>Dr. @Model.DoctorName</strong></p>
-                @if (!string.IsNullOrWhiteSpace(Model.DoctorSpecialization))
-                {
-                    <p class="text-muted small mb-0">@Model.DoctorSpecialization</p>
-                }
-            </div>
-        </div>
+        <app-card id="prescription-doctor" title="@T["Doctor"].Value" level="2" icon="bi-clipboard2-pulse">
+            <p class="mb-1"><strong dir="auto">@T["Dr. {0}", Model.DoctorName]</strong></p>
+            @if (!string.IsNullOrWhiteSpace(Model.DoctorSpecialization))
+            {
+                <p class="text-muted small mb-0" dir="auto">@Model.DoctorSpecialization</p>
+            }
+        </app-card>
 
-        <!-- Attachments -->
-        <div class="card">
-            <div class="card-header"><i class="bi bi-paperclip me-2"></i>Attachments</div>
-            <div class="card-body">
-                @if (!Model.Attachments.Any())
-                {
-                    <p class="text-muted small mb-2">No attachments.</p>
-                }
-                else
-                {
+        <app-card id="prescription-attachments" title="@T["Attachments"].Value" level="2" icon="bi-paperclip">
+            @if (!Model.Attachments.Any())
+            {
+                <p class="text-muted small mb-2">@T["No attachments."]</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-2">
                     @foreach (var a in Model.Attachments)
                     {
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <a href="javascript:void(0)" onclick="showAttachmentPreview('@Url.Action("ViewAttachment", new { attachmentId = a.Id })', '@Url.Action("DownloadAttachment", new { attachmentId = a.Id })', '@a.FileName')">
+                        <li class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                            <button type="button" class="btn btn-link p-0 text-start" dir="auto"
+                                    onclick="showAttachmentPreview('@Url.Action("ViewAttachment", new { attachmentId = a.Id })', '@Url.Action("DownloadAttachment", new { attachmentId = a.Id })', '@a.FileName')">
                                 @a.FileName
-                            </a>
+                            </button>
                             @if (await Can.HasAsync(Permissions.Attachments.Delete))
                             {
-                                <form asp-action="DeleteAttachment" method="post" class="d-inline">
+                                <form asp-action="DeleteAttachment" method="post" class="d-inline" data-confirm="@T["Delete this attachment?"]">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="attachmentId" value="@a.Id" />
                                     <input type="hidden" name="recordId" value="@Model.RecordId" />
-                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0">×</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Delete {0}", a.FileName]</span>
+                                    </button>
                                 </form>
                             }
-                        </div>
+                        </li>
                     }
-                }
-                <form asp-action="UploadPrescriptionAttachment" method="post" enctype="multipart/form-data" class="d-flex gap-2 mt-2">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="prescriptionId" value="@Model.Id" />
-                    <input type="hidden" name="recordId" value="@Model.RecordId" />
-                    <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" aria-label="Attachment (PDF, JPG or PNG)" />
-                    <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-upload"></i></button>
-                </form>
-            </div>
-        </div>
+                </ul>
+            }
+            <form asp-action="UploadPrescriptionAttachment" method="post" enctype="multipart/form-data" class="d-flex gap-2">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="prescriptionId" value="@Model.Id" />
+                <input type="hidden" name="recordId" value="@Model.RecordId" />
+                <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" aria-label="@T["Attachment (PDF, JPG or PNG)"]" />
+                <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Upload"]</button>
+            </form>
+        </app-card>
     </div>
 </div>
 
@@ -167,6 +169,7 @@
             unavailable: @Json.Serialize(T["Drug suggestions are unavailable right now. You can type the name."].Value)
         };
     </script>
+    <script src="~/js/form-draft.js" asp-append-version="true"></script>
     <script src="~/js/allergy-check.js" asp-append-version="true"></script>
     <script>
         document.querySelectorAll('.med-input').forEach(input => {

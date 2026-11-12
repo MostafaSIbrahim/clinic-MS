@@ -1527,4 +1527,91 @@
   <data name="Save changes" xml:space="preserve">
     <value>حفظ التغييرات</value>
   </data>
+  <data name="Prescription notes" xml:space="preserve">
+    <value>ملاحظات الروشتة</value>
+  </data>
+  <data name="Printed under the drugs." xml:space="preserve">
+    <value>تُطبع أسفل الأدوية.</value>
+  </data>
+  <data name="Drugs" xml:space="preserve">
+    <value>الأدوية</value>
+  </data>
+  <data name="Add drug" xml:space="preserve">
+    <value>إضافة دواء</value>
+  </data>
+  <data name="Save Prescription" xml:space="preserve">
+    <value>حفظ الروشتة</value>
+  </data>
+  <data name="Medication" xml:space="preserve">
+    <value>الدواء</value>
+  </data>
+  <data name="Dosage" xml:space="preserve">
+    <value>الجرعة</value>
+  </data>
+  <data name="Frequency" xml:space="preserve">
+    <value>عدد المرات</value>
+  </data>
+  <data name="Duration" xml:space="preserve">
+    <value>المدة</value>
+  </data>
+  <data name="Instructions" xml:space="preserve">
+    <value>التعليمات</value>
+  </data>
+  <data name="Remove this drug" xml:space="preserve">
+    <value>حذف هذا الدواء</value>
+  </data>
+  <data name="Drug {0}" xml:space="preserve">
+    <value>الدواء {0}</value>
+  </data>
+  <data name="Back to the record" xml:space="preserve">
+    <value>العودة إلى السجل</value>
+  </data>
+  <data name="Add another drug" xml:space="preserve">
+    <value>إضافة دواء آخر</value>
+  </data>
+  <data name="Dr. {0}" xml:space="preserve">
+    <value>د. {0}</value>
+  </data>
+  <data name="Attachments" xml:space="preserve">
+    <value>المرفقات</value>
+  </data>
+  <data name="No attachments." xml:space="preserve">
+    <value>لا توجد مرفقات.</value>
+  </data>
+  <data name="Delete this attachment?" xml:space="preserve">
+    <value>حذف هذا المرفق؟</value>
+  </data>
+  <data name="Delete {0}" xml:space="preserve">
+    <value>حذف {0}</value>
+  </data>
+  <data name="Attachment (PDF, JPG or PNG)" xml:space="preserve">
+    <value>مرفق (PDF أو JPG أو PNG)</value>
+  </data>
+  <data name="Upload" xml:space="preserve">
+    <value>رفع</value>
+  </data>
+  <data name="Age" xml:space="preserve">
+    <value>السن</value>
+  </data>
+  <data name="Licence no. {0}" xml:space="preserve">
+    <value>ترخيص رقم {0}</value>
+  </data>
+  <data name="This prescription is valid only when signed by the prescribing physician." xml:space="preserve">
+    <value>هذه الروشتة سارية فقط بتوقيع الطبيب المعالج.</value>
+  </data>
+  <data name="Paper size" xml:space="preserve">
+    <value>مقاس الورق</value>
+  </data>
+  <data name="Design" xml:space="preserve">
+    <value>التصميم</value>
+  </data>
+  <data name="Classic" xml:space="preserve">
+    <value>كلاسيكي</value>
+  </data>
+  <data name="Modern" xml:space="preserve">
+    <value>حديث</value>
+  </data>
+  <data name="Minimal" xml:space="preserve">
+    <value>بسيط</value>
+  </data>
 </root>

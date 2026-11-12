@@ -1,40 +1,52 @@
 ﻿@model CreatePrescriptionRequest
 @inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
-    ViewData["Title"] = "New Prescription";
+    // M3b: a new prescription. Every drug field has a visible label (compact row; stacked on phones), English and
+    // Arabic. Field names, drug search (P8b), route list (P9a) and the allergy warning (P5a) are unchanged.
+    ViewData["Title"] = T["New prescription"].Value;
+    // Keeps typed drugs if the page reloads before saving (e.g. the language is switched). Restored only when the
+    // page is opened normally, not when the server shows it again with what was submitted.
+    var draftKey = $"prescription-new-{Model.RecordId}";
+    var restoreDraft = Context.Request.Method == "GET" ? "true" : "false";
+    var labels = new
+    {
+        medication = T["Medication"].Value, dosage = T["Dosage"].Value, frequency = T["Frequency"].Value,
+        duration = T["Duration"].Value, route = T["Route"].Value, instructions = T["Instructions"].Value,
+        remove = T["Remove this drug"].Value, drug = T["Drug {0}", "{0}"].Value
+    };
 }
+<div class="page-toolbar">
+    <div>
+        <h1>@T["New prescription"]</h1>
+        <p class="text-muted mb-0">@T["Record #{0}", Model.RecordId]</p>
+    </div>
+</div>
 
 @if (ViewData["PatientId"] is int patientId)
 {
     @await Component.InvokeAsync("PatientHeader", new { patientId })
 }
 
-<h4>New Prescription</h4>
-<p class="text-muted">Record #@Model.RecordId</p>
+<div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
 
-<div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-<form asp-action="CreatePrescription" method="post" data-allergy-check>
+<form asp-action="CreatePrescription" method="post" data-allergy-check data-draft-key="@draftKey" data-draft-restore="@restoreDraft" data-draft-prepare="ensureDrugRows">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="RecordId" />
 
-    <div class="mb-3">
-        <label asp-for="Notes" class="form-label">Prescription Notes</label>
-        <textarea asp-for="Notes" class="form-control" rows="2" placeholder="General notes for this prescription..."></textarea>
-    </div>
+    <app-field asp-for="Notes" label="@T["Prescription notes"].Value" type="textarea" rows="2" hint="@T["Printed under the drugs."].Value" />
 
-    <h5>Drugs</h5>
+    <h2 class="h5 mt-3">@T["Drugs"]</h2>
     <div id="drugs-container"></div>
 
     <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="addDrugRow()">
-        <i class="bi bi-plus-lg"></i> Add Drug
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> @T["Add drug"]
     </button>
 
     <partial name="_AllergyConfirm" model="@(ViewData["AllergyMatches"] as IReadOnlyList<SafyaClinic.Application.Clinical.AllergyMatch>)" />
 
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Save Prescription</button>
-        <a asp-action="Details" asp-route-id="@Model.RecordId" asp-route-tab="prescriptions" class="btn btn-outline-secondary">Cancel</a>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">@T["Save Prescription"]</button>
+        <a asp-action="Details" asp-route-id="@Model.RecordId" asp-route-tab="prescriptions" class="btn btn-outline-secondary" data-draft-discard="@draftKey">@T["Cancel"]</a>
     </div>
 </form>
 
@@ -43,62 +55,62 @@
     <script>
         // P9a: the route is chosen from the list.
         const routeOptions = @Html.Raw(Json.Serialize(
-            new[] { new { value = "", label = T["Route"].Value } }
+            new[] { new { value = "", label = "—" } }
                 .Concat(SafyaClinic.Application.Clinical.AdministrationRoutes.All.Select(r => new { value = r.Value, label = T[r.Label].Value }))));
         const drugMessages = {
             noMatch: @Json.Serialize(T["No matching drug in the list. You can type the name."].Value),
             unavailable: @Json.Serialize(T["Drug suggestions are unavailable right now. You can type the name."].Value)
         };
+        const drugLabels = @Html.Raw(Json.Serialize(labels));
     </script>
     <script>
         let drugIndex = 0;
         // P5a: after a refusal (e.g. an allergy warning) the drugs already entered are shown again.
         const enteredDrugs = @Json.Serialize(Model.Items);
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
         function addDrugRow(drug) {
             const container = document.getElementById('drugs-container');
+            const i = drugIndex;
+            const id = name => `drug-${i}-${name}`;
+            const field = (name, label, control, cls) =>
+                `<div class="${cls}"><label class="form-label small mb-1" for="${id(name)}">${esc(label)}</label>${control}</div>`;
             const html = `
-                        <div class="card mb-2 drug-row" data-index="${drugIndex}">
-                            <div class="card-body py-2">
-                                <div class="row g-2">
-                                    <div class="col-md-3 position-relative">
-                                        <input type="text" name="Items[${drugIndex}].MedicationName" class="form-control form-control-sm med-input" placeholder="Medication" required />
-                                    </div>
-                                    <div class="col-md-2">
-                                        <input type="text" name="Items[${drugIndex}].Dosage" class="form-control form-control-sm dosage-input" placeholder="Dosage" />
-                                    </div>
-                                    <div class="col-md-2">
-                                        <input type="text" name="Items[${drugIndex}].Frequency" class="form-control form-control-sm" placeholder="Frequency" />
-                                    </div>
-                                    <div class="col-md-2">
-                                        <input type="text" name="Items[${drugIndex}].Duration" class="form-control form-control-sm" placeholder="Duration" />
-                                    </div>
-                                    <div class="col-md-2">
-                                        <select name="Items[${drugIndex}].RouteOfAdministration" class="form-select form-select-sm" aria-label="@T["Route"]">
-                                            ${routeOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-1">
-                                        <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('.drug-row').remove()">
-                                            <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">Remove this drug</span>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="mt-1">
-                                    <input type="text" name="Items[${drugIndex}].Instructions" class="form-control form-control-sm" placeholder="Special instructions" />
-                                </div>
+                <fieldset class="card mb-2 drug-row" data-index="${i}">
+                    <legend class="visually-hidden">${esc(drugLabels.drug.replace('{0}', i + 1))}</legend>
+                    <div class="card-body py-2">
+                        <div class="row g-2 align-items-end">
+                            ${field('medication', drugLabels.medication,
+                                `<input type="text" id="${id('medication')}" name="Items[${i}].MedicationName" class="form-control form-control-sm med-input" required />`,
+                                'col-12 col-md-3 position-relative')}
+                            ${field('dosage', drugLabels.dosage,
+                                `<input type="text" id="${id('dosage')}" name="Items[${i}].Dosage" class="form-control form-control-sm dosage-input" />`, 'col-6 col-md-2')}
+                            ${field('frequency', drugLabels.frequency,
+                                `<input type="text" id="${id('frequency')}" name="Items[${i}].Frequency" class="form-control form-control-sm" />`, 'col-6 col-md-2')}
+                            ${field('duration', drugLabels.duration,
+                                `<input type="text" id="${id('duration')}" name="Items[${i}].Duration" class="form-control form-control-sm" />`, 'col-6 col-md-2')}
+                            ${field('route', drugLabels.route,
+                                `<select id="${id('route')}" name="Items[${i}].RouteOfAdministration" class="form-select form-select-sm">${routeOptions.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join('')}</select>`,
+                                'col-6 col-md-2')}
+                            <div class="col-12 col-md-1 text-md-end">
+                                <button type="button" class="btn btn-sm btn-link text-danger" onclick="removeDrugRow(this)">
+                                    <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">${esc(drugLabels.remove)}</span>
+                                </button>
                             </div>
+                            ${field('instructions', drugLabels.instructions,
+                                `<input type="text" id="${id('instructions')}" name="Items[${i}].Instructions" class="form-control form-control-sm" />`, 'col-12')}
                         </div>
-                    `;
+                    </div>
+                </fieldset>`;
             container.insertAdjacentHTML('beforeend', html);
 
             const newRow = container.lastElementChild;
             if (drug) {
                 ['medicationName', 'dosage', 'frequency', 'duration', 'routeOfAdministration', 'instructions'].forEach(function (key) {
                     const pascal = key.charAt(0).toUpperCase() + key.slice(1);
-                    const field = newRow.querySelector('[name$=".' + pascal + '"]');
+                    const input = newRow.querySelector('[name$=".' + pascal + '"]');
                     const value = drug[key] ?? drug[pascal];
-                    if (field && value) field.value = value;
+                    if (input && value) input.value = value;
                 });
             }
             const medInput = newRow.querySelector('.med-input');
@@ -109,17 +121,46 @@
                 onSelect: function (med) {
                     medInput.value = med.tradeName;
                     medInput.dispatchEvent(new Event('input', { bubbles: true }));   // P5a: re-check allergies
-                    if (dosageInput && !dosageInput.value) {
-                        dosageInput.value = med.strength || '';
-                            }
-                        }
-                    });
-
-                    drugIndex++;
+                    if (dosageInput && !dosageInput.value) dosageInput.value = med.strength || '';
                 }
+            });
+            drugIndex++;
+        }
 
-                if (enteredDrugs && enteredDrugs.length) enteredDrugs.forEach(function (d) { addDrugRow(d); });
-                else addDrugRow();
+        // The server reads Items[0], Items[1]… and stops at the first missing number, so after a row is removed the
+        // remaining rows are renumbered. Before this, removing a drug in the middle silently dropped the drugs after it.
+        function removeDrugRow(button) {
+            button.closest('.drug-row').remove();
+            const rows = document.querySelectorAll('#drugs-container .drug-row');
+            rows.forEach(function (row, n) {
+                row.dataset.index = n;
+                const legend = row.querySelector('legend');
+                if (legend) legend.textContent = drugLabels.drug.replace('{0}', n + 1);
+                row.querySelectorAll('[name], [id], label[for]').forEach(function (el) {
+                    if (el.name) el.name = el.name.replace(/^Items\[\d+\]/, 'Items[' + n + ']');
+                    if (el.id) el.id = el.id.replace(/^drug-\d+-/, 'drug-' + n + '-');
+                    if (el.htmlFor) el.htmlFor = el.htmlFor.replace(/^drug-\d+-/, 'drug-' + n + '-');
+                });
+            });
+            drugIndex = rows.length;
+            document.querySelector('form[data-draft-key]').dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        // form-draft.js: before a kept draft is put back, make the same drug rows (same numbers) exist.
+        function ensureDrugRows(names) {
+            const wanted = new Set();
+            names.forEach(function (n) { const m = /^Items\[(\d+)\]\./.exec(n); if (m) wanted.add(Number(m[1])); });
+            if (wanted.size === 0) return;
+            const highest = Math.max.apply(null, Array.from(wanted));
+            while (drugIndex <= highest) addDrugRow();
+            document.querySelectorAll('#drugs-container .drug-row').forEach(function (row) {
+                if (!wanted.has(Number(row.dataset.index))) row.remove();
+            });
+        }
+
+        if (enteredDrugs && enteredDrugs.length) enteredDrugs.forEach(function (d) { addDrugRow(d); });
+        else addDrugRow();
     </script>
+    <script src="~/js/form-draft.js" asp-append-version="true"></script>
     <script src="~/js/allergy-check.js" asp-append-version="true"></script>
 }

@@ -1,7 +1,27 @@
 @model PrescriptionPrintDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using System.Globalization
 @{
     ViewData["Title"] = "Print Prescription";
     Layout = null;
+
+    // M3b: the printout is bilingual whatever the language of the person printing: each heading in English and
+    // Arabic (Arabic from the resource file), drug names and instructions as the doctor wrote them.
+    string Ar(string english, params object[] args)
+    {
+        var current = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("ar");
+        try { return T[english, args].Value; }
+        finally { CultureInfo.CurrentUICulture = current; }
+    }
+    string En(string english, params object[] args) => string.Format(CultureInfo.InvariantCulture, english, args);
+    Microsoft.AspNetCore.Html.IHtmlContent Bi(string english, params object[] args) =>
+        new Microsoft.AspNetCore.Html.HtmlString(
+            $"<span lang=\"en\">{System.Net.WebUtility.HtmlEncode(En(english, args))}</span> <span class=\"rx-ar\" lang=\"ar\" dir=\"rtl\">{System.Net.WebUtility.HtmlEncode(Ar(english, args))}</span>");
+    string RouteText(string? stored) => SafyaClinic.Application.Clinical.AdministrationRoutes.Label(stored) is { } label
+        ? (SafyaClinic.Application.Clinical.AdministrationRoutes.All.Any(r => r.Label == label) ? $"{label} / {Ar(label)}" : label)
+        : "—";
+    string GenderText(string? g) => g is null ? "—" : $"{g} / {Ar(g)}";
 
     string paperSize = ViewBag.PaperSize ?? "A4";
     string design = ViewBag.Design ?? "classic";
@@ -21,7 +41,7 @@
     };
 }
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <title>Prescription — @Model.PatientName</title>
@@ -94,6 +114,8 @@
             padding-top: 8px;
             color: #666;
         }
+        .rx-ar { font-weight: normal; color: #555; }
+        th .rx-ar, strong .rx-ar { display: block; font-size: .85em; }
         .signature-line {
             margin-top: 60px;
             width: 220px;
@@ -114,24 +136,24 @@
         <form method="get" class="row g-2 align-items-end mb-2">
             <input type="hidden" name="prescriptionId" value="@Model.Id" />
             <div class="col-auto">
-                <label class="form-label small mb-0">Paper Size</label>
-                <select name="paperSize" class="form-select form-select-sm" onchange="this.form.submit()">
+                <label for="paperSize" class="form-label small mb-0">@T["Paper size"]</label>
+                <select id="paperSize" name="paperSize" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="A4" selected="@(paperSize == "A4")">A4</option>
                     <option value="A5" selected="@(paperSize == "A5")">A5</option>
                     <option value="Letter" selected="@(paperSize == "Letter")">Letter</option>
                 </select>
             </div>
             <div class="col-auto">
-                <label class="form-label small mb-0">Design</label>
-                <select name="design" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="classic" selected="@(design == "classic")">Classic</option>
-                    <option value="modern" selected="@(design == "modern")">Modern</option>
-                    <option value="minimal" selected="@(design == "minimal")">Minimal</option>
+                <label for="printDesign" class="form-label small mb-0">@T["Design"]</label>
+                <select id="printDesign" name="design" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="classic" selected="@(design == "classic")">@T["Classic"]</option>
+                    <option value="modern" selected="@(design == "modern")">@T["Modern"]</option>
+                    <option value="minimal" selected="@(design == "minimal")">@T["Minimal"]</option>
                 </select>
             </div>
             <div class="col-auto">
                 <button type="button" class="btn btn-primary" onclick="window.print()">
-                    <i class="bi bi-printer me-1"></i>Print
+                    <i class="bi bi-printer me-1" aria-hidden="true"></i>@T["Print"]
                 </button>
             </div>
         </form>
@@ -154,9 +176,9 @@
         </div>
 
         <div class="patient-bar">
-            <span><strong>Patient:</strong> @Model.PatientName</span>
-            <span><strong>Age/Gender:</strong> @(Model.PatientAge?.ToString() ?? "—") / @(Model.PatientGender ?? "—")</span>
-            <span><strong>Diagnosis:</strong> @(Model.Diagnosis ?? "—")</span>
+            <span><strong>@Bi("Patient")</strong> <span dir="auto">@Model.PatientName</span></span>
+            <span><strong>@Bi("Age")</strong> @(Model.PatientAge?.ToString() ?? "—") · <strong>@Bi("Gender")</strong> @GenderText(Model.PatientGender)</span>
+            <span><strong>@Bi("Diagnosis")</strong> <span dir="auto">@(Model.Diagnosis ?? "—")</span></span>
         </div>
 
         <div class="rx-body">
@@ -164,11 +186,11 @@
                 <thead>
                     <tr class="border-bottom">
                         <th>#</th>
-                        <th>Medication</th>
-                        <th>Dosage</th>
-                        <th>Frequency</th>
-                        <th>Duration</th>
-                        <th>Route</th>
+                        <th>@Bi("Medication")</th>
+                        <th>@Bi("Dosage")</th>
+                        <th>@Bi("Frequency")</th>
+                        <th>@Bi("Duration")</th>
+                        <th>@Bi("Route")</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -179,17 +201,17 @@
                     {
                         <tr>
                             <td>@idx</td>
-                            <td><strong>@item.MedicationName</strong></td>
-                            <td>@(item.Dosage ?? "—")</td>
-                            <td>@(item.Frequency ?? "—")</td>
-                            <td>@(item.Duration ?? "—")</td>
-                            <td>@(SafyaClinic.Application.Clinical.AdministrationRoutes.Label(item.RouteOfAdministration) ?? "—")</td>
+                            <td><strong dir="auto">@item.MedicationName</strong></td>
+                            <td dir="auto">@(item.Dosage ?? "—")</td>
+                            <td dir="auto">@(item.Frequency ?? "—")</td>
+                            <td dir="auto">@(item.Duration ?? "—")</td>
+                            <td>@RouteText(item.RouteOfAdministration)</td>
                         </tr>
                         @if (!string.IsNullOrWhiteSpace(item.Instructions))
                         {
                             <tr>
                                 <td></td>
-                                <td colspan="5" class="text-muted small">↳ @item.Instructions</td>
+                                <td colspan="5" class="text-muted small" dir="auto">↳ @item.Instructions</td>
                             </tr>
                         }
                         idx++;
@@ -200,26 +222,26 @@
             @if (!string.IsNullOrWhiteSpace(Model.Notes))
             {
                 <div class="mt-3 p-2 border-top">
-                    <strong>Notes:</strong> @Model.Notes
+                    <strong>@Bi("Notes")</strong> <span dir="auto">@Model.Notes</span>
                 </div>
             }
         </div>
 
         <div class="signature-line ms-auto">
-            Dr. @Model.DoctorName
+            <span dir="auto">@T["Dr. {0}", Model.DoctorName]</span>
             @if (!string.IsNullOrWhiteSpace(Model.DoctorSpecialization))
             {
                 <div>@Model.DoctorSpecialization</div>
             }
             @if (!string.IsNullOrWhiteSpace(Model.DoctorLicenseNumber))
             {
-                <div>Lic. #@Model.DoctorLicenseNumber</div>
+                <div>@Bi("Licence no. {0}", Model.DoctorLicenseNumber)</div>
             }
         </div>
 
         <div class="rx-footer">
-            <span>Prescription #@Model.Id</span>
-            <span>This prescription is valid only when signed by the prescribing physician.</span>
+            <span>@Bi("Prescription #{0}", Model.Id)</span>
+            <span>@Bi("This prescription is valid only when signed by the prescribing physician.")</span>
         </div>
     </div>
 </body>
