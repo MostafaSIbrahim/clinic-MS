@@ -5,6 +5,7 @@
    unchanged; links name the Payments controller because the page is served by Patients. *@
 @{
     var canWriteOff = await Can.HasAsync(Permissions.Payments.WriteOff);
+    var canAdjust = await Can.HasAsync(Permissions.Payments.Adjust);   // P9a: not the front desk
     string D(DateTime d) => d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
     var noPayments = new EmptyStateModel(T["No payments recorded."].Value, Icon: "bi-receipt-cutoff");
 }
@@ -184,7 +185,7 @@
                                         @T["Undo write-off"]<span class="visually-hidden"> @when</span>
                                     </a>
                                 }
-                                @if (p.Status == "Active")
+                                @if (p.Status == "Active" && canAdjust)
                                 {
                                     <a asp-controller="Payments" asp-action="ChangeAmount" asp-route-paymentId="@p.Id" class="btn btn-sm btn-outline-primary">
                                         @T["Change amount"]<span class="visually-hidden"> @when</span>

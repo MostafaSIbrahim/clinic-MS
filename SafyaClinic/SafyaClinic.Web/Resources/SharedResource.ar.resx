@@ -1416,4 +1416,49 @@
   <data name="was {0}" xml:space="preserve">
     <value>كان {0}</value>
   </data>
+  <data name="Route" xml:space="preserve">
+    <value>طريقة الإعطاء</value>
+  </data>
+  <data name="Oral" xml:space="preserve">
+    <value>بالفم</value>
+  </data>
+  <data name="Sublingual" xml:space="preserve">
+    <value>تحت اللسان</value>
+  </data>
+  <data name="Intravenous (IV)" xml:space="preserve">
+    <value>في الوريد</value>
+  </data>
+  <data name="Intramuscular (IM)" xml:space="preserve">
+    <value>في العضل</value>
+  </data>
+  <data name="Subcutaneous (SC)" xml:space="preserve">
+    <value>تحت الجلد</value>
+  </data>
+  <data name="Topical" xml:space="preserve">
+    <value>موضعي</value>
+  </data>
+  <data name="Inhaled" xml:space="preserve">
+    <value>استنشاق</value>
+  </data>
+  <data name="Nasal" xml:space="preserve">
+    <value>بالأنف</value>
+  </data>
+  <data name="Eye" xml:space="preserve">
+    <value>في العين</value>
+  </data>
+  <data name="Ear" xml:space="preserve">
+    <value>في الأذن</value>
+  </data>
+  <data name="Rectal" xml:space="preserve">
+    <value>شرجي</value>
+  </data>
+  <data name="Vaginal" xml:space="preserve">
+    <value>مهبلي</value>
+  </data>
+  <data name="Transdermal" xml:space="preserve">
+    <value>عبر الجلد</value>
+  </data>
+  <data name="Other route" xml:space="preserve">
+    <value>طريقة أخرى</value>
+  </data>
 </root>

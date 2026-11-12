@@ -137,7 +137,7 @@ public class PaymentsControllerAccessTests
     [Fact]
     public async Task A_refused_amount_change_shows_the_form_again_with_the_payment()
     {
-        var (controller, _) = Create("Reception");
+        var (controller, _) = Create("ReceptionAdmin");
         controller.ModelState.AddModelError("Reason", "Required");
 
         var view = Assert.IsType<ViewResult>(await controller.ChangeAmount(new ChangePaymentAmountRequest { PaymentId = 12, NewAmount = 400m }));

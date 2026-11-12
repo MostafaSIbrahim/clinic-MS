@@ -183,7 +183,7 @@
                             <td>@(item.Dosage ?? "—")</td>
                             <td>@(item.Frequency ?? "—")</td>
                             <td>@(item.Duration ?? "—")</td>
-                            <td>@(item.RouteOfAdministration ?? "—")</td>
+                            <td>@(SafyaClinic.Application.Clinical.AdministrationRoutes.Label(item.RouteOfAdministration) ?? "—")</td>
                         </tr>
                         @if (!string.IsNullOrWhiteSpace(item.Instructions))
                         {

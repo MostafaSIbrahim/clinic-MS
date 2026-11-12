@@ -41,7 +41,7 @@ public class PermissionCatalogueTests
         [Permissions.Nutrition.ManagePackages] = "A",
         [Permissions.Payments.View] = "A R RA CA",
         [Permissions.Payments.Collect] = "A R RA CA",
-        [Permissions.Payments.Adjust] = "A R RA CA",
+        [Permissions.Payments.Adjust] = "A RA CA",   // P9a: not the front desk
         [Permissions.Payments.ViewReport] = "A D R RA CA",
         [Permissions.Payments.ReportAnyDate] = "A D CA",
         [Permissions.Payments.ReportAllDoctors] = "A R RA CA",

@@ -44,7 +44,7 @@
                                 <td>@item.Dosage</td>
                                 <td>@item.Frequency</td>
                                 <td>@item.Duration</td>
-                                <td>@item.RouteOfAdministration</td>
+                                <td>@(SafyaClinic.Application.Clinical.AdministrationRoutes.Label(item.RouteOfAdministration) is { } route ? T[route].Value : "—")</td>
                             </tr>
                             @if (!string.IsNullOrWhiteSpace(item.Instructions))
                             {
@@ -78,7 +78,16 @@
                     <div class="col-md-2"><input type="text" name="Dosage" class="form-control form-control-sm" placeholder="Dosage" value="@pending?.Dosage" /></div>
                     <div class="col-md-2"><input type="text" name="Frequency" class="form-control form-control-sm" placeholder="Frequency" value="@pending?.Frequency" /></div>
                     <div class="col-md-2"><input type="text" name="Duration" class="form-control form-control-sm" placeholder="Duration" value="@pending?.Duration" /></div>
-                    <div class="col-md-2"><input type="text" name="RouteOfAdministration" class="form-control form-control-sm" placeholder="Route" value="@pending?.RouteOfAdministration" /></div>
+                    <div class="col-md-2">
+                        @* P9a: the route is chosen from the list. *@
+                        <select name="RouteOfAdministration" class="form-select form-select-sm" aria-label="@T["Route"]">
+                            <option value="">@T["Route"]</option>
+                            @foreach (var route in SafyaClinic.Application.Clinical.AdministrationRoutes.All)
+                            {
+                                <option value="@route.Value" selected="@(pending?.RouteOfAdministration == route.Value)">@T[route.Label]</option>
+                            }
+                        </select>
+                    </div>
                     <div class="col-md-1"><button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-plus"></i></button></div>
                     <div class="col-12"><input type="text" name="Instructions" class="form-control form-control-sm" placeholder="Instructions" value="@pending?.Instructions" /></div>
                     <div class="col-12">

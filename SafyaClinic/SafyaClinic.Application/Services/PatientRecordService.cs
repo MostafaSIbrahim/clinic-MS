@@ -523,6 +523,9 @@ public class PatientRecordService : IPatientRecordService
             return ServiceResult<PrescriptionDetailDto>.Failure("Record not found.");
         if (record.IsLocked) 
             return ServiceResult<PrescriptionDetailDto>.Failure("Record is locked.");
+        // P9a: the route comes from the list.
+        if (request.Items.Any(i => !AdministrationRoutes.IsAllowed(i.RouteOfAdministration)))
+            return ServiceResult<PrescriptionDetailDto>.Failure(AdministrationRoutes.NotInList);
 
         // P5a: a medicine matching a recorded allergy needs the doctor's explicit confirmation, which is audited.
         var allergyMatches = AllergyCheck.Matches(record.Allergies, request.Items.Select(i => i.MedicationName));
@@ -629,6 +632,8 @@ public class PatientRecordService : IPatientRecordService
         if (allergyMatches.Count > 0)
             await _audit.RecordAsync(AuditActions.AllergyOverride, "Prescription", prescriptionId,
                 new { overrides = allergyMatches.Select(m => new { medication = m.Medication, allergy = m.Allergy }) });
+        if (!AdministrationRoutes.IsAllowed(request.RouteOfAdministration))   // P9a
+            return ServiceResult<PrescriptionItemDto>.Failure(AdministrationRoutes.NotInList);
         var item = new PrescriptionItem
         {
             PrescriptionId = prescriptionId,

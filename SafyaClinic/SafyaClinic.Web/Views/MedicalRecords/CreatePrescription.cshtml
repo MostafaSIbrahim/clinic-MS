@@ -41,6 +41,10 @@
 @section Scripts {
     <script src="~/js/medicine-autocomplete.js" asp-append-version="true"></script>
     <script>
+        // P9a: the route is chosen from the list.
+        const routeOptions = @Html.Raw(Json.Serialize(
+            new[] { new { value = "", label = T["Route"].Value } }
+                .Concat(SafyaClinic.Application.Clinical.AdministrationRoutes.All.Select(r => new { value = r.Value, label = T[r.Label].Value }))));
         const drugMessages = {
             noMatch: @Json.Serialize(T["No matching drug in the list. You can type the name."].Value),
             unavailable: @Json.Serialize(T["Drug suggestions are unavailable right now. You can type the name."].Value)
@@ -70,7 +74,9 @@
                                         <input type="text" name="Items[${drugIndex}].Duration" class="form-control form-control-sm" placeholder="Duration" />
                                     </div>
                                     <div class="col-md-2">
-                                        <input type="text" name="Items[${drugIndex}].RouteOfAdministration" class="form-control form-control-sm" placeholder="Route" />
+                                        <select name="Items[${drugIndex}].RouteOfAdministration" class="form-select form-select-sm" aria-label="@T["Route"]">
+                                            ${routeOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                                        </select>
                                     </div>
                                     <div class="col-md-1">
                                         <button type="button" class="btn btn-sm btn-link text-danger" onclick="this.closest('.drug-row').remove()">
