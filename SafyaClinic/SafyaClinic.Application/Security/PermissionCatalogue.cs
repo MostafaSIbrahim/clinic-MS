@@ -25,6 +25,7 @@ public static class Permissions
         public const string OverridePrice = "Reservations.OverridePrice";
         public const string SetCompleted = "Reservations.SetCompleted";
         public const string ChangeAnyDoctorStatus = "Reservations.ChangeAnyDoctorStatus";
+        public const string Reopen = "Reservations.Reopen";   // P9b
     }
 
     public static class Records
@@ -122,6 +123,7 @@ public static class PermissionCatalogue
         new(Permissions.Reservations.OverridePrice, "Reservations", "Set a price different from the treatment type's price", IsSensitive: true),
         new(Permissions.Reservations.SetCompleted, "Reservations", "Set a visit to Completed outside the consultation screen", IsSensitive: true),
         new(Permissions.Reservations.ChangeAnyDoctorStatus, "Reservations", "Change the status of any doctor's reservation, not only their own"),
+        new(Permissions.Reservations.Reopen, "Reservations", "Change a cancelled or no-show reservation's status (reopen it)", IsSensitive: true),
 
         new(Permissions.Records.View, "Medical records", "See medical records, prescriptions and their files; print prescriptions"),
         new(Permissions.Records.Write, "Medical records", "Write medical records, treatments and prescriptions; upload prescription files; complete consultations"),
@@ -225,7 +227,7 @@ public static class SystemGroups
             Permissions.FollowUps.View, Permissions.FollowUps.Manage, Permissions.FollowUps.ViewAll,
             Permissions.Payments.View, Permissions.Payments.Collect, Permissions.Payments.Adjust,
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
-            Permissions.Payments.WriteOff,
+            Permissions.Payments.WriteOff, Permissions.Reservations.Reopen,
             Permissions.Schedule.ManageAll,
         }),
 
@@ -240,7 +242,7 @@ public static class SystemGroups
             Permissions.FollowUps.View, Permissions.FollowUps.Manage, Permissions.FollowUps.ViewAll,
             Permissions.Payments.View, Permissions.Payments.Collect, Permissions.Payments.Adjust,
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
-            Permissions.Payments.WriteOff, Permissions.Payments.ViewFullDashboard, Permissions.Payments.ReportAnyDate,
+            Permissions.Payments.WriteOff, Permissions.Reservations.Reopen, Permissions.Payments.ViewFullDashboard, Permissions.Payments.ReportAnyDate,
             Permissions.Schedule.ManageAll,
             Permissions.Settings.Clinics,
         }),

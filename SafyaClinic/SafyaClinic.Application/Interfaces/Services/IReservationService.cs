@@ -23,6 +23,8 @@ public interface IReservationService
     int? doctorId = null,
     int? clinicId = null);
     Task<ServiceResult> CheckInAsync(int reservationId);
+    /// <summary>P9b: Pending/Confirmed reservations not checked in within 24 hours of the appointment become No show.</summary>
+    Task<int> MarkMissedAsNoShowAsync();
     Task<ServiceResult> StartConsultationAsync(
     int reservationId,
     int currentUserId,

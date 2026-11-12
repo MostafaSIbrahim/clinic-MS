@@ -25,6 +25,7 @@ public class PermissionCatalogueTests
         [Permissions.Reservations.OverridePrice] = "A",
         [Permissions.Reservations.SetCompleted] = "A",
         [Permissions.Reservations.ChangeAnyDoctorStatus] = "A R RA CA",
+        [Permissions.Reservations.Reopen] = "A RA CA",   // P9b
         [Permissions.Records.View] = "A D",
         [Permissions.Records.Write] = "A D",
         [Permissions.Records.Lock] = "A",

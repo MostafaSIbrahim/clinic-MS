@@ -35,6 +35,7 @@ public static class AuditActions
     public const string ScheduleChanged = "Schedule.Changed";         // P1
     public const string ScheduleDateChanged = "Schedule.DateChanged"; // P1c
     public const string ReservationMoved = "Reservation.Moved";       // P2c
+    public const string ReservationAutoNoShow = "Reservation.AutoNoShow"; // P9b: not checked in within 24 hours
     public const string AllergyOverride = "Prescription.AllergyOverride"; // P5a
     public const string RecordVisitLinked = "MedicalRecord.VisitLinked";  // P5c: a visit continues an existing record
 }
