@@ -100,6 +100,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuditContext, HttpAuditContext>();
 builder.Services.AddScoped<IAuditTrail, AuditTrail>();
 
+// ── P9b: reservations never checked in become No show 24 hours after their appointment ──
+builder.Services.AddHostedService<SafyaClinic.Web.Startup.NoShowSweeper>();
+
 // ── Sign-in keys (D2a): kept in App_Data/keys so a restart or recycle on the host doesn't sign everyone
 // out or break open forms. App_Data is never served, is git-ignored and survives publishing.
 builder.Services.AddDataProtection()

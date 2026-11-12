@@ -65,7 +65,8 @@
                 <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Move
             </a>
         }
-        @if (Model.StatusName != "Cancelled" && Model.StatusName != "Completed")
+        @if (Model.StatusName != "Cancelled" && Model.StatusName != "Completed"
+             && (Model.StatusName != "NoShow" || await Can.HasAsync(Permissions.Reservations.Reopen)))   @* P9b *@
         {
             <form asp-action="Cancel"
                   asp-route-id="@Model.Id"
@@ -171,6 +172,9 @@
             <div class="card-header"><i class="bi bi-arrow-repeat me-2"></i>Update Status</div>
             <div class="card-body">
                 @{ var isCompleted = Model.StatusName == "Completed"; }
+                @* P9b: a cancelled or no-show reservation is changed only by people who can reopen it. *@
+                @{ var isLocked = SafyaClinic.Application.Services.ReservationRules.IsLocked(Model.StatusName)
+                       && !await Can.HasAsync(Permissions.Reservations.Reopen); }
                 @{ var canCompleteFromQueue = Model.StatusName == "Confirmed"
                         && Model.QueueStatus == PatientQueueStatus.InConsultation
                         && Model.ConsultationStartedAtUtc.HasValue;
@@ -179,14 +183,14 @@
                 <form asp-action="UpdateStatus" asp-route-id="@Model.Id" method="post" class="d-flex gap-2">
                     @Html.AntiForgeryToken()
                     <label for="reservationStatus" class="form-label mb-0 small text-muted">Status</label>
-                    <select id="reservationStatus" name="statusId" class="form-select form-select-sm" disabled="@isCompleted">
+                    <select id="reservationStatus" name="statusId" class="form-select form-select-sm" disabled="@(isCompleted || isLocked)">
                         <option value="1" selected="@(Model.StatusName == "Pending")">Pending</option>
                         <option value="2" selected="@(Model.StatusName == "Confirmed")">Confirmed</option>
                         <option value="3" selected="@(Model.StatusName == "Completed")" disabled="@(!canCompleteFromQueue || !await Can.HasAsync(Permissions.Reservations.SetCompleted))">Completed</option>
                         <option value="4" selected="@(Model.StatusName == "Cancelled")">Cancelled</option>
                         <option value="5" selected="@(Model.StatusName == "NoShow")">NoShow</option>
                     </select>
-                    <button type="submit" class="btn btn-sm btn-primary" disabled="@isCompleted">Update</button>
+                    <button type="submit" class="btn btn-sm btn-primary" disabled="@(isCompleted || isLocked)">Update</button>
                 </form>
                 <p class="small text-muted mt-2 mb-0">
                     Doctors complete the visit from the consultation screen. Only an administrator can set Completed here, after the consultation starts.
@@ -194,6 +198,10 @@
                 @if (isCompleted)
                 {
                     <small class="text-muted d-block mt-2">This reservation is completed and its status can no longer be changed.</small>
+                }
+                else if (isLocked)
+                {
+                    <small class="text-muted d-block mt-2">This reservation is cancelled or marked no-show. Only a supervisor can change its status.</small>
                 }
             </div>
         </div>

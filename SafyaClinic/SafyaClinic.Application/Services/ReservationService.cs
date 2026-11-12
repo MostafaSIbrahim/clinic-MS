@@ -37,18 +37,56 @@ public class ReservationService : IReservationService
 
     private async Task<string?> StatusChangeProblemAsync(int reservationId, int actingUserId, string targetStatus)
     {
-        var doctorId = await _uow.Reservations
+        var current = await _uow.Reservations
             .Query()
             .Where(r => r.Id == reservationId)
-            .Select(r => (int?)r.DoctorId)
+            .Select(r => new { r.DoctorId, Status = r.Status.StatusName })
             .FirstOrDefaultAsync();
 
-        if (doctorId is null)
+        if (current is null)
             return "Reservation not found.";
 
         return ReservationRules.CheckStatusChange(
-            await PermissionsAsync(actingUserId), actingUserId, doctorId.Value, targetStatus);
+            await PermissionsAsync(actingUserId), actingUserId, current.DoctorId, targetStatus, current.Status);
     }
+    /// <summary>
+    /// P9b: a Pending or Confirmed reservation that wasn't checked in within 24 hours of its appointment time
+    /// (clinic time) becomes No show. Each change is audited without a user (the system). Returns how many changed.
+    /// </summary>
+    public async Task<int> MarkMissedAsNoShowAsync()
+    {
+        var now = _clock.Now;
+        var noShow = await _uow.ReservationStatuses.Query()
+            .Where(s => s.StatusName == "NoShow").Select(s => (int?)s.Id).FirstOrDefaultAsync();
+        if (noShow is null) return 0;
+
+        var lastDay = now.Date.AddDays(-1);   // an appointment today can't be 24 hours old yet
+        var candidates = await _uow.Reservations.Query()
+            .Where(r => (r.Status.StatusName == "Pending" || r.Status.StatusName == "Confirmed")
+                        && r.QueueStatus == PatientQueueStatus.NotCheckedIn
+                        && r.ReservationDate <= lastDay)
+            .ToListAsync();
+        var missed = candidates
+            .Where(r => r.ReservationDate.Date + r.ReservationTime + NoShowAfter <= now)
+            .ToList();
+        if (missed.Count == 0) return 0;
+
+        foreach (var r in missed)
+        {
+            r.StatusId = noShow.Value;
+            r.UpdatedAt = DateTime.UtcNow;
+            _uow.Reservations.Update(r);   // Query() doesn't track changes
+            if (_audit is not null)
+                await _audit.RecordAsync(SafyaClinic.Application.Common.Auditing.AuditActions.ReservationAutoNoShow, "Reservation", r.Id,
+                    new { appointment = $"{r.ReservationDate:yyyy-MM-dd} {r.ReservationTime:hh\\:mm}", after = "24 hours, not checked in" });
+        }
+        await _uow.SaveChangesAsync();
+        return missed.Count;
+    }
+
+    /// <summary>P9b: how long after the appointment time a reservation that never arrived becomes No show.</summary>
+    public static readonly TimeSpan NoShowAfter = TimeSpan.FromHours(24);
+
     public async Task<ServiceResult<ReservationDto>> CreateReservationAsync(
         CreateReservationRequest request, int createdBy)
     {

@@ -14,10 +14,21 @@ public static class ReservationRules
     public static bool CanOverridePrice(IReadOnlySet<string> permissions) =>
         permissions.Contains(Permissions.Reservations.OverridePrice);
 
+    /// <summary>P9b: statuses that only people with Reservations.Reopen can change.</summary>
+    public static bool IsLocked(string? status) => status is "Cancelled" or "NoShow";
+
+    public const string LockedMessage =
+        "This reservation is cancelled or marked no-show. Only a supervisor can change its status.";
+
     /// <summary>Returns a message for the user, or null when the status change is allowed.</summary>
     public static string? CheckStatusChange(
-        IReadOnlySet<string> permissions, int actingUserId, int reservationDoctorId, string targetStatus)
+        IReadOnlySet<string> permissions, int actingUserId, int reservationDoctorId, string targetStatus,
+        string? currentStatus = null)
     {
+        // P9b: a cancelled or no-show reservation stays so unless a supervisor reopens it.
+        if (IsLocked(currentStatus) && targetStatus != currentStatus && !permissions.Contains(Permissions.Reservations.Reopen))
+            return LockedMessage;
+
         // D4: doctors complete a visit from the consultation screen, which records it properly.
         if (targetStatus == CompletedStatus && !permissions.Contains(Permissions.Reservations.SetCompleted))
             return "Only an administrator can set a visit to Completed here. The doctor completes it from the consultation screen.";
