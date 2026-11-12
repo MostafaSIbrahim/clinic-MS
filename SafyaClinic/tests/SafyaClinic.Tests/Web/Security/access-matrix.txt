@@ -133,12 +133,12 @@ Patients.UseExisting GET: Admin Doctor Nutritionist Reception ReceptionAdmin Cli
 PatientsApi.Search GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Payments.Audit GET: Admin Reception ReceptionAdmin ClinicAdmin
 Payments.BackfillZeroCostPayments POST: Admin
-Payments.Cancel GET: Admin Reception ReceptionAdmin ClinicAdmin
-Payments.Cancel POST: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.Cancel GET: Admin ReceptionAdmin ClinicAdmin
+Payments.Cancel POST: Admin ReceptionAdmin ClinicAdmin
 Payments.CancelWriteOff GET: Admin ReceptionAdmin ClinicAdmin
 Payments.CancelWriteOff POST: Admin ReceptionAdmin ClinicAdmin
-Payments.ChangeAmount GET: Admin Reception ReceptionAdmin ClinicAdmin
-Payments.ChangeAmount POST: Admin Reception ReceptionAdmin ClinicAdmin
+Payments.ChangeAmount GET: Admin ReceptionAdmin ClinicAdmin
+Payments.ChangeAmount POST: Admin ReceptionAdmin ClinicAdmin
 Payments.Collect GET: Admin Reception ReceptionAdmin ClinicAdmin
 Payments.Collect POST: Admin Reception ReceptionAdmin ClinicAdmin
 Payments.Dashboard GET: Admin Reception ReceptionAdmin ClinicAdmin

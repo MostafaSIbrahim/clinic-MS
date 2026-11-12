@@ -208,7 +208,9 @@ public static class SystemGroups
             Permissions.Reservations.ViewAllQueues, Permissions.Reservations.CheckIn, Permissions.Reservations.ChangeAnyDoctorStatus,
             Permissions.Medicines.Search,
             Permissions.FollowUps.View, Permissions.FollowUps.Manage, Permissions.FollowUps.ViewAll,
-            Permissions.Payments.View, Permissions.Payments.Collect, Permissions.Payments.Adjust,
+            // P9a: the front desk collects (fully or partly); changing or cancelling a collected payment is for
+            // supervisors, clinic managers and admin.
+            Permissions.Payments.View, Permissions.Payments.Collect,
             Permissions.Payments.ViewReport, Permissions.Payments.ReportAllDoctors,
         }),
 
