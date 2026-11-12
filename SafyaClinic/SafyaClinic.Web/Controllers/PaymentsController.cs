@@ -6,6 +6,7 @@ using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.Common;
 using SafyaClinic.Web.Security;
 using SafyaClinic.Application.Security;
+using SafyaClinic.Web.Reports;
 namespace SafyaClinic.Web.Controllers;
 
 [Authorize] // Payment access: each action below declares its specific permission.
@@ -47,32 +48,69 @@ public class PaymentsController : BaseController
 
     [HttpGet]
     [RequirePermission(Permissions.Payments.ViewReport)]
-    public async Task<IActionResult> Report(DateTime? from, DateTime? to, bool run = false)
+    public async Task<IActionResult> Report(DateTime? from, DateTime? to, bool run = false,
+        [FromServices] IClinicClock? clock = null)
     {
-        // Payment access: derive scope from authenticated roles, never query-string doctor IDs.
+        clock ??= ClinicClock.Cairo;
+        var report = await RunReportAsync(from, to, run, clock);
+        if (report.Forbidden) return Forbid();
+
+        ViewBag.TodayOnly = report.TodayOnly;
+        ViewBag.From = report.From;
+        ViewBag.To = report.To;
+        ViewBag.HasSearch = report.HasSearch;
+        ViewBag.Clock = clock;
+        // Failed report loads must not appear as a valid zero-total report.
+        var active = report.Payments.Where(p => p.Status == "Active").ToList();
+        ViewBag.Total = active.Sum(p => p.Amount);
+        // M2d: totals by payment method and by doctor (collected money only).
+        ViewBag.ByMethod = active.GroupBy(p => p.PaymentMethod)
+            .Select(g => new ReportTotal(g.Key, g.Count(), g.Sum(p => p.Amount)))
+            .OrderByDescending(t => t.Amount).ThenBy(t => t.Name, StringComparer.Ordinal).ToList();
+        ViewBag.ByDoctor = active.GroupBy(p => p.DoctorName ?? "")
+            .Select(g => new ReportTotal(g.Key, g.Count(), g.Sum(p => p.Amount)))
+            .OrderByDescending(t => t.Amount).ThenBy(t => t.Name, StringComparer.Ordinal).ToList();
+        return View(report.Payments);
+    }
+
+    /// <summary>M2d: the report's rows as a CSV file (UTF-8 with a byte-order mark, so Excel shows Arabic names).</summary>
+    [HttpGet]
+    [RequirePermission(Permissions.Payments.ViewReport)]
+    public async Task<IActionResult> ReportCsv(DateTime? from, DateTime? to, [FromServices] IClinicClock? clock = null)
+    {
+        clock ??= ClinicClock.Cairo;
+        var report = await RunReportAsync(from, to, run: true, clock);
+        if (report.Forbidden) return Forbid();
+        if (!report.HasSearch || !ModelState.IsValid)
+            return RedirectToAction(nameof(Report), new { from, to, run = true });
+
+        var csv = PaymentReportCsv.Write(report.Payments, clock);
+        var name = $"payments-{report.From:yyyy-MM-dd}-to-{report.To:yyyy-MM-dd}.csv";
+        return File(csv, "text/csv; charset=utf-8", name);
+    }
+
+    public sealed record ReportTotal(string Name, int Count, decimal Amount);
+
+    private sealed record ReportRun(bool Forbidden, bool TodayOnly, bool HasSearch, DateTime? From, DateTime? To, IReadOnlyList<PaymentDto> Payments);
+
+    // The report's scope comes from the signed-in user's permissions, never from the address. M2d: the clinic
+    // clock (Clinic:TimeZone) decides "today" and the day boundaries, as everywhere else since F2.
+    private async Task<ReportRun> RunReportAsync(DateTime? from, DateTime? to, bool run, IClinicClock clock)
+    {
+        var empty = Array.Empty<PaymentDto>();
         var todayOnly = !await CanAsync(Permissions.Payments.ReportAnyDate);
         var ownPaymentsOnly = !await CanAsync(Permissions.Payments.ReportAllDoctors);
-        var reportZone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
-        ViewBag.TodayOnly = todayOnly;
-        ViewBag.ReportTimeZone = reportZone;
         if (todayOnly)
         {
             // Payment access: ignore attempted historical ranges; retain explicit search-first loading.
             var requested = run || from.HasValue || to.HasValue;
-            from = to = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, reportZone).Date;
-            ViewBag.From = from;
-            ViewBag.To = to;
-            ViewBag.HasSearch = requested;
+            from = to = clock.Today;
             ModelState.Clear();
-            if (!requested) return View(Enumerable.Empty<PaymentDto>());
+            if (!requested) return new ReportRun(false, true, false, from, to, empty);
         }
-        if (ownPaymentsOnly && CurrentUserId <= 0) return Forbid();
+        if (ownPaymentsOnly && CurrentUserId <= 0) return new ReportRun(true, todayOnly, false, from, to, empty);
         if (to?.Date == DateTime.MaxValue.Date)
             ModelState.AddModelError(nameof(to), "Choose an earlier end date.");
-        // Search-first: do not substitute a default range and query payments on initial navigation.
-        ViewBag.From = from;
-        ViewBag.To = to;
-        ViewBag.HasSearch = from.HasValue && to.HasValue;
         if (from.HasValue || to.HasValue)
         {
             // Require a complete, ordered range before running the financial report.
@@ -83,76 +121,24 @@ public class PaymentsController : BaseController
             if (from.HasValue && to.HasValue && from.Value.Date > to.Value.Date)
                 ModelState.AddModelError(nameof(to), "The end date must be on or after the start date.");
         }
-        if (!ModelState.IsValid || !from.HasValue || !to.HasValue)
-            return View(Enumerable.Empty<PaymentDto>());
+        var hasSearch = from.HasValue && to.HasValue;
+        if (!ModelState.IsValid || !hasSearch)
+            return new ReportRun(false, todayOnly, hasSearch, from, to, empty);
 
-        // Payment access: inclusive Cairo calendar dates become an exclusive UTC end boundary.
-        var fromUtc = ReportDayStartUtc(from.Value.Date, reportZone);
-        var toUtc = ReportDayStartUtc(to.Value.Date.AddDays(1), reportZone);
-        var result = await _paymentService.GetPaymentsByDateRangeAsync(
-            fromUtc, toUtc, ownPaymentsOnly ? CurrentUserId : null);
-        // Failed report loads must not appear as a valid zero-total report.
+        // Inclusive clinic calendar dates become an exclusive UTC end boundary.
+        var fromUtc = clock.DayStartUtc(from!.Value.Date);
+        var toUtc = clock.DayStartUtc(to!.Value.Date.AddDays(1));
+        var result = await _paymentService.GetPaymentsByDateRangeAsync(fromUtc, toUtc, ownPaymentsOnly ? CurrentUserId : null);
         if (!result.IsSuccess)
+        {
             ModelState.AddModelError("", "Could not load the payment report. Please try again.");
-        ViewBag.Total = result.IsSuccess ? result.Data!.Where(p => p.Status == "Active").Sum(p => p.Amount) : 0m;
-        return View(result.IsSuccess ? result.Data : Enumerable.Empty<PaymentDto>());
+            return new ReportRun(false, todayOnly, hasSearch, from, to, empty);
+        }
+        return new ReportRun(false, todayOnly, hasSearch, from, to, result.Data!.ToList());
     }
 
-    // Payment access: Cairo's spring transition skips midnight; use the first real instant of that date.
-    private static DateTime ReportDayStartUtc(DateTime date, TimeZoneInfo zone)
-    {
-        var local = DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified);
-        while (zone.IsInvalidTime(local)) local = local.AddMinutes(1);
-        if (zone.IsAmbiguousTime(local))
-            return new DateTimeOffset(local, zone.GetAmbiguousTimeOffsets(local).Max()).UtcDateTime;
-        return TimeZoneInfo.ConvertTimeToUtc(local, zone);
-    }
-
-    // ── One-time maintenance: backfill historical IsPaid values ──
-    // Corrects Reservation.IsPaid for rows written before the save-ordering fix in
-    // PaymentService (see CollectPaymentAsync / ChangePaymentAmountAsync). Safe to run
-    // more than once — it only updates rows whose computed status actually differs.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [RequirePermission(Permissions.Payments.Maintenance)]
-    public async Task<IActionResult> RecalculateAllPaidStatuses()
-    {
-        var result = await _paymentService.RecalculateAllReservationsPaidStatusAsync();
-        if (!result.IsSuccess)
-        {
-            ApplyErrors(result);
-            Error("Failed to recalculate reservation paid statuses.");
-        }
-        else
-        {
-            Success(result.Message);
-        }
-        return RedirectToAction(nameof(Report));
-    }
-
-    // ── One-time maintenance: backfill $0 payments for pre-existing free reservations ──
-    // Reservations for a zero-cost treatment type (e.g. nutrition "Follow-up") created
-    // before ReservationService started auto-recording a $0 payment were left with no
-    // Payment row at all, so they never appeared in payment reports/dashboards. Safe to
-    // run more than once — it only creates a payment for reservations that don't already
-    // have one.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [RequirePermission(Permissions.Payments.Maintenance)]
-    public async Task<IActionResult> BackfillZeroCostPayments()
-    {
-        var result = await _paymentService.BackfillZeroCostPaymentsAsync(CurrentUserId);
-        if (!result.IsSuccess)
-        {
-            ApplyErrors(result);
-            Error("Failed to backfill zero-cost payments.");
-        }
-        else
-        {
-            Success(result.Message);
-        }
-        return RedirectToAction(nameof(Report));
-    }
+    // M2d: the two one-off repair actions (recalculate paid status, back-fill zero-cost payments) are removed.
+    // Since P6 every payment change recomputes coverage, so nothing needs them.
 
     // ── Dashboard ───────────────────────────────────────────────
 

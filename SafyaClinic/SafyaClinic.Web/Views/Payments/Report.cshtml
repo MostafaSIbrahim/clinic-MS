@@ -1,106 +1,156 @@
 @model IEnumerable<PaymentDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
+@using SafyaClinic.Web.Controllers
 @{
-    ViewData["Title"] = "Payment Report";
+    // M2d: the payments report. Clinic time, totals by method and doctor, CSV download, English and Arabic.
+    ViewData["Title"] = T["Payment Reports"].Value;
+    var clock = (IClinicClock)ViewBag.Clock;
+    var todayOnly = ViewBag.TodayOnly == true;
+    var hasSearch = ViewBag.HasSearch == true && ViewData.ModelState.IsValid;
+    var from = ViewBag.From as DateTime?;
+    var to = ViewBag.To as DateTime?;
+    var byMethod = ViewBag.ByMethod as List<PaymentsController.ReportTotal> ?? new();
+    var byDoctor = ViewBag.ByDoctor as List<PaymentsController.ReportTotal> ?? new();
+    string D(DateTime d) => d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    string Iso(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "";
+    var none = new EmptyStateModel(T["No payments in this period."].Value, Icon: "bi-inbox");
 }
-
 <div class="page-toolbar">
-    <h1 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Payment Report</h1>
-    @* Payment access: doctors have report access without collection dashboard access. *@
-    @if (await Can.HasAsync(Permissions.Payments.View))
-    {
-    <a asp-action="Dashboard" class="btn btn-sm btn-outline-primary"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
-    }
-</div>
-
-<div class="card">
-    <div class="card-body pb-0">
-        <div class="filter-panel mb-3">
-            @* Search-first: leave dates empty initially and require an explicit report range. *@
-            <form asp-action="Report" method="get" class="row g-2 align-items-end">
-                @* Payment access: reception cannot choose a historical period. *@
-                <input type="hidden" name="run" value="true" />
-                @if (ViewBag.TodayOnly == true)
-                {
-                    <div class="col-auto"><span class="form-label">Today � @(((DateTime)ViewBag.From).ToString("dd MMM yyyy")) (Cairo)</span></div>
-                }
-                else
-                {
-                <div class="col-md-3">
-                    <label for="filterFrom" class="form-label small mb-1">From</label>
-                    <input type="date" id="filterFrom" name="from" value="@(((DateTime?)ViewBag.From)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" required />
-                </div>
-                <div class="col-md-3">
-                    <label for="filterTo" class="form-label small mb-1">To</label>
-                    <input type="date" id="filterTo" name="to" value="@(((DateTime?)ViewBag.To)?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" required />
-                </div>
-                }
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
-                    <a asp-action="Report" class="btn btn-outline-secondary">Clear</a>
-                </div>
-            </form>
-        </div>
-
-        @* Search-first: only show totals after a successful report request, never before searching. *@
-        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-        @if (ViewBag.HasSearch == true && ViewData.ModelState.IsValid)
+    <div>
+        <h1>@T["Payment Reports"]</h1>
+        <p class="text-muted mb-0">
+            @(todayOnly ? T["Today, {0}", from is DateTime f ? D(f) : ""] : T["Choose dates, then select Show. Times are clinic time."])
+        </p>
+    </div>
+    <div class="page-actions">
+        @* Payment access: doctors have report access without collection dashboard access. *@
+        @if (await Can.HasAsync(Permissions.Payments.View))
         {
-            <div class="alert alert-info d-flex justify-content-between">
-                <span>Total for period (active payments)</span>
-                <strong>@(((decimal)ViewBag.Total).ToMoney())</strong>
-            </div>
+            <a asp-action="Dashboard" class="btn btn-outline-primary">@T["Payment Dashboard"]</a>
         }
-
-        @if (!ViewData.ModelState.IsValid)
+        @if (hasSearch && Model.Any())
         {
-            <p class="text-muted py-3">Check the date range above and try again.</p>
-        }
-        else if (ViewBag.HasSearch != true)
-        {
-            <div class="empty-state" role="status">@(ViewBag.TodayOnly == true ? "Select Filter to load today�s payments." : "Choose a start and end date, then select Filter to load the payment report. Dates and times use Cairo time.")</div>
-        }
-        else if (!Model.Any())
-        {
-            <div class="text-center text-muted py-5">No payments found for the selected date range.</div>
-        }
-        else
-        {
-            @* Review fix: make the horizontally scrolling results keyboard-accessible. *@
-            <div class="table-responsive" tabindex="0" role="region" aria-label="Payment report results">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr><th scope="col">Date</th><th scope="col">Patient</th><th scope="col">Amount</th><th scope="col">Method</th><th scope="col">Clinic</th><th scope="col">Source</th><th scope="col">Status</th><th scope="col">Collected By</th></tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in Model)
-                        {
-                            <tr class="@(p.Status == "Cancelled" ? "text-muted text-decoration-line-through" : "")">
-                                <td>@TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(p.PaymentDate, DateTimeKind.Utc), (TimeZoneInfo)ViewBag.ReportTimeZone).ToString("dd MMM yyyy HH:mm")</td>
-                                <td>@p.PatientName</td>
-                                <td class="fw-semibold">@p.Amount.ToMoney()</td>
-                                <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
-                                <td>@(p.ClinicName ?? "—")</td>
-                                <td>@(p.PatientSourceName ?? "—")</td>
-                                <td>
-                                    @if (p.Status == "Active")
-                                    {
-                                        <span class="badge bg-success">Active</span>
-                                    }
-                                    else if (p.Status == "WrittenOff")
-                                    {
-                                        <span class="badge bg-warning text-dark">Written off</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Cancelled (void)</span>
-                                    }
-                                </td>
-                                <td>@p.CollectorName</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            <a asp-action="ReportCsv" asp-route-from="@Iso(from)" asp-route-to="@Iso(to)" class="btn btn-outline-secondary">
+                <i class="bi bi-download" aria-hidden="true"></i> @T["Download as CSV"]
+            </a>
         }
     </div>
 </div>
+
+@if (todayOnly)
+{
+    @* Payment access: the front desk can't choose a past period. *@
+    <form asp-action="Report" method="get" class="mb-3">
+        <input type="hidden" name="run" value="true" />
+        <button type="submit" class="btn btn-primary">@T["Show today's payments"]</button>
+    </form>
+}
+else
+{
+    <app-filter-bar label="@T["Report period"].Value" submit-text="@T["Show"].Value" clear-url="@Url.Action("Report")">
+        <input type="hidden" name="run" value="true" />
+        <div class="app-filter-bar__field">
+            <label for="filterFrom" class="form-label">@T["From"]</label>
+            <input type="date" id="filterFrom" name="from" value="@Iso(from)" class="form-control" required />
+        </div>
+        <div class="app-filter-bar__field">
+            <label for="filterTo" class="form-label">@T["To"]</label>
+            <input type="date" id="filterTo" name="to" value="@Iso(to)" class="form-control" required />
+        </div>
+    </app-filter-bar>
+}
+
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <p class="text-muted">@T["Check the dates above and try again."]</p>
+}
+else if (!hasSearch)
+{
+    <p class="text-muted" role="status">@(todayOnly ? T["Select Show today's payments to load them."] : T["Choose a start and an end date to load the report."])</p>
+}
+else if (!Model.Any())
+{
+    <partial name="_AppEmpty" model="none" />
+}
+else
+{
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="stat-card bg-teal-soft">
+                <div class="small opacity-75">@T["Collected in this period"]</div>
+                <div class="fs-3 fw-bold">@(((decimal)ViewBag.Total).ToMoney())</div>
+                <div class="small">@T["{0} payment(s)", Model.Count(p => p.Status == "Active")]</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <app-card id="by-method" title="@T["By payment method"].Value" level="2">
+                <ul class="list-unstyled mb-0">
+                    @foreach (var m in byMethod)
+                    {
+                        <li class="d-flex justify-content-between gap-2"><span>@T[Labels.Humanize(m.Name)] (@m.Count)</span><strong>@m.Amount.ToMoney()</strong></li>
+                    }
+                </ul>
+            </app-card>
+        </div>
+        <div class="col-md-4">
+            <app-card id="by-doctor" title="@T["By doctor"].Value" level="2">
+                <ul class="list-unstyled mb-0">
+                    @foreach (var d in byDoctor)
+                    {
+                        <li class="d-flex justify-content-between gap-2"><span dir="auto">@(d.Name.Length == 0 ? T["No visit (other payments)"].Value : d.Name) (@d.Count)</span><strong>@d.Amount.ToMoney()</strong></li>
+                    }
+                </ul>
+            </app-card>
+        </div>
+    </div>
+
+    <app-table caption="@T["Payments in this period"].Value" stack="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Date"]</th>
+                <th scope="col">@T["Patient"]</th>
+                <th scope="col" class="app-table__num">@T["Amount"]</th>
+                <th scope="col">@T["Method"]</th>
+                <th scope="col">@T["Clinic"]</th>
+                <th scope="col">@T["Source"]</th>
+                <th scope="col">@T["Doctor"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col">@T["Collected by"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr class="@(p.Status == "Cancelled" ? "payment-row--void" : "")">
+                    <th scope="row" data-label="@T["Date"]">@clock.ToClinicTime(DateTime.SpecifyKind(p.PaymentDate, DateTimeKind.Utc)).ToString("dd MMM yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture)</th>
+                    <td data-label="@T["Patient"]" dir="auto">
+                        <a asp-controller="Patients" asp-action="Details" asp-route-id="@p.PatientId" asp-route-tab="payments">@p.PatientName</a>
+                    </td>
+                    <td data-label="@T["Amount"]" class="app-table__num fw-semibold">@p.Amount.ToMoney()</td>
+                    <td data-label="@T["Method"]">@T[Labels.Humanize(p.PaymentMethod)]</td>
+                    <td data-label="@T["Clinic"]" dir="auto">@(p.ClinicName ?? "—")</td>
+                    <td data-label="@T["Source"]" dir="auto">@(p.PatientSourceName ?? "—")</td>
+                    <td data-label="@T["Doctor"]" dir="auto">@(p.DoctorName ?? "—")</td>
+                    <td data-label="@T["Status"]">
+                        @if (p.Status == "Active")
+                        {
+                            <span class="app-status app-status--paid">@T["Active"]</span>
+                        }
+                        else if (p.Status == "WrittenOff")
+                        {
+                            <span class="app-status app-status--write-off">@T["Written off"]</span>
+                        }
+                        else
+                        {
+                            <span class="app-status app-status--cancelled">@T["Cancelled (void)"]</span>
+                        }
+                    </td>
+                    <td data-label="@T["Collected by"]" dir="auto">@p.CollectorName</td>
+                </tr>
+            }
+        </tbody>
+    </app-table>
+}

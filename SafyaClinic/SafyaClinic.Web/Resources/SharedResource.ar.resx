@@ -1461,4 +1461,43 @@
   <data name="Other route" xml:space="preserve">
     <value>طريقة أخرى</value>
   </data>
+  <data name="By doctor" xml:space="preserve">
+    <value>حسب الطبيب</value>
+  </data>
+  <data name="By payment method" xml:space="preserve">
+    <value>حسب طريقة الدفع</value>
+  </data>
+  <data name="Check the dates above and try again." xml:space="preserve">
+    <value>راجع التواريخ أعلاه وحاول مرة أخرى.</value>
+  </data>
+  <data name="Choose a start and an end date to load the report." xml:space="preserve">
+    <value>اختر تاريخ البداية وتاريخ النهاية لعرض التقرير.</value>
+  </data>
+  <data name="Choose dates, then select Show. Times are clinic time." xml:space="preserve">
+    <value>اختر التواريخ ثم اضغط عرض. الأوقات بتوقيت العيادة.</value>
+  </data>
+  <data name="Collected in this period" xml:space="preserve">
+    <value>المحصّل في هذه الفترة</value>
+  </data>
+  <data name="Download as CSV" xml:space="preserve">
+    <value>تنزيل كملف CSV</value>
+  </data>
+  <data name="No visit (other payments)" xml:space="preserve">
+    <value>بدون زيارة (مدفوعات أخرى)</value>
+  </data>
+  <data name="Payments in this period" xml:space="preserve">
+    <value>المدفوعات في هذه الفترة</value>
+  </data>
+  <data name="Report period" xml:space="preserve">
+    <value>فترة التقرير</value>
+  </data>
+  <data name="Select Show today&#x27;s payments to load them." xml:space="preserve">
+    <value>اضغط «عرض مدفوعات اليوم» لعرضها.</value>
+  </data>
+  <data name="Show today&#x27;s payments" xml:space="preserve">
+    <value>عرض مدفوعات اليوم</value>
+  </data>
+  <data name="Today, {0}" xml:space="preserve">
+    <value>اليوم، {0}</value>
+  </data>
 </root>

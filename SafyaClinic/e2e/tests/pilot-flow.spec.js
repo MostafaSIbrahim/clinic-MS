@@ -166,6 +166,8 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         // M2b: the payment dashboards, checked at the three widths by the screen test (as admin).
         screens['Payment dashboard'] = '/Payments/Dashboard';
         screens['Payment dashboard, all time'] = '/Payments/Dashboard?all=true';
+        // M2d: the payments report with this run's payments in it.
+        screens['Payments report'] = '/Payments/Report?from=2020-01-01&to=2099-12-31&run=true';
         await checkA11y(page, 'Patient payments');
         // Icon fonts can add a character to a link's name, so match the end of it.
         const collect = page.locator('main').getByRole('link', { name: /Collect$/ }).first();

@@ -206,9 +206,8 @@ public class PaymentsControllerAccessTests
 
     private static string ExpectedPermission(string action) => action switch
     {
-        "Report" => Permissions.Payments.ViewReport,
+        "Report" or "ReportCsv" => Permissions.Payments.ViewReport,   // M2d: the CSV has the report's access
         "DashboardLineDetails" => Permissions.Payments.ViewFullDashboard,
-        "RecalculateAllPaidStatuses" or "BackfillZeroCostPayments" => Permissions.Payments.Maintenance,
         "Collect" => Permissions.Payments.Collect,
         "Cancel" or "ChangeAmount" => Permissions.Payments.Adjust,
         "WriteOff" or "CancelWriteOff" => Permissions.Payments.WriteOff,   // P6b

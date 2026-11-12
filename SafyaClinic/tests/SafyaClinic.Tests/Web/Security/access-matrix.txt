@@ -132,7 +132,6 @@ Patients.Timeline GET: Admin Doctor
 Patients.UseExisting GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 PatientsApi.Search GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Payments.Audit GET: Admin Reception ReceptionAdmin ClinicAdmin
-Payments.BackfillZeroCostPayments POST: Admin
 Payments.Cancel GET: Admin ReceptionAdmin ClinicAdmin
 Payments.Cancel POST: Admin ReceptionAdmin ClinicAdmin
 Payments.CancelWriteOff GET: Admin ReceptionAdmin ClinicAdmin
@@ -144,8 +143,8 @@ Payments.Collect POST: Admin Reception ReceptionAdmin ClinicAdmin
 Payments.Dashboard GET: Admin Reception ReceptionAdmin ClinicAdmin
 Payments.DashboardLineDetails GET: Admin ClinicAdmin
 Payments.PatientSummary ANY: Admin Reception ReceptionAdmin ClinicAdmin
-Payments.RecalculateAllPaidStatuses POST: Admin
 Payments.Report GET: Admin Doctor Reception ReceptionAdmin ClinicAdmin
+Payments.ReportCsv GET: Admin Doctor Reception ReceptionAdmin ClinicAdmin
 Payments.WriteOff GET: Admin ReceptionAdmin ClinicAdmin
 Payments.WriteOff POST: Admin ReceptionAdmin ClinicAdmin
 PermissionGroups.AddMember POST: Admin

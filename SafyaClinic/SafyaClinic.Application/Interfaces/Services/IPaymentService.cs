@@ -39,30 +39,7 @@ public interface IPaymentService
     /// </summary>
     Task<ServiceResult<decimal>> GetDueAmountAsync(int patientId, int? reservationId, int? enrollmentId);
 
-    // ── One-time data backfill ───────────────────────────────────
-    /// <summary>
-    /// Recomputes Reservation.IsPaid for every reservation that has a linked payment,
-    /// using the same coverage rule as RecalculateReservationPaidStatusAsync (Active +
-    /// Cancelled payments vs TotalAmount). Intended as a one-off maintenance action to
-    /// correct historical rows written under the pre-fix save-ordering bug, where IsPaid
-    /// could be computed against a stale/incomplete payment total. Safe to run multiple
-    /// times — it is idempotent.
-    /// </summary>
-    /// <returns>The number of reservations whose IsPaid value actually changed.</returns>
-    Task<ServiceResult<int>> RecalculateAllReservationsPaidStatusAsync();
 
-    // ── One-time data backfill ───────────────────────────────────
-    /// <summary>
-    /// Creates a $0 Payment record for every existing reservation whose TotalAmount is
-    /// exactly 0 (e.g. a nutrition "Follow-up" visit) that doesn't already have one.
-    /// Needed because such reservations were previously marked IsPaid = true without any
-    /// Payment row at all, so they were invisible in payment reports/dashboards, which
-    /// are built from Payment rows rather than reservations. New free reservations get
-    /// their $0 payment recorded automatically going forward — this only backfills
-    /// reservations created before that fix. Safe to run more than once.
-    /// </summary>
-    /// <returns>The number of $0 payments created.</returns>
-    Task<ServiceResult<int>> BackfillZeroCostPaymentsAsync(int currentUserId);
 
     // ── Dashboard drill-down ──────────────────────────────────────
     /// <summary>

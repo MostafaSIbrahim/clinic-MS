@@ -486,6 +486,8 @@ public class PaymentService : IPaymentService
                 ReservationId = p.ReservationId,
                 EnrollmentId = p.EnrollmentId,
                 CollectorName = p.Collector.FullName,
+                DoctorName = p.Reservation != null ? p.Reservation.Doctor.FullName
+                    : p.Enrollment != null ? p.Enrollment.Doctor.FullName : null,   // M2d
                 Amount = p.Amount,
                 PaymentMethod = p.PaymentMethod.ToString(),
                 PaymentDate = p.PaymentDate,
@@ -1096,158 +1098,7 @@ public class PaymentService : IPaymentService
 
     // ── One-time data backfill ───────────────────────────────────
 
-    /// <summary>
-    /// One-off maintenance action: recomputes IsPaid for every reservation in the system
-    /// using the current (correct) coverage rule, so historical rows written before the
-    /// save-ordering fix in CollectPaymentAsync/ChangePaymentAmountAsync/CancelPaymentAsync
-    /// get corrected. Does a single bulk pass instead of calling the per-reservation
-    /// RecalculateReservationPaidStatusAsync in a loop, to avoid N+1 queries against a
-    /// potentially large reservations table.
-    /// </summary>
-    public async Task<ServiceResult<int>> RecalculateAllReservationsPaidStatusAsync()
-    {
-        var reservations = (await _uow.Reservations
-            .Query()
-            .Select(r => new
-            {
-                r.Id,
-                r.TotalAmount,
-                r.IsPaid
-            })
-            .ToListAsync());
 
-        var reservationsToUpdate = new Dictionary<int, bool>();
-
-        // P6: the coverage rule (Active + WrittenOff) lives in Coverage.
-        var coverageByReservation = await _uow.Payments
-                .Query()
-                .Where(p => p.ReservationId != null)
-                .Where(Coverage.Covers)
-                .GroupBy(p => p.ReservationId!.Value)
-                .Select(g => new
-                {
-                    ReservationId = g.Key,
-                    TotalCoverage = g.Sum(p => p.Amount)
-                })
-                .ToDictionaryAsync(
-                    x => x.ReservationId,
-                    x => x.TotalCoverage);
-
-        var changedCount = 0;
-
-        foreach (var reservation in reservations)
-        {
-            var totalCoverage = coverageByReservation.TryGetValue(reservation.Id, out var covered) ? covered : 0m;
-
-            // NOTE: no longer requires TotalAmount > 0 — a reservation whose treatment type
-            // genuinely costs nothing (e.g. a nutrition "Follow-up" visit) has TotalAmount
-            // explicitly set to 0, and 0 >= 0 correctly means "fully covered", i.e. paid.
-            var shouldBePaid = Coverage.IsCovered(reservation.TotalAmount, totalCoverage);
-
-            if (reservation.IsPaid != shouldBePaid)
-            {
-                reservationsToUpdate[reservation.Id] = shouldBePaid;
-                changedCount++;
-            }
-        }
-
-        if (reservationsToUpdate.Count > 0)
-        {
-            var reservationIds = reservationsToUpdate.Keys.ToList();
-
-            var reservationEntities = await _uow.Reservations
-                .Query(false)
-                .Where(r => reservationIds.Contains(r.Id))
-                .ToListAsync();
-
-            foreach (var reservation in reservationEntities)
-            {
-                reservation.IsPaid = reservationsToUpdate[reservation.Id];
-                reservation.UpdatedAt = DateTime.UtcNow;
-            }
-        }
-        if (changedCount > 0)
-            await _uow.SaveChangesAsync();
-
-        return ServiceResult<int>.Success(changedCount,
-            changedCount == 0
-                ? "No reservations needed correction."
-                : $"Corrected the paid status of {changedCount} reservation(s).");
-    }
-
-    public async Task<ServiceResult<int>> BackfillZeroCostPaymentsAsync(int currentUserId)
-    {
-        var freeReservations = (await _uow.Reservations
-            .Query()
-            .Where(r => r.TotalAmount.HasValue && r.TotalAmount.Value == 0m)
-            .Select(r => new
-            {
-                r.Id,
-                r.PatientId,
-                r.ClinicId,
-                r.CreatedAt,
-                r.Patient.PatientSourceId
-            })
-            .ToListAsync());
-
-        if (freeReservations.Count == 0)
-            return ServiceResult<int>.Success(0, "No zero-cost reservations found.");
-
-        var reservationIds = freeReservations
-            .Select(r => r.Id)
-            .ToList();
-
-        var reservationIdsWithPayment = (await _uow.Payments
-             .Query()
-             .Where(p =>
-                 p.ReservationId.HasValue &&
-                 p.Status == PaymentStatusEnum.Active &&
-                 reservationIds.Contains(p.ReservationId.Value))
-             .Select(p => p.ReservationId!.Value)
-             .ToListAsync())
-             .ToHashSet();
-
-        var paymentsToCreate = new List<Payment>();
-
-        foreach (var reservation in freeReservations)
-        {
-            if (reservationIdsWithPayment.Contains(reservation.Id))
-                continue;
-
-            paymentsToCreate.Add(new Payment
-            {
-                PatientId = reservation.PatientId,
-                ReservationId = reservation.Id,
-                ClinicId = reservation.ClinicId,
-                PatientSourceId = reservation.PatientSourceId,
-                CollectedBy = currentUserId > 0 ? currentUserId : 1,
-                Amount = 0m,
-                OriginalAmount = 0m,
-                PaymentMethod = PaymentMethodEnum.Cash,
-                PaymentDate = reservation.CreatedAt,
-                Notes = "Backfilled: this treatment type carries no charge.",
-                CreatedAt = DateTime.UtcNow,
-                SourceDeductionAmount = 0m,
-                ClinicNetAmount = 0m,
-                Status = PaymentStatusEnum.Active
-            });
-        }
-
-        var createdCount = paymentsToCreate.Count;
-
-        if (createdCount > 0)
-        {
-            await _uow.Payments.AddRangeAsync(paymentsToCreate);
-            await _uow.SaveChangesAsync();
-        }
-
-        
-
-        return ServiceResult<int>.Success(createdCount,
-            createdCount == 0
-                ? "All zero-cost reservations already have a payment record."
-                : $"Created {createdCount} zero-amount payment record(s) for pre-existing free reservations.");
-    }
 
     // ── Dashboard drill-down ────────────────────────────────────────
 
