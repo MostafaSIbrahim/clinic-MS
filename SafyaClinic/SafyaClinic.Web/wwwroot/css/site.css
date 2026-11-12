@@ -1167,6 +1167,11 @@ a.app-kpi:focus-visible {
     overflow-wrap: anywhere;
 }
 
+/* M3a: record forms keep a readable line length. */
+.record-form-card {
+    max-width: 50rem;
+}
+
 /* M2c: a voided payment stays in the history, struck through. */
 .payment-row--void > * {
     color: var(--color-text-muted);
