@@ -1188,4 +1188,232 @@
   <data name="{0} visit(s)" xml:space="preserve">
     <value>{0} زيارة</value>
   </data>
+  <data name="Action" xml:space="preserve">
+    <value>الإجراء</value>
+  </data>
+  <data name="Amount changed" xml:space="preserve">
+    <value>تم تغيير المبلغ</value>
+  </data>
+  <data name="Amount to write off" xml:space="preserve">
+    <value>المبلغ المراد إعفاؤه</value>
+  </data>
+  <data name="Back to payments" xml:space="preserve">
+    <value>العودة إلى المدفوعات</value>
+  </data>
+  <data name="Bank Transfer" xml:space="preserve">
+    <value>تحويل بنكي</value>
+  </data>
+  <data name="Before P6" xml:space="preserve">
+    <value>قبل التحديث</value>
+  </data>
+  <data name="Billing Error" xml:space="preserve">
+    <value>خطأ في الفاتورة</value>
+  </data>
+  <data name="By" xml:space="preserve">
+    <value>بواسطة</value>
+  </data>
+  <data name="Cancel payment" xml:space="preserve">
+    <value>إلغاء الدفعة</value>
+  </data>
+  <data name="Cancel this payment" xml:space="preserve">
+    <value>إلغاء هذه الدفعة</value>
+  </data>
+  <data name="Cancelled (void)" xml:space="preserve">
+    <value>ملغاة (باطلة)</value>
+  </data>
+  <data name="Cancelling voids this payment, as if it was never collected: it stops counting as revenue and the amount becomes due again on the visit. Use it for a payment entered by mistake. This is recorded in the payment&#x27;s history and cannot be undone from here." xml:space="preserve">
+    <value>الإلغاء يُبطل هذه الدفعة كأنها لم تُحصَّل: لا تُحتسب إيرادًا ويعود المبلغ مستحقًا على الزيارة. استخدمه لدفعة أُدخلت بالخطأ. يُسجَّل ذلك في سجل الدفعة ولا يمكن التراجع عنه من هنا.</value>
+  </data>
+  <data name="Cash" xml:space="preserve">
+    <value>نقدي</value>
+  </data>
+  <data name="Change amount" xml:space="preserve">
+    <value>تغيير المبلغ</value>
+  </data>
+  <data name="Change payment amount" xml:space="preserve">
+    <value>تغيير مبلغ الدفعة</value>
+  </data>
+  <data name="Changes ({0}), newest first" xml:space="preserve">
+    <value>التغييرات ({0})، الأحدث أولًا</value>
+  </data>
+  <data name="Changes to this payment" xml:space="preserve">
+    <value>التغييرات على هذه الدفعة</value>
+  </data>
+  <data name="Choose…" xml:space="preserve">
+    <value>اختر…</value>
+  </data>
+  <data name="Chosen when collecting" xml:space="preserve">
+    <value>تُختار عند التحصيل</value>
+  </data>
+  <data name="Collect Payment" xml:space="preserve">
+    <value>تحصيل الدفعة</value>
+  </data>
+  <data name="Collect payment" xml:space="preserve">
+    <value>تحصيل دفعة</value>
+  </data>
+  <data name="Collected by" xml:space="preserve">
+    <value>حصّلها</value>
+  </data>
+  <data name="Collectible balance" xml:space="preserve">
+    <value>المبلغ القابل للتحصيل</value>
+  </data>
+  <data name="Could not load the payment history." xml:space="preserve">
+    <value>تعذر تحميل سجل الدفعة.</value>
+  </data>
+  <data name="Credit Card" xml:space="preserve">
+    <value>بطاقة ائتمان</value>
+  </data>
+  <data name="Current amount" xml:space="preserve">
+    <value>المبلغ الحالي</value>
+  </data>
+  <data name="Current amount: {0}. If a first-visit source or clinic deduction was applied, it is recalculated in proportion to the new amount." xml:space="preserve">
+    <value>المبلغ الحالي: {0}. إذا طُبّق خصم الزيارة الأولى للمصدر أو العيادة، يُعاد حسابه بنسبة المبلغ الجديد.</value>
+  </data>
+  <data name="Date and time" xml:space="preserve">
+    <value>التاريخ والوقت</value>
+  </data>
+  <data name="Deduction" xml:space="preserve">
+    <value>الخصم</value>
+  </data>
+  <data name="Discount" xml:space="preserve">
+    <value>خصم</value>
+  </data>
+  <data name="Existing payments need to be linked before collecting more." xml:space="preserve">
+    <value>يجب ربط المدفوعات الحالية قبل تحصيل المزيد.</value>
+  </data>
+  <data name="For a partial payment, enter less than the balance. The balance is checked again when you save." xml:space="preserve">
+    <value>للدفع الجزئي أدخل أقل من المتبقي. يُراجَع المتبقي مرة أخرى عند الحفظ.</value>
+  </data>
+  <data name="For nutrition enrollment #{0}" xml:space="preserve">
+    <value>لاشتراك التغذية رقم {0}</value>
+  </data>
+  <data name="For reservation #{0}" xml:space="preserve">
+    <value>للحجز رقم {0}</value>
+  </data>
+  <data name="Hardship" xml:space="preserve">
+    <value>ظروف صعبة</value>
+  </data>
+  <data name="Insurance" xml:space="preserve">
+    <value>تأمين</value>
+  </data>
+  <data name="Method" xml:space="preserve">
+    <value>الطريقة</value>
+  </data>
+  <data name="Mobile Payment" xml:space="preserve">
+    <value>دفع عبر الهاتف</value>
+  </data>
+  <data name="Needs reconciliation" xml:space="preserve">
+    <value>تحتاج إلى تسوية</value>
+  </data>
+  <data name="New amount" xml:space="preserve">
+    <value>المبلغ الجديد</value>
+  </data>
+  <data name="No amount changes, cancellations or write-offs are recorded for this payment." xml:space="preserve">
+    <value>لا توجد تغييرات في المبلغ أو إلغاءات أو إعفاءات لهذه الدفعة.</value>
+  </data>
+  <data name="No collectible balance at this time." xml:space="preserve">
+    <value>لا يوجد مبلغ قابل للتحصيل حاليًا.</value>
+  </data>
+  <data name="No payments recorded." xml:space="preserve">
+    <value>لا توجد مدفوعات مسجلة.</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>ملاحظة</value>
+  </data>
+  <data name="On a patient&#x27;s first visit, the clinic and patient source agreement sets the deduction for this payment." xml:space="preserve">
+    <value>في الزيارة الأولى للمريض، يحدد اتفاق العيادة ومصدر المريض خصم هذه الدفعة.</value>
+  </data>
+  <data name="Original amount" xml:space="preserve">
+    <value>المبلغ الأصلي</value>
+  </data>
+  <data name="Other" xml:space="preserve">
+    <value>أخرى</value>
+  </data>
+  <data name="Page {0} of {1}" xml:space="preserve">
+    <value>صفحة {0} من {1}</value>
+  </data>
+  <data name="Payment #{0}" xml:space="preserve">
+    <value>دفعة رقم {0}</value>
+  </data>
+  <data name="Payment #{0}: {1}" xml:space="preserve">
+    <value>دفعة رقم {0}: {1}</value>
+  </data>
+  <data name="Payment history" xml:space="preserve">
+    <value>سجل المدفوعات</value>
+  </data>
+  <data name="Payment method" xml:space="preserve">
+    <value>طريقة الدفع</value>
+  </data>
+  <data name="Previous amount" xml:space="preserve">
+    <value>المبلغ السابق</value>
+  </data>
+  <data name="Ready for collection" xml:space="preserve">
+    <value>جاهز للتحصيل</value>
+  </data>
+  <data name="Reason for cancelling" xml:space="preserve">
+    <value>سبب الإلغاء</value>
+  </data>
+  <data name="Reason for the change" xml:space="preserve">
+    <value>سبب التغيير</value>
+  </data>
+  <data name="Reference number" xml:space="preserve">
+    <value>الرقم المرجعي</value>
+  </data>
+  <data name="Remaining amount" xml:space="preserve">
+    <value>المبلغ المتبقي</value>
+  </data>
+  <data name="Remaining balance: {0}. A write-off excuses this amount: the visit counts as covered, but it is not revenue and is reported separately. It is recorded with your name and reason in the audit log, and can be undone." xml:space="preserve">
+    <value>المتبقي: {0}. الإعفاء يسقط هذا المبلغ: تُعد الزيارة مغطاة لكنه ليس إيرادًا ويظهر منفصلًا. يُسجَّل باسمك وسببك في سجل المراجعة ويمكن التراجع عنه.</value>
+  </data>
+  <data name="Required when the reason is Other." xml:space="preserve">
+    <value>مطلوبة عندما يكون السبب «أخرى».</value>
+  </data>
+  <data name="Save change" xml:space="preserve">
+    <value>حفظ التغيير</value>
+  </data>
+  <data name="Service" xml:space="preserve">
+    <value>الخدمة</value>
+  </data>
+  <data name="Staff Or Family" xml:space="preserve">
+    <value>موظف أو قريب</value>
+  </data>
+  <data name="This patient has {0} in payments or write-offs that are not linked to a reservation or nutrition enrollment. Reconcile these records before collecting more." xml:space="preserve">
+    <value>لدى هذا المريض {0} في مدفوعات أو إعفاءات غير مرتبطة بحجز أو اشتراك تغذية. قم بتسوية هذه السجلات قبل تحصيل المزيد.</value>
+  </data>
+  <data name="Total charged" xml:space="preserve">
+    <value>إجمالي المستحق</value>
+  </data>
+  <data name="Total paid" xml:space="preserve">
+    <value>إجمالي المدفوع</value>
+  </data>
+  <data name="Undo write-off" xml:space="preserve">
+    <value>التراجع عن الإعفاء</value>
+  </data>
+  <data name="Up to the remaining balance. Write off part of it to leave the rest to collect." xml:space="preserve">
+    <value>حتى المبلغ المتبقي. أعفِ جزءًا منه ليبقى الباقي للتحصيل.</value>
+  </data>
+  <data name="Write off" xml:space="preserve">
+    <value>إعفاء</value>
+  </data>
+  <data name="Write off balance" xml:space="preserve">
+    <value>إعفاء من المتبقي</value>
+  </data>
+  <data name="Write off instead" xml:space="preserve">
+    <value>الإعفاء بدلًا من ذلك</value>
+  </data>
+  <data name="Write-off of {0} ({1}). Undoing it makes this amount due again. This is recorded in the audit log." xml:space="preserve">
+    <value>إعفاء بقيمة {0} ({1}). التراجع عنه يعيد المبلغ مستحقًا. يُسجَّل ذلك في سجل المراجعة.</value>
+  </data>
+  <data name="Write-off of {0} on reservation #{1} ({2}). Undoing it makes this amount due again. This is recorded in the audit log." xml:space="preserve">
+    <value>إعفاء بقيمة {0} على الحجز رقم {1} ({2}). التراجع عنه يعيد المبلغ مستحقًا. يُسجَّل ذلك في سجل المراجعة.</value>
+  </data>
+  <data name="Write-off undone" xml:space="preserve">
+    <value>تم التراجع عن الإعفاء</value>
+  </data>
+  <data name="Your session expired or you don&#x27;t have access. Reload the page and sign in again." xml:space="preserve">
+    <value>انتهت جلستك أو ليست لديك صلاحية. أعد تحميل الصفحة وسجّل الدخول مرة أخرى.</value>
+  </data>
+  <data name="was {0}" xml:space="preserve">
+    <value>كان {0}</value>
+  </data>
 </root>

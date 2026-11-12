@@ -16,7 +16,7 @@
                             <div class="text-center text-muted py-5" role="status">
                                 <span class="spinner-border spinner-border-sm me-2"
                                       aria-hidden="true"></span>
-                                Loading audit history…
+                                ${body.dataset.loading || 'Loading…'}
                             </div>`;
 
                 try {
@@ -29,11 +29,11 @@
                         response.status === 401 ||
                         response.status === 403) {
                         throw new Error(
-                            'Your session expired or you do not have access. Refresh the page and sign in again.');
+                            body.dataset.expired || 'Your session expired or you do not have access. Refresh the page and sign in again.');
                     }
 
                     if (!response.ok) {
-                        throw new Error('Could not load payment audit history.');
+                        throw new Error(body.dataset.error || 'Could not load payment audit history.');
                     }
 
                     const html = await response.text();
@@ -50,7 +50,7 @@
                     alert.className = 'alert alert-danger mb-0';
                     alert.setAttribute('role', 'alert');
                     alert.textContent = error.message ||
-                        'Could not load payment audit history.';
+                        body.dataset.error || 'Could not load payment audit history.';
                     body.appendChild(alert);
                 }
             }

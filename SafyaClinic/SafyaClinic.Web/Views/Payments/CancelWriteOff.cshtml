@@ -1,33 +1,41 @@
 @model CancelWriteOffRequest
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
-    ViewData["Title"] = "Undo Write-off";
+    // P6b, M2c: undo a write-off, with a reason. In English and Arabic. Rules unchanged.
+    ViewData["Title"] = T["Undo write-off"].Value;
     var payment = ViewBag.Payment as PaymentDto;
 }
+<div class="page-toolbar">
+    <div><h1>@T["Undo write-off"]</h1></div>
+</div>
 
-<div class="card" style="max-width:600px;">
-    <div class="card-header"><i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i>Undo write-off</div>
+@if (payment is not null)
+{
+    @await Component.InvokeAsync("PatientHeader", new { patientId = payment.PatientId })
+}
+
+<div class="card payment-form-card">
     <div class="card-body">
         @if (payment is not null)
         {
+            var reason = T[Labels.Humanize(payment.WriteOffReason ?? "Before P6")].Value;
             <div class="alert alert-warning">
-                Write-off of <strong>@payment.Amount.ToMoney()</strong>
-                @(payment.ReservationId.HasValue ? $"on reservation #{payment.ReservationId}" : "")
-                (@Labels.Humanize(payment.WriteOffReason ?? "before P6")).
-                Undoing it makes this amount <strong>due again</strong>. This is recorded in the audit log.
+                @(payment.ReservationId.HasValue
+                    ? T["Write-off of {0} on reservation #{1} ({2}). Undoing it makes this amount due again. This is recorded in the audit log.", payment.Amount.ToMoney(), payment.ReservationId, reason]
+                    : T["Write-off of {0} ({1}). Undoing it makes this amount due again. This is recorded in the audit log.", payment.Amount.ToMoney(), reason])
             </div>
         }
         <form asp-action="CancelWriteOff" method="post">
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert"></div>
             <input type="hidden" asp-for="PaymentId" />
-            <div class="mb-3">
-                <label asp-for="Reason" class="form-label">Reason *</label>
-                <textarea asp-for="Reason" class="form-control" rows="3" required maxlength="500"></textarea>
+            <app-field asp-for="Reason" label="@T["Reason"].Value" type="textarea" rows="3" required="true" />
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">@T["Undo write-off"]</button>
+                @if (payment is not null)
+                {
+                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@payment.PatientId" asp-route-tab="payments" class="btn btn-outline-secondary">@T["Back to payments"]</a>
+                }
             </div>
-            <button type="submit" class="btn btn-danger"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Undo write-off</button>
-            @if (payment is not null)
-            {
-                <a asp-action="PatientSummary" asp-route-patientId="@payment.PatientId" class="btn btn-outline-secondary">Back</a>
-            }
         </form>
     </div>
 </div>

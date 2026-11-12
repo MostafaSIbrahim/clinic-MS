@@ -32,6 +32,8 @@ public class FieldTagHelper : TagHelper
     [HtmlAttributeName("placeholder")] public string? Placeholder { get; set; }
     [HtmlAttributeName("required")] public bool Required { get; set; }
     [HtmlAttributeName("rows")] public int Rows { get; set; } = 3;
+    /// <summary>M2c: for type="number"; "0.01" by default so money can have piastres.</summary>
+    [HtmlAttributeName("step")] public string? Step { get; set; }
 
     [ViewContext]
     [HtmlAttributeNotBound]
@@ -65,6 +67,7 @@ public class FieldTagHelper : TagHelper
 
         control.MergeAttribute("aria-describedby", Hint is null ? errorId : $"{hintId} {errorId}", replaceExisting: true);
         if (Required) control.MergeAttribute("required", "required");
+        if (type == "number") control.MergeAttribute("step", Step ?? "0.01", replaceExisting: true);
         if (Placeholder is not null) control.MergeAttribute("placeholder", Placeholder);
         if (ViewContext.ViewData.ModelState.TryGetValue(fullName, out var entry) && entry.Errors.Count > 0)
             control.MergeAttribute("aria-invalid", "true");
