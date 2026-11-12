@@ -10,6 +10,8 @@ public class PaymentDto
     public int? ReservationId { get; init; }
     public int? EnrollmentId { get; init; }
     public string CollectorName { get; init; } = string.Empty;
+    /// <summary>M2d: the doctor of the visit or nutrition enrollment paid for (filled by the payments report).</summary>
+    public string? DoctorName { get; init; }
     public decimal Amount { get; init; }
     public string PaymentMethod { get; init; } = string.Empty;
     public DateTime PaymentDate { get; init; }
