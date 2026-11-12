@@ -1500,4 +1500,31 @@
   <data name="Today, {0}" xml:space="preserve">
     <value>اليوم، {0}</value>
   </data>
+  <data name="New medical record" xml:space="preserve">
+    <value>سجل طبي جديد</value>
+  </data>
+  <data name="Edit medical record" xml:space="preserve">
+    <value>تعديل السجل الطبي</value>
+  </data>
+  <data name="Presenting complaint" xml:space="preserve">
+    <value>الشكوى الحالية</value>
+  </data>
+  <data name="In the patient&#x27;s words." xml:space="preserve">
+    <value>بكلمات المريض.</value>
+  </data>
+  <data name="History of present illness" xml:space="preserve">
+    <value>تاريخ المرض الحالي</value>
+  </data>
+  <data name="Plan" xml:space="preserve">
+    <value>الخطة</value>
+  </data>
+  <data name="Medicines go on the record&#x27;s Prescriptions tab." xml:space="preserve">
+    <value>تُكتب الأدوية في تبويب الروشتات بالسجل.</value>
+  </data>
+  <data name="Create record" xml:space="preserve">
+    <value>إنشاء السجل</value>
+  </data>
+  <data name="Save changes" xml:space="preserve">
+    <value>حفظ التغييرات</value>
+  </data>
 </root>

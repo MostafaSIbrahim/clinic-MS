@@ -153,6 +153,7 @@ namespace SafyaClinic.Web.Controllers
             if (!result.IsSuccess) return RedirectToAction(nameof(PatientRecords));
             var r = result.Data!;
             if (r.IsLocked) { Error("This record is locked."); return RedirectToAction(nameof(Details), new { id }); }
+            ViewBag.PatientId = r.PatientId;   // M3a: the patient header with allergies
             return View(new UpdatePatientRecordRequest
             {
                 ChiefComplaint = r.ChiefComplaint,
@@ -170,10 +171,18 @@ namespace SafyaClinic.Web.Controllers
         [RequirePermission(Permissions.Records.Write)]
         public async Task<IActionResult> Edit(int id, UpdatePatientRecordRequest model)
         {
-            if (!ModelState.IsValid) return View(model);
+            if (!ModelState.IsValid) return await EditAgainAsync(id, model);
             var result = await _recordService.UpdateRecordAsync(id, model);
-            if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+            if (!result.IsSuccess) { ApplyErrors(result); return await EditAgainAsync(id, model); }
             return RedirectWithSuccess("Record updated.", nameof(Details), routeValues: new { id });
+        }
+
+        // M3a: a refused edit shows the form again with the patient header.
+        private async Task<IActionResult> EditAgainAsync(int id, UpdatePatientRecordRequest model)
+        {
+            var record = await _recordService.GetRecordByIdAsync(id);
+            if (record.IsSuccess && record.Data is not null) ViewBag.PatientId = record.Data.PatientId;
+            return View(nameof(Edit), model);
         }
 
         [HttpPost]

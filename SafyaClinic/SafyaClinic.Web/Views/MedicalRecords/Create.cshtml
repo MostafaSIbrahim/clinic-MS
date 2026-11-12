@@ -1,83 +1,57 @@
 @model CreatePatientRecordRequest
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
-    ViewData["Title"] = "New Medical Record";
+    // M3a: a new medical record. Shared form fields, the patient header with allergies, English and Arabic.
+    ViewData["Title"] = T["New medical record"].Value;
+    var categories = new[] { "InternalMedicine", "Nutritional" }
+        .Select(c => new SelectListItem(T[Labels.Humanize(c)].Value, c, c == Model.Category)).ToList();
 }
+<div class="page-toolbar">
+    <div><h1>@T["New medical record"]</h1></div>
+</div>
 
 @await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
 
-<div class="card" style="max-width:800px;">
-    <div class="card-header"><i class="bi bi-file-earmark-plus me-2"></i>Create Medical Record</div>
+<div class="card record-form-card">
     <div class="card-body">
         <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="All" class="alert alert-danger py-2"
-                 role="alert" tabindex="-1"></div>
+            <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
 
             <input type="hidden" asp-for="PatientId" />
             <input type="hidden" asp-for="DoctorId" />
             <input type="hidden" asp-for="ReservationId" />
+
             <fieldset class="mb-4">
-                <legend class="h5">Visit classification</legend>
+                <legend class="h5">@T["Visit"]</legend>
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="Category" class="form-label">Category</label>
-                        <select asp-for="Category" class="form-select">
-                            <option value="InternalMedicine">Internal Medicine</option>
-                            <option value="Nutritional">Nutritional</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="FollowUpDate" class="form-label">Follow-up Date</label>
-                        <input asp-for="FollowUpDate" type="date" class="form-control" />
-                    </div>
+                    <div class="col-md-6"><app-field asp-for="Category" label="@T["Category"].Value" type="select" asp-items="categories" /></div>
+                    <div class="col-md-6"><app-field asp-for="FollowUpDate" label="@T["Follow-up date"].Value" type="date" /></div>
                 </div>
             </fieldset>
 
             <fieldset class="mb-4">
-                <legend class="h5">Presenting complaint</legend>
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label asp-for="ChiefComplaint" class="form-label">Chief Complaint</label>
-                        <textarea asp-for="ChiefComplaint" class="form-control" rows="4"></textarea>
-                    </div>
-                    <div class="col-12">
-                        <label asp-for="PresentIllnessHistory" class="form-label">Present Illness History</label>
-                        <textarea asp-for="PresentIllnessHistory" class="form-control" rows="4"></textarea>
-                    </div>
-                </div>
+                <legend class="h5">@T["Presenting complaint"]</legend>
+                <app-field asp-for="ChiefComplaint" label="@T["Chief complaint"].Value" type="textarea" rows="4" hint="@T["In the patient's words."].Value" />
+                <app-field asp-for="PresentIllnessHistory" label="@T["History of present illness"].Value" type="textarea" rows="4" />
             </fieldset>
 
             <fieldset class="mb-4">
-                <legend class="h5">Diagnosis</legend>
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label asp-for="Diagnosis" class="form-label">Diagnosis</label>
-                        <textarea asp-for="Diagnosis" class="form-control" rows="4"></textarea>
-                    </div>
-                    <div class="col-12">
-                        <label asp-for="DifferentialDiagnosis" class="form-label">Differential Diagnosis</label>
-                        <textarea asp-for="DifferentialDiagnosis" class="form-control" rows="4"></textarea>
-                    </div>
-                </div>
+                <legend class="h5">@T["Diagnosis"]</legend>
+                <app-field asp-for="Diagnosis" label="@T["Diagnosis"].Value" type="textarea" rows="4" />
+                <app-field asp-for="DifferentialDiagnosis" label="@T["Differential diagnosis"].Value" type="textarea" rows="4" />
             </fieldset>
 
             <fieldset class="mb-4">
-                <legend class="h5">Plan</legend>
-                <div class="row g-3">
-                    <div class="col-12">
-                        <label asp-for="TreatmentPlan" class="form-label">Treatment Plan</label>
-                        <textarea asp-for="TreatmentPlan" class="form-control" rows="4"></textarea>
-                    </div>
-                    <div class="col-12">
-                        <label asp-for="Notes" class="form-label">Notes</label>
-                        <textarea asp-for="Notes" class="form-control" rows="4"></textarea>
-                    </div>
-                </div>
+                <legend class="h5">@T["Plan"]</legend>
+                <app-field asp-for="TreatmentPlan" label="@T["Treatment plan"].Value" type="textarea" rows="4" hint="@T["Medicines go on the record's Prescriptions tab."].Value" />
+                <app-field asp-for="Notes" label="@T["Notes"].Value" type="textarea" rows="4" />
             </fieldset>
 
-            <div class="form-actions mt-3">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Create Record</button>
-                <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">@T["Create record"]</button>
+                <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">@T["Cancel"]</a>
             </div>
         </form>
     </div>
