@@ -2055,4 +2055,76 @@
   <data name="This patient's plan only; the package doesn't change. Each week's form starts from it." xml:space="preserve">
     <value>هذه خطة هذا المريض فقط؛ لا تتغير الباقة. يبدأ نموذج كل أسبوع منها.</value>
   </data>
+  <data name="Active (offered in the lists)" xml:space="preserve">
+    <value>نشط (يظهر في القوائم)</value>
+  </data>
+  <data name="Add to {0}" xml:space="preserve">
+    <value>إضافة إلى {0}</value>
+  </data>
+  <data name="Analysis types" xml:space="preserve">
+    <value>أنواع التحاليل</value>
+  </data>
+  <data name="Catalogues" xml:space="preserve">
+    <value>القوائم</value>
+  </data>
+  <data name="Delete {0}? It has never been used." xml:space="preserve">
+    <value>حذف {0}؟ لم يُستخدم من قبل.</value>
+  </data>
+  <data name="Duration (minutes)" xml:space="preserve">
+    <value>المدة (بالدقائق)</value>
+  </data>
+  <data name="Edit {0}" xml:space="preserve">
+    <value>تعديل {0}</value>
+  </data>
+  <data name="Find in {0}" xml:space="preserve">
+    <value>البحث في {0}</value>
+  </data>
+  <data name="For example ml, mg or tablet." xml:space="preserve">
+    <value>مثل مل أو مجم أو قرص.</value>
+  </data>
+  <data name="For example oral, injectable or IV." xml:space="preserve">
+    <value>مثل فموي أو حقن أو وريدي.</value>
+  </data>
+  <data name="Form" xml:space="preserve">
+    <value>الشكل</value>
+  </data>
+  <data name="Inactive" xml:space="preserve">
+    <value>غير نشط</value>
+  </data>
+  <data name="Make inactive" xml:space="preserve">
+    <value>إلغاء التنشيط</value>
+  </data>
+  <data name="Make {0} inactive? It stays in the history and can be made active again." xml:space="preserve">
+    <value>إلغاء تنشيط {0}؟ يبقى في السجل ويمكن تنشيطه مرة أخرى.</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>الاسم</value>
+  </data>
+  <data name="Nothing here yet." xml:space="preserve">
+    <value>لا يوجد شيء هنا بعد.</value>
+  </data>
+  <data name="Nothing matches this search." xml:space="preserve">
+    <value>لا شيء يطابق هذا البحث.</value>
+  </data>
+  <data name="Only the nutrition follow-up visit may be free." xml:space="preserve">
+    <value>زيارة متابعة التغذية فقط يمكن أن تكون مجانية.</value>
+  </data>
+  <data name="Printed on the lab request slip." xml:space="preserve">
+    <value>يُطبع على ورقة طلب التحاليل.</value>
+  </data>
+  <data name="The lists used when booking, requesting lab tests and building nutrition packages." xml:space="preserve">
+    <value>القوائم المستخدمة عند الحجز وطلب التحاليل وإنشاء باقات التغذية.</value>
+  </data>
+  <data name="This item is already used, so it can be made inactive but not deleted." xml:space="preserve">
+    <value>هذا العنصر مستخدم بالفعل، لذا يمكن إلغاء تنشيطه دون حذفه.</value>
+  </data>
+  <data name="Treatment types" xml:space="preserve">
+    <value>أنواع العلاج</value>
+  </data>
+  <data name="Usual dose" xml:space="preserve">
+    <value>الجرعة المعتادة</value>
+  </data>
+  <data name="{0} min" xml:space="preserve">
+    <value>{0} دقيقة</value>
+  </data>
 </root>

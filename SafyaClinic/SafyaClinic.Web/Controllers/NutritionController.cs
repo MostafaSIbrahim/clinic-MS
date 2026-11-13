@@ -314,132 +314,13 @@ namespace SafyaClinic.Web.Controllers
             return RedirectToAction(nameof(EnrollmentDetails), new { id = enrollmentId });
         }
 
-        // ── Injection Types (feature 5) ───────────────────────────
+        // ── Injection and vitamin types ──────────────────────────
+        // M5a: edited in the one catalogue editor (Settings → Catalogues); the old addresses land there.
 
         [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> InjectionTypes()
-        {
-            var result = await _nutritionService.GetInjectionTypesAsync(includeInactive: true);
-            return View(result.IsSuccess ? result.Data : Enumerable.Empty<InjectionTypeDto>());
-        }
-
-        [HttpGet]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public IActionResult CreateInjectionType() => View(new CreateInjectionTypeDto());
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> CreateInjectionType(CreateInjectionTypeDto model)
-        {
-            if (!ModelState.IsValid) return View(model);
-            var result = await _nutritionService.CreateInjectionTypeAsync(model);
-            if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
-            return RedirectWithSuccess("Injection type created.", nameof(InjectionTypes));
-        }
-
-        [HttpGet]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> EditInjectionType(int id)
-        {
-            var result = await _nutritionService.GetInjectionTypeByIdAsync(id);
-            if (!result.IsSuccess) { Error("Injection type not found."); return RedirectToAction(nameof(InjectionTypes)); }
-            var i = result.Data!;
-            ViewBag.Id = id;
-            ViewBag.IsInUse = i.IsInUse;
-            return View(new UpdateInjectionTypeDto
-            {
-                InjectionName = i.InjectionName,
-                Unit = i.Unit,
-                Description = i.Description,
-                DefaultDosage = i.DefaultDosage,
-                IsActive = i.IsActive
-            });
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> EditInjectionType(int id, UpdateInjectionTypeDto model)
-        {
-            if (!ModelState.IsValid) { ViewBag.Id = id; return View(model); }
-            var result = await _nutritionService.UpdateInjectionTypeAsync(id, model);
-            if (!result.IsSuccess) { ApplyErrors(result); ViewBag.Id = id; return View(model); }
-            return RedirectWithSuccess("Injection type updated.", nameof(InjectionTypes));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> DeleteInjectionType(int id)
-        {
-            var result = await _nutritionService.DeleteInjectionTypeAsync(id);
-            if (!result.IsSuccess) Error(result.Errors.First()); else Success(result.Message);
-            return RedirectToAction(nameof(InjectionTypes));
-        }
-
-        // ── Vitamin Types (feature 6) ─────────────────────────────
+        public IActionResult InjectionTypes() => RedirectToAction("Catalogue", "Lookups", new { kind = "Injection" });
 
         [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> VitaminTypes()
-        {
-            var result = await _nutritionService.GetVitaminTypesAsync(includeInactive: true);
-            return View(result.IsSuccess ? result.Data : Enumerable.Empty<VitaminTypeDto>());
-        }
-
-        [HttpGet]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public IActionResult CreateVitaminType() => View(new CreateVitaminTypeDto());
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> CreateVitaminType(CreateVitaminTypeDto model)
-        {
-            if (!ModelState.IsValid) return View(model);
-            var result = await _nutritionService.CreateVitaminTypeAsync(model);
-            if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
-            return RedirectWithSuccess("Vitamin type created.", nameof(VitaminTypes));
-        }
-
-        [HttpGet]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> EditVitaminType(int id)
-        {
-            var result = await _nutritionService.GetVitaminTypeByIdAsync(id);
-            if (!result.IsSuccess) { Error("Vitamin type not found."); return RedirectToAction(nameof(VitaminTypes)); }
-            var v = result.Data!;
-            ViewBag.Id = id;
-            ViewBag.IsInUse = v.IsInUse;
-            return View(new UpdateVitaminTypeDto
-            {
-                VitaminName = v.VitaminName,
-                Formulation = v.Formulation,
-                Unit = v.Unit,
-                Description = v.Description,
-                IsActive = v.IsActive
-            });
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> EditVitaminType(int id, UpdateVitaminTypeDto model)
-        {
-            if (!ModelState.IsValid) { ViewBag.Id = id; return View(model); }
-            var result = await _nutritionService.UpdateVitaminTypeAsync(id, model);
-            if (!result.IsSuccess) { ApplyErrors(result); ViewBag.Id = id; return View(model); }
-            return RedirectWithSuccess("Vitamin type updated.", nameof(VitaminTypes));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Settings.Lookups)]
-        public async Task<IActionResult> DeleteVitaminType(int id)
-        {
-            var result = await _nutritionService.DeleteVitaminTypeAsync(id);
-            if (!result.IsSuccess) Error(result.Errors.First()); else Success(result.Message);
-            return RedirectToAction(nameof(VitaminTypes));
-        }
+        public IActionResult VitaminTypes() => RedirectToAction("Catalogue", "Lookups", new { kind = "Vitamin" });
     }
 }

@@ -23,6 +23,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IAnalysisService, AnalysisService>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<INutritionService, NutritionService>();
+        services.AddScoped<SafyaClinic.Application.Catalogue.ICatalogueService, SafyaClinic.Application.Catalogue.CatalogueService>();   // M5a
         services.AddScoped<IPatientSourceService, PatientSourceService>();
         services.AddScoped<IClinicService, ClinicService>();
         services.AddScoped<IClinicHoursService, ClinicHoursService>();   // P1

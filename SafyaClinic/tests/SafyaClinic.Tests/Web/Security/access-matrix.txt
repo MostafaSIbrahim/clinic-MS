@@ -43,18 +43,12 @@ Home.Error ANY: anyone
 Home.Index ANY: anyone
 Language.Set POST: anyone
 Lookups.AnalysisTypes ANY: Admin
-Lookups.CreateAnalysisType POST: Admin
-Lookups.CreateInjectionType POST: Admin
-Lookups.CreateTreatmentType POST: Admin
-Lookups.CreateVitaminType POST: Admin
-Lookups.DeleteInjectionType POST: Admin
-Lookups.DeleteTreatmentType POST: Admin
-Lookups.DeleteVitaminType POST: Admin
+Lookups.Catalogue ANY: Admin
+Lookups.DeleteCatalogueItem POST: Admin
+Lookups.EditCatalogueItem GET: Admin
 Lookups.Index ANY: Admin
 Lookups.InjectionTypes ANY: Admin
-Lookups.SaveInjectionType POST: Admin
-Lookups.SaveTreatmentType POST: Admin
-Lookups.SaveVitaminType POST: Admin
+Lookups.SaveCatalogueItem POST: Admin
 Lookups.TreatmentTypes ANY: Admin
 Lookups.VitaminTypes ANY: Admin
 MedicalRecords.AddPrescriptionItem POST: Admin Doctor
@@ -82,22 +76,12 @@ MedicalRecords.UploadPrescriptionAttachment POST: Admin Doctor
 MedicalRecords.ViewAttachment GET: Admin Doctor
 Medicines.Search GET: Admin Doctor Nutritionist Reception ReceptionAdmin ClinicAdmin
 Nutrition.CompleteFollowUp POST: Admin Nutritionist
-Nutrition.CreateInjectionType GET: Admin
-Nutrition.CreateInjectionType POST: Admin
 Nutrition.CreatePackage GET: Admin
 Nutrition.CreatePackage POST: Admin
-Nutrition.CreateVitaminType GET: Admin
-Nutrition.CreateVitaminType POST: Admin
 Nutrition.DeactivatePackage POST: Admin
 Nutrition.DeleteFollowUp POST: Admin Nutritionist
-Nutrition.DeleteInjectionType POST: Admin
-Nutrition.DeleteVitaminType POST: Admin
 Nutrition.EditFollowUp GET: Admin Nutritionist
 Nutrition.EditFollowUp POST: Admin Nutritionist
-Nutrition.EditInjectionType GET: Admin
-Nutrition.EditInjectionType POST: Admin
-Nutrition.EditVitaminType GET: Admin
-Nutrition.EditVitaminType POST: Admin
 Nutrition.Enroll GET: Admin Nutritionist
 Nutrition.Enroll POST: Admin Nutritionist
 Nutrition.EnrollmentDetails ANY: Admin Nutritionist

@@ -192,6 +192,10 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         screens['Payment dashboard, all time'] = '/Payments/Dashboard?all=true';
         // M2d: the payments report with this run's payments in it.
         screens['Payments report'] = '/Payments/Report?from=2020-01-01&to=2099-12-31&run=true';
+        // M5a: the catalogue editor (as admin, at the three widths).
+        screens['Catalogue: treatment types'] = '/Lookups/Catalogue?kind=Treatment';
+        screens['Catalogue: injection types'] = '/Lookups/Catalogue?kind=Injection';
+        screens['Catalogue: add a treatment type'] = '/Lookups/EditCatalogueItem?kind=Treatment';
         await checkA11y(page, 'Patient payments');
         // Icon fonts can add a character to a link's name, so match the end of it.
         const collect = page.locator('main').getByRole('link', { name: /Collect$/ }).first();

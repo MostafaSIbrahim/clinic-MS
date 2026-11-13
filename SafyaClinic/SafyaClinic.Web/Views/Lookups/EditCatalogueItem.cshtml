@@ -1,0 +1,87 @@
+@model SafyaClinic.Application.Catalogue.CatalogueItemForm
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Application.Catalogue
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    // M5a: add or edit one catalogue item. Its own input model (F16) with the service's checks; the fields shown
+    // depend on the catalogue. Shared fields, English and Arabic.
+    var kind = (CatalogueKind)ViewBag.Kind;
+    var inUse = ViewBag.InUse == true;
+    var title = kind switch
+    {
+        CatalogueKind.Treatment => "Treatment types", CatalogueKind.Analysis => "Analysis types",
+        CatalogueKind.Injection => "Injection types", _ => "Vitamin types",
+    };
+    ViewData["Title"] = Model.Id == 0 ? T["Add to {0}", T[title].Value].Value : T["Edit {0}", Model.Name ?? ""].Value;
+    var categories = new[] { "InternalMedicine", "Nutritional" }
+        .Select(c => new SelectListItem(T[Labels.Humanize(c)].Value, c, c == Model.Category)).ToList();
+}
+<div class="page-toolbar">
+    <div>
+        <h1 dir="auto">@ViewData["Title"]</h1>
+        <p class="text-muted mb-0">@T[title]</p>
+    </div>
+</div>
+
+<div class="card record-form-card">
+    <div class="card-body">
+        <form asp-action="SaveCatalogueItem" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
+            <input type="hidden" name="kind" value="@kind" />
+            <input type="hidden" asp-for="Id" />
+
+            <app-field asp-for="Name" label="@T["Name"].Value" required="true" />
+
+            @if (kind == CatalogueKind.Treatment)
+            {
+                <div class="row g-3">
+                    <div class="col-md-4"><app-field asp-for="Category" label="@T["Category"].Value" type="select" asp-items="categories" required="true" /></div>
+                    <div class="col-6 col-md-4"><app-field asp-for="Cost" label="@T["Price"].Value" type="number" required="true" hint="@T["Only the nutrition follow-up visit may be free."].Value" /></div>
+                    <div class="col-6 col-md-4"><app-field asp-for="DurationMinutes" label="@T["Duration (minutes)"].Value" type="number" step="1" required="true" /></div>
+                </div>
+            }
+            else if (kind == CatalogueKind.Analysis)
+            {
+                <app-field asp-for="Cost" label="@T["Price"].Value" type="number" />
+                <app-field asp-for="Preparation" label="@T["Preparation"].Value" type="textarea" rows="2" hint="@T["Printed on the lab request slip."].Value" />
+            }
+            else
+            {
+                <div class="row g-3">
+                    <div class="col-md-6"><app-field asp-for="Unit" label="@T["Unit"].Value" required="true" hint="@T["For example ml, mg or tablet."].Value" /></div>
+                    <div class="col-md-6">
+                        @if (kind == CatalogueKind.Injection)
+                        {
+                            <app-field asp-for="DefaultDosage" label="@T["Usual dose"].Value" />
+                        }
+                        else
+                        {
+                            <app-field asp-for="Formulation" label="@T["Form"].Value" hint="@T["For example oral, injectable or IV."].Value" />
+                        }
+                    </div>
+                </div>
+            }
+
+            <app-field asp-for="Description" label="@T["Description"].Value" type="textarea" rows="2" />
+
+            <div class="form-check mb-3">
+                <input asp-for="IsActive" class="form-check-input" />
+                <label asp-for="IsActive" class="form-check-label">@T["Active (offered in the lists)"]</label>
+            </div>
+            @if (inUse)
+            {
+                <p class="text-muted small">@T["This item is already used, so it can be made inactive but not deleted."]</p>
+            }
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">@(Model.Id == 0 ? T["Add"] : T["Save changes"])</button>
+                <a asp-action="Catalogue" asp-route-kind="@kind" class="btn btn-outline-secondary">@T["Cancel"]</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}
