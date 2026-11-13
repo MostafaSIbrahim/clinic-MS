@@ -1614,4 +1614,79 @@
   <data name="Minimal" xml:space="preserve">
     <value>بسيط</value>
   </data>
+  <data name="All lab requests" xml:space="preserve">
+    <value>كل طلبات التحاليل</value>
+  </data>
+  <data name="All statuses" xml:space="preserve">
+    <value>كل الحالات</value>
+  </data>
+  <data name="Analyses (tick all that apply)" xml:space="preserve">
+    <value>التحاليل (اختر كل ما يلزم)</value>
+  </data>
+  <data name="Back to the patient's lab requests" xml:space="preserve">
+    <value>العودة إلى تحاليل المريض</value>
+  </data>
+  <data name="Check the search above and try again." xml:space="preserve">
+    <value>راجع البحث أعلاه وحاول مرة أخرى.</value>
+  </data>
+  <data name="Enter a patient name or analysis, or choose a status, then select Search." xml:space="preserve">
+    <value>اكتب اسم المريض أو التحليل، أو اختر حالة، ثم اختر بحث.</value>
+  </data>
+  <data name="Find lab requests" xml:space="preserve">
+    <value>البحث في طلبات التحاليل</value>
+  </data>
+  <data name="Laboratory analysis request" xml:space="preserve">
+    <value>طلب تحاليل معملية</value>
+  </data>
+  <data name="National ID" xml:space="preserve">
+    <value>الرقم القومي</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>لا</value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>نعم</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>حفظ</value>
+  </data>
+  <data name="No analysis types are set up yet." xml:space="preserve">
+    <value>لم تُضَف أنواع تحاليل بعد.</value>
+  </data>
+  <data name="No lab requests match this search." xml:space="preserve">
+    <value>لا توجد طلبات تحاليل تطابق هذا البحث.</value>
+  </data>
+  <data name="Patient name or analysis" xml:space="preserve">
+    <value>اسم المريض أو التحليل</value>
+  </data>
+  <data name="Please bring this slip to the laboratory." xml:space="preserve">
+    <value>يرجى إحضار هذه الورقة إلى المعمل.</value>
+  </data>
+  <data name="Preparation" xml:space="preserve">
+    <value>التحضير</value>
+  </data>
+  <data name="Print controls" xml:space="preserve">
+    <value>أدوات الطباعة</value>
+  </data>
+  <data name="Request selected analyses" xml:space="preserve">
+    <value>طلب التحاليل المختارة</value>
+  </data>
+  <data name="Requested on {0}" xml:space="preserve">
+    <value>طُلب في {0}</value>
+  </data>
+  <data name="Result notes" xml:space="preserve">
+    <value>ملاحظات النتيجة</value>
+  </data>
+  <data name="Results files" xml:space="preserve">
+    <value>ملفات النتائج</value>
+  </data>
+  <data name="Search every patient's lab requests and results." xml:space="preserve">
+    <value>ابحث في طلبات التحاليل ونتائجها لكل المرضى.</value>
+  </data>
+  <data name="Status and result" xml:space="preserve">
+    <value>الحالة والنتيجة</value>
+  </data>
+  <data name="Tick each analysis to request. A request slip opens to print for the patient." xml:space="preserve">
+    <value>اختر كل تحليل مطلوب. تُفتح ورقة الطلب لطباعتها للمريض.</value>
+  </data>
 </root>

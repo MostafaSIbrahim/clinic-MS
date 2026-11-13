@@ -1,105 +1,93 @@
 @model PagedResult<MedicalAnalysisDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
 @{
-    ViewData["Title"] = "Analyses";
+    // M3c: the lab list. Shared filter bar, table (cards on phones), status badges, English and Arabic.
+    // Search first and the lab rules are unchanged (D9).
+    ViewData["Title"] = T["Lab requests"].Value;
     var statuses = new[] { "Requested", "InProgress", "Completed", "Cancelled" };
+    string D(DateTime utc) => Clock.ToClinicTime(DateTime.SpecifyKind(utc, DateTimeKind.Utc)).ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    var startHint = new EmptyStateModel(T["Find lab requests"].Value, Icon: "bi-search",
+        Hint: T["Enter a patient name or analysis, or choose a status, then select Search."].Value);
+    var noMatch = new EmptyStateModel(T["No lab requests match this search."].Value, Icon: "bi-clipboard-x");
 }
-
-<div class="card">
-    <div class="card-header">
-        <i class="bi bi-clipboard2-pulse me-2"></i>Medical Analyses
-    </div>
-    <div class="card-body">
-        @* Search-first: explicitly submit criteria; Clear returns to the query-free index. *@
-        <form asp-action="Index" method="get" class="row g-2 mb-3 align-items-end">
-            <div class="col-md-4">
-                <label for="analysisSearch" class="form-label">Patient name or analysis type</label>
-                <input type="text" name="search" value="@ViewBag.Search" class="form-control"
-                       id="analysisSearch" placeholder="Search by patient name or analysis type..." />
-            </div>
-            <div class="col-md-3">
-                <label for="analysisStatus" class="form-label">Status</label>
-                <select name="status" id="analysisStatus" class="form-select">
-                    <option value="">All statuses</option>
-                    @foreach (var s in statuses)
-                    {
-                        <option value="@s" selected="@(ViewBag.Status == s)">@s</option>
-                    }
-                </select>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search me-1"></i>Search</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Clear</a>
-            </div>
-        </form>
-
-        @* Search-first: distinguish initial guidance, errors and actual empty results. *@
-        <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-        @if (!ViewData.ModelState.IsValid)
-        {
-            <p class="text-muted py-3">Check the search above and try again.</p>
-        }
-        else if (ViewBag.HasSearch != true)
-        {
-            <div class="empty-state" role="status">Enter a patient name or analysis type, or select a status, then select Search to load analyses.</div>
-        }
-        else if (Model == null || !Model.Items.Any())
-        {
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-clipboard-x fs-1 d-block mb-2 opacity-50"></i>
-                No analyses match your search.
-            </div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>Patient</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Urgent</th>
-                            <th>Requested</th>
-                            <th>Result Date</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var a in Model.Items)
-                        {
-                            <tr>
-                                <td>
-                                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@a.PatientId">@a.PatientName</a>
-                                </td>
-                                <td>@a.AnalysisTypeName</td>
-                                <td>
-                                    @{
-                                        var cls = a.Status switch
-                                        {
-                                            "Completed" => "bg-success",
-                                            "InProgress" => "bg-warning text-dark",
-                                            "Cancelled" => "bg-danger",
-                                            _ => "bg-secondary"
-                                        };
-                                    }
-                                    <span class="badge @cls">@a.Status</span>
-                                </td>
-                                <td>@(a.IsUrgent ? "🔴" : "—")</td>
-                                <td>@a.RequestDate.ToString("dd MMM yyyy")</td>
-                                <td>@(a.ResultDate?.ToString("dd MMM yyyy") ?? "—")</td>
-                                <td class="text-end">
-                                    <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
-
-        @if (Model != null)
-        {
-            <partial name="_AppPagination" model="SafyaClinic.Web.Components.PagerModel.From(Model)" />
-        }
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Lab requests"]</h1>
+        <p class="text-muted mb-0">@T["Search every patient's lab requests and results."]</p>
     </div>
 </div>
+
+<app-filter-bar label="@T["Find lab requests"].Value" submit-text="@T["Search"].Value" action="@Url.Action("Index")" clear-url="@Url.Action("Index")">
+    <div class="app-filter-bar__field">
+        <label for="analysisSearch" class="form-label">@T["Patient name or analysis"]</label>
+        <input type="text" name="search" value="@ViewBag.Search" class="form-control" id="analysisSearch" autocomplete="off" />
+    </div>
+    <div class="app-filter-bar__field">
+        <label for="analysisStatus" class="form-label">@T["Status"]</label>
+        <select name="status" id="analysisStatus" class="form-select">
+            <option value="">@T["All statuses"]</option>
+            @foreach (var s in statuses)
+            {
+                <option value="@s" selected="@(ViewBag.Status == s)">@T[Labels.Humanize(s)]</option>
+            }
+        </select>
+    </div>
+</app-filter-bar>
+
+<div asp-validation-summary="All" class="text-danger" role="alert"></div>
+@if (!ViewData.ModelState.IsValid)
+{
+    <p class="text-muted">@T["Check the search above and try again."]</p>
+}
+else if (ViewBag.HasSearch != true)
+{
+    <partial name="_AppEmpty" model="startHint" />
+}
+else if (Model == null || !Model.Items.Any())
+{
+    <partial name="_AppEmpty" model="noMatch" />
+}
+else
+{
+    <app-table caption="@T["Lab requests"].Value" caption-hidden="true" stack="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Patient"]</th>
+                <th scope="col">@T["Analysis"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col">@T["Requested on"]</th>
+                <th scope="col">@T["Result date"]</th>
+                <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in Model.Items)
+            {
+                <tr>
+                    <th scope="row" data-label="@T["Patient"]" dir="auto">
+                        <a asp-controller="Patients" asp-action="Details" asp-route-id="@a.PatientId" asp-route-tab="lab">@a.PatientName</a>
+                    </th>
+                    <td data-label="@T["Analysis"]" dir="auto">
+                        @a.AnalysisTypeName
+                        @if (a.IsUrgent)
+                        {
+                            <span class="app-status app-status--due ms-1">@T["Urgent"]</span>
+                        }
+                    </td>
+                    <td data-label="@T["Status"]"><partial name="_StatusBadge" model="a.Status" /></td>
+                    <td data-label="@T["Requested on"]">@D(a.RequestDate)</td>
+                    <td data-label="@T["Result date"]">@(a.ResultDate is DateTime done ? done.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture) : "—")</td>
+                    <td class="app-table__actions">
+                        <a asp-action="Details" asp-route-id="@a.Id" class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @a.AnalysisTypeName, @a.PatientName</span></a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </app-table>
+}
+
+@if (Model != null)
+{
+    <partial name="_AppPagination" model="SafyaClinic.Web.Components.PagerModel.From(Model)" />
+}
