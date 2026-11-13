@@ -62,7 +62,7 @@ public class FieldTagHelper : TagHelper
             "password" => _generator.GeneratePassword(ViewContext, For.ModelExplorer, name, null,
                 new { @class = "form-control", autocomplete = "new-password" }),
             _ => _generator.GenerateTextBox(ViewContext, For.ModelExplorer, name, For.Model,
-                Format ?? DefaultFormat(type), new { @class = "form-control", type }),
+                Format ?? DefaultFormat(type, Step), new { @class = "form-control", type }),
         };
 
         control.MergeAttribute("aria-describedby", Hint is null ? errorId : $"{hintId} {errorId}", replaceExisting: true);
@@ -88,10 +88,23 @@ public class FieldTagHelper : TagHelper
         if (error is not null) output.Content.AppendHtml(error);
     }
 
-    private static string? DefaultFormat(string type) => type switch
+    private static string? DefaultFormat(string type, string? step) => type switch
     {
         "date" => "{0:yyyy-MM-dd}",
         "datetime-local" => "{0:yyyy-MM-ddTHH:mm}",
+        "number" => NumberFormat(step ?? "0.01"),
         _ => null
     };
+
+    /// <summary>
+    /// A number shown with as many decimals as its step allows ("0.01" → "748.00", not "748.0000"). The
+    /// browser check (jQuery Validate's step rule) refuses a value with more decimals than the step, even
+    /// when it is a whole multiple, so the form couldn't be saved without retyping the amount.
+    /// </summary>
+    internal static string NumberFormat(string step)
+    {
+        var dot = step.IndexOf('.');
+        var decimals = dot < 0 ? 0 : step.Length - dot - 1;
+        return decimals == 0 ? "{0:0}" : "{0:0." + new string('0', decimals) + "}";
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SafyaClinic.Application.Billing;
+using SafyaClinic.Application.Common;
 using SafyaClinic.Application.Common.Auditing;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Payment;
@@ -440,7 +441,7 @@ public class PaymentService : IPaymentService
                 EnrollmentId = e.Id,
                 Description = $"Nutrition enrollment #{e.Id}",
                 Date = e.StartDate,
-                AmountDue = e.Charge - e.TotalPaid
+                AmountDue = Money.Round(e.Charge - e.TotalPaid)   // the same figure as the Collect form
             }));
 
         var unallocatedCoverage = dtos
@@ -1091,9 +1092,11 @@ public class PaymentService : IPaymentService
             if (enrollment.Status == EnrollmentStatus.Cancelled)
                 return ServiceResult<decimal>.Success(0m);
 
-            var due = Math.Max(
+            // Price × (1 − discount%) can have more than two decimals (850.00 × 0.88 = 748.0000, 333.33 × 0.88 =
+            // 293.3304). The Collect form only accepts whole piastres, so the amount due is rounded to them.
+            var due = Money.Round(Math.Max(
                 0m,
-                enrollment.FinalPrice - enrollment.TotalPaid);
+                enrollment.FinalPrice - enrollment.TotalPaid));
 
             return ServiceResult<decimal>.Success(due);
         }

@@ -46,6 +46,13 @@ Record, Edit, Delete and the status buttons appear only for people who manage nu
 - the start date defaults to the **clinic's** date;
 - typing is kept across a language switch (as in M3b).
 
+**5. Fix: the Collect amount sometimes couldn't be saved** (from the owner's test, 13 Nov 2026).
+- A package price with a discount can work out to more than two decimals. For example, 850.00 with 12% gives 748.0000, and 333.33 with 12% gives 293.3304. The amount box then showed four decimals.
+- The browser check allows two decimals, so it refused to save until the amount was retyped. This was most visible after the form came back with *choose a clinic*.
+- The amount due on an enrollment is now rounded to whole piastres: on Collect and on the Payments tab.
+- Every number box shows as many decimals as it allows: two for money.
+- The Enroll discount box now also takes two decimals, as the package allows.
+
 ## Unchanged
 
 - Who can enroll.
@@ -56,14 +63,15 @@ Record, Edit, Delete and the status buttons appear only for people who manage nu
 
 ## Tests
 
-There are 22 new test cases:
+There are 23 new test cases:
 - **Every status change, allowed or refused (11 cases).** The buttons offered are exactly the allowed changes.
 - **The service, in memory.** It covers:
   - putting on hold and resuming, saved and audited;
   - six refused changes, which change nothing, write no audit entry and give a reason;
   - resuming refused while another enrollment is active;
   - a cancelled enrollment owes nothing: Collect sees 0, it isn't waiting for payment, and only the paid part is charged;
-  - an active one still owes its balance.
+  - an active one still owes its balance;
+  - the amount due has at most two decimals (293.3304 becomes 293.33), on Collect and on the Payments tab.
 - **Browser test:** the Enroll form is checked for accessibility at the three widths.
 
 ## Files
@@ -109,8 +117,9 @@ As **Admin**, with a **test patient**. If no package exists, create one under **
    - The page says it's cancelled.
    - The amount due is 0.00 EGP, with no status buttons.
    - On the Payments tab, the enrollment is no longer waiting for payment, and the part you collected is still listed.
-7. **Arabic:** both screens are in Arabic.
-8. Optional: check the audit log:
+7. **Collect amount:** enroll in a package with a discount that leaves odd piastres (for example 12% on a price ending in .33). Select **Collect**: the amount has two decimals. Leave the clinic empty and save. The clinic error shows, the amount still has two decimals, and choosing a clinic then saves it.
+8. **Arabic:** both screens are in Arabic.
+9. Optional: check the audit log:
    ```sql
    SELECT TOP 5 OccurredAtUtc, Action, EntityId, Details FROM AuditLogs WHERE Action = 'Enrollment.StatusChanged' ORDER BY Id DESC;
    ```

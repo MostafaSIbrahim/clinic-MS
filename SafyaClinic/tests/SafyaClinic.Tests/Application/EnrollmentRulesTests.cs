@@ -165,6 +165,29 @@ public class EnrollmentRulesTests
     }
 
     [Fact]
+    public async Task The_amount_due_is_in_whole_piastres_so_the_Collect_form_accepts_it()
+    {
+        // 333.33 × (1 − 12%) = 293.3304; 850.00 × (1 − 12%) = 748.0000. The form allows two decimals.
+        var w = await WorldAsync();
+        var odd = new PatientNutritionEnrollment
+        {
+            PatientId = w.Patient, PackageId = w.Package, DoctorId = w.Doctor, BasePrice = 333.33m, DiscountPercent = 12m,
+            StartDate = new DateTime(2026, 11, 1), EndDate = new DateTime(2026, 11, 29), Status = EnrollmentStatus.Active,
+        };
+        w.Db.PatientNutritionEnrollments.Add(odd);
+        await w.Db.SaveChangesAsync();
+
+        var due = (await Payments(w).GetDueAmountAsync(w.Patient, null, odd.Id)).Data;
+        var pending = Assert.Single((await Payments(w).GetPatientFinancialSummaryAsync(w.Patient)).Data!.PendingPayments);
+
+        Assert.Equal(293.33m, due);
+        Assert.True(due.Scale <= 2, $"{due} has {due.Scale} decimals");
+        Assert.Equal(due, pending.AmountDue);
+        Assert.Equal(748.00m, SafyaClinic.Application.Common.Money.Round(850.00m * (1 - 12.00m / 100)));
+        Assert.Equal(2, SafyaClinic.Application.Common.Money.Round(850.00m * (1 - 12.00m / 100)).Scale);
+    }
+
+    [Fact]
     public async Task An_active_enrollment_still_owes_its_balance()
     {
         var w = await WorldAsync();

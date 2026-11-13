@@ -11,4 +11,7 @@ public static class Money
         amount.ToString("N2", CultureInfo.InvariantCulture) + " " + Currency;
 
     public static string ToMoney(this decimal amount) => Format(amount);
+
+    /// <summary>To whole piastres (two decimals), half away from zero, so it fits the money fields.</summary>
+    public static decimal Round(decimal amount) => Math.Round(amount, 2, MidpointRounding.AwayFromZero);
 }
