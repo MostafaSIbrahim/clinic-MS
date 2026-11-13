@@ -8,6 +8,8 @@
     var canRequest = await Can.HasAsync(Permissions.Analyses.Manage);
     var none = new EmptyStateModel(T["No lab requests yet."].Value, Icon: "bi-clipboard-x");
     string D(DateTime d) => d.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+    // M3c: the request time is stored in UTC; show the clinic's date.
+    string Requested(DateTime utc) => D(Clock.ToClinicTime(DateTime.SpecifyKind(utc, DateTimeKind.Utc)));
 }
 <section aria-labelledby="lab-heading">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
@@ -57,7 +59,7 @@
                             }
                         </th>
                         <td data-label="@T["Status"]"><partial name="_StatusBadge" model="a.Status" /></td>
-                        <td data-label="@T["Requested on"]">@D(a.RequestDate)</td>
+                        <td data-label="@T["Requested on"]">@Requested(a.RequestDate)</td>
                         <td data-label="@T["Result date"]">@(a.ResultDate is DateTime done ? D(done) : "—")</td>
                         <td data-label="@T["Record"]">
                             @if (a.RecordId is int recordId)

@@ -143,6 +143,28 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await expect(dpage.getByRole('link', { name: 'Lab', exact: true })).toHaveAttribute('aria-current', 'page');
         screens['Patient lab'] = `/Patients/Details/${patientId}?tab=lab`;
         await checkA11y(dpage, 'Patient lab');
+        // M3c: request a lab test, print the slip, then record a result. Changing only the status keeps the notes.
+        await dpage.locator('main').getByRole('link', { name: 'Request analysis' }).click();
+        await checkA11y(dpage, 'Request analysis');
+        await dpage.getByRole('checkbox', { name: /Blood Test/ }).check();
+        await dpage.getByRole('button', { name: 'Request selected analyses' }).click();
+        await expectMovedTo(dpage, /\/Analysis\/PrintRequestSlip/, 'Requesting the analysis');
+        await expect(dpage.locator('h1')).toContainText('Laboratory analysis request');
+        await checkA11y(dpage, 'Lab request slip');
+        await dpage.goto(`/Patients/Details/${patientId}?tab=lab`);
+        await dpage.locator('main').getByRole('link', { name: /^Open\s+Blood Test/ }).first().click();
+        await expect(dpage).toHaveURL(/\/Analysis\/Details\/\d+/);
+        screens['Lab request'] = new URL(dpage.url()).pathname;
+        screens['Lab requests list'] = '/Analysis?status=Completed';
+        await dpage.getByLabel('Status', { exact: true }).selectOption('Completed');
+        await dpage.getByLabel('Result notes').fill('Within normal limits');
+        await dpage.getByRole('button', { name: 'Save', exact: true }).click();
+        await expect(dpage.locator('#analysis-details')).toContainText('Within normal limits');
+        await dpage.getByLabel('Status', { exact: true }).selectOption('InProgress');
+        await dpage.getByRole('button', { name: 'Save', exact: true }).click();
+        await expect(dpage.locator('#analysis-details')).toContainText('Within normal limits');
+        await checkA11y(dpage, 'Lab request');
+        await dpage.goto(`/Patients/Details/${patientId}?tab=lab`);
         // The old records page lands on the tab.
         await dpage.goto(`/MedicalRecords/PatientRecords?patientId=${patientId}`);
         await expect(dpage).toHaveURL(new RegExp(`/Patients/Details/${patientId}\\?tab=records`));

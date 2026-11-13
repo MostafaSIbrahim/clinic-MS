@@ -1,87 +1,114 @@
 @model IEnumerable<MedicalAnalysisDto>
 @inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using System.Globalization
 @{
+    // M3c: the lab request slip is bilingual whatever the language of the person printing, like the prescription
+    // (M3b): each heading in English with Arabic beside it; analysis names and preparation as set up. Dates are
+    // clinic time.
     ViewData["Title"] = "Analysis Request Slip";
     Layout = null;
     var first = Model.First();
     var patient = ViewBag.Patient as PatientDto;
+    var inv = CultureInfo.InvariantCulture;
+
+    string Ar(string english, params object[] args)
+    {
+        var current = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = new CultureInfo("ar");
+        try { return T[english, args].Value; }
+        finally { CultureInfo.CurrentUICulture = current; }
+    }
+    Microsoft.AspNetCore.Html.IHtmlContent Bi(string english) =>
+        new Microsoft.AspNetCore.Html.HtmlString(
+            $"<span lang=\"en\">{System.Net.WebUtility.HtmlEncode(english)}</span> <span class=\"slip-ar\" lang=\"ar\" dir=\"rtl\">{System.Net.WebUtility.HtmlEncode(Ar(english))}</span>");
+    string GenderText(string? g) => g is null ? "—" : $"{g} / {Ar(g)}";
+    var requested = Clock.ToClinicTime(DateTime.SpecifyKind(first.RequestDate, DateTimeKind.Utc)).ToString("dd MMM yyyy", inv);
+    var printed = Clock.Now.ToString("dd MMM yyyy, HH:mm", inv);
+    var phone = patient?.Phones.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber ?? patient?.Phones.FirstOrDefault()?.PhoneNumber;
 }
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>Analysis Request Slip</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lab request — @first.PatientName</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" asp-append-version="true" />
     @* Branding: retain the logo when printing the standalone analysis slip. *@
     <link rel="stylesheet" href="~/css/tokens.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/branding.css" asp-append-version="true" />
     <style>
         body { padding: 30px; }
+        .slip-ar { color: #444; font-size: .9em; margin-inline-start: .35em; }
+        .slip-details dt { font-weight: 600; }
         @@media print {
             .no-print { display: none !important; }
+            body { padding: 0; }
         }
     </style>
 </head>
 <body>
-    <div class="no-print mb-3 d-flex gap-2">
-        <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    <nav class="no-print mb-3 d-flex flex-wrap gap-2" aria-label="@T["Print controls"]">
+        <button type="button" class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer" aria-hidden="true"></i> @T["Print"]</button>
         @if (first.RecordId is int visitRecordId)
         {
             @* P5b: lab tests requested from a visit return to that visit's Lab tab. *@
             <a class="btn btn-success" asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@visitRecordId" asp-route-tab="lab">
-                <i class="bi bi-arrow-return-left"></i> @T["Back to the visit"]
+                <i class="bi bi-arrow-return-left" aria-hidden="true"></i> @T["Back to the visit"]
             </a>
         }
-        <a class="btn btn-outline-secondary" href="/Patients/Details/@first.PatientId?tab=lab">Back to Patient Analyses</a>
-    </div>
+        <a class="btn btn-outline-secondary" asp-controller="Patients" asp-action="Details" asp-route-id="@first.PatientId" asp-route-tab="lab">@T["Back to the patient's lab requests"]</a>
+    </nav>
 
-    <div class="border-bottom pb-2 mb-3">
-        @* Branding: the logo identifies the clinic; the heading identifies the document. *@
-        @await Html.PartialAsync("_ClinicLogo", "clinic-logo--print")
-        <h4 class="mb-0">Laboratory Analysis Request</h4>
-        <small class="text-muted">Printed @DateTime.Now.ToString("dd MMM yyyy, HH:mm")</small>
-    </div>
+    <main>
+        <div class="border-bottom pb-2 mb-3">
+            @* Branding: the logo identifies the clinic; the heading identifies the document. *@
+            @await Html.PartialAsync("_ClinicLogo", "clinic-logo--print")
+            <h1 class="h4 mb-0">@Bi("Laboratory analysis request")</h1>
+            <small class="text-muted">@Bi("Printed") @printed</small>
+        </div>
 
-    <dl class="row">
-        <dt class="col-2">Patient</dt>
-        <dd class="col-4">@first.PatientName (#@first.PatientId)</dd>
-        <dt class="col-2">Age / Gender</dt>
-        <dd class="col-4">@(patient?.Age?.ToString() ?? "—") / @(patient?.Gender ?? "—")</dd>
+        <dl class="row slip-details">
+            <dt class="col-sm-2">@Bi("Patient")</dt>
+            <dd class="col-sm-4"><span dir="auto">@first.PatientName</span> (#@first.PatientId)</dd>
+            <dt class="col-sm-2">@Bi("Age") / @Bi("Gender")</dt>
+            <dd class="col-sm-4">@(patient?.Age?.ToString() ?? "—") / @GenderText(patient?.Gender)</dd>
 
-        <dt class="col-2">Doctor</dt>
-        <dd class="col-4">@first.DoctorName</dd>
-        <dt class="col-2">Phone</dt>
-        <dd class="col-4">@(patient?.Phones.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber ?? patient?.Phones.FirstOrDefault()?.PhoneNumber ?? "—")</dd>
+            <dt class="col-sm-2">@Bi("Doctor")</dt>
+            <dd class="col-sm-4" dir="auto">@first.DoctorName</dd>
+            <dt class="col-sm-2">@Bi("Phone")</dt>
+            <dd class="col-sm-4" dir="ltr">@(phone ?? "—")</dd>
 
-        <dt class="col-2">Date</dt>
-        <dd class="col-4">@first.RequestDate.ToString("dd MMM yyyy")</dd>
-        <dt class="col-2">National ID</dt>
-        <dd class="col-4">@(patient?.NationalId ?? "—")</dd>
-    </dl>
+            <dt class="col-sm-2">@Bi("Date")</dt>
+            <dd class="col-sm-4">@requested</dd>
+            <dt class="col-sm-2">@Bi("National ID")</dt>
+            <dd class="col-sm-4" dir="ltr">@(patient?.NationalId ?? "—")</dd>
+        </dl>
 
-    <table class="table table-bordered mt-3">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Analysis</th>
-                <th>Urgent</th>
-                <th>Preparation Instructions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @{ int i = 1; }
-            @foreach (var a in Model)
-            {
+        <table class="table table-bordered mt-3">
+            <thead>
                 <tr>
-                    <td>@(i++)</td>
-                    <td>@a.AnalysisTypeName</td>
-                    <td>@(a.IsUrgent ? "Yes" : "—")</td>
-                    <td>@(string.IsNullOrWhiteSpace(a.PreparationInstructions) ? "—" : a.PreparationInstructions)</td>
+                    <th scope="col">#</th>
+                    <th scope="col">@Bi("Analysis")</th>
+                    <th scope="col">@Bi("Urgent")</th>
+                    <th scope="col">@Bi("Preparation")</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @{ int i = 1; }
+                @foreach (var a in Model)
+                {
+                    <tr>
+                        <td>@(i++)</td>
+                        <td dir="auto">@a.AnalysisTypeName</td>
+                        <td>@(a.IsUrgent ? Bi("Yes") : new Microsoft.AspNetCore.Html.HtmlString("—"))</td>
+                        <td dir="auto">@(string.IsNullOrWhiteSpace(a.PreparationInstructions) ? "—" : a.PreparationInstructions)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
 
-    <p class="small text-muted mt-4">Please bring this slip to the laboratory to complete the requested analyses.</p>
+        <p class="small text-muted mt-4">@Bi("Please bring this slip to the laboratory.")</p>
+    </main>
 </body>
 </html>

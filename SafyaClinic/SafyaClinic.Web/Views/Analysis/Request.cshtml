@@ -1,64 +1,74 @@
 @model RequestAnalysisBatchRequest
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
-    ViewData["Title"] = "Request Analysis";
+    // M3c: request lab analyses. The patient header, a labelled list of analyses with preparation, English and
+    // Arabic. What's saved and who can request are unchanged (D9).
+    ViewData["Title"] = T["Request analysis"].Value;
     var types = ViewBag.AnalysisTypes as IEnumerable<AnalysisTypeDto> ?? Enumerable.Empty<AnalysisTypeDto>();
 }
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Request analysis"]</h1>
+        <p class="text-muted mb-0">@T["Tick each analysis to request. A request slip opens to print for the patient."]</p>
+    </div>
+</div>
 
-<div class="card" style="max-width:700px;">
-    <div class="card-header"><i class="bi bi-clipboard2-plus me-2"></i>Request Medical Analysis</div>
+@await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
+
+<div class="card record-form-card">
     <div class="card-body">
         <form asp-action="Request" method="post">
             @Html.AntiForgeryToken()
-            @* Review fix: include errors attached to the selected analysis IDs. *@
             <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
             <input type="hidden" asp-for="PatientId" />
             <input type="hidden" asp-for="DoctorId" />
             <input type="hidden" asp-for="RecordId" />
 
-            @* Review fix: give the checkbox group an accessible name without an unbound label. *@
-            <fieldset>
-            <legend class="h6">Analysis types (select all that apply)</legend>
-            @if (!types.Any())
-            {
-                <p class="text-muted small">No analysis types configured.</p>
-            }
-            else
-            {
-                <div class="border rounded p-2 mb-3" style="max-height:320px;overflow-y:auto;">
-                    @foreach (var t in types)
-                    {
-                        <div class="form-check">
-                            @* Review fix: the controller can redisplay a missing selection; keep that path null-safe. *@
-                            <input class="form-check-input" type="checkbox" name="AnalysisTypeIds"
-                                   value="@t.Id" id="type_@t.Id" checked="@(Model.AnalysisTypeIds?.Contains(t.Id) == true)" />
-                            <label class="form-check-label" for="type_@t.Id">
-                                @t.TypeName @(t.DefaultCost != null ? $"({t.DefaultCost.Value.ToMoney()})" : "")
-                                @if (!string.IsNullOrWhiteSpace(t.PreparationInstructions))
-                                {
-                                    <span class="text-muted small d-block">@t.PreparationInstructions</span>
-                                }
-                            </label>
-                        </div>
-                    }
-                </div>
-            }
-
-            </fieldset>
-            <div class="form-check mb-3">
-                <input asp-for="IsUrgent" class="form-check-input" />
-                <label asp-for="IsUrgent" class="form-check-label">Mark as urgent</label>
-            </div>
-
-            @* Review fix: return to the originating clinical record when this request is linked to one. *@
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Request Selected Analyses</button>
-                @if (Model.RecordId.HasValue)
+            <fieldset class="mb-3">
+                <legend class="h6">@T["Analyses (tick all that apply)"]</legend>
+                @if (!types.Any())
                 {
-                    <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@Model.RecordId.Value" asp-route-tab="lab" class="btn btn-outline-secondary">Cancel</a>
+                    <p class="text-muted small">@T["No analysis types are set up yet."]</p>
                 }
                 else
                 {
-                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+                    <div class="analysis-choices">
+                        @foreach (var t in types)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="AnalysisTypeIds" value="@t.Id" id="type_@t.Id"
+                                       checked="@(Model.AnalysisTypeIds?.Contains(t.Id) == true)" />
+                                <label class="form-check-label" for="type_@t.Id">
+                                    <span dir="auto">@t.TypeName</span>
+                                    @if (t.DefaultCost != null)
+                                    {
+                                        <span class="text-muted">(@t.DefaultCost.Value.ToMoney())</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(t.PreparationInstructions))
+                                    {
+                                        <span class="text-muted small d-block">@T["Preparation"]: <span dir="auto">@t.PreparationInstructions</span></span>
+                                    }
+                                </label>
+                            </div>
+                        }
+                    </div>
+                }
+            </fieldset>
+
+            <div class="form-check mb-3">
+                <input asp-for="IsUrgent" class="form-check-input" />
+                <label asp-for="IsUrgent" class="form-check-label">@T["Urgent"]</label>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">@T["Request selected analyses"]</button>
+                @if (Model.RecordId.HasValue)
+                {
+                    <a asp-controller="MedicalRecords" asp-action="Details" asp-route-id="@Model.RecordId.Value" asp-route-tab="lab" class="btn btn-outline-secondary">@T["Cancel"]</a>
+                }
+                else
+                {
+                    <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" asp-route-tab="lab" class="btn btn-outline-secondary">@T["Cancel"]</a>
                 }
             </div>
         </form>
