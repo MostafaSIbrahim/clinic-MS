@@ -4,6 +4,7 @@ using SafyaClinic.Application.DTOs.Nutrition;
 using SafyaClinic.Application.Interfaces.Services;
 using SafyaClinic.Web.Security;
 using SafyaClinic.Application.Security;
+using SafyaClinic.Application.Common;
 namespace SafyaClinic.Web.Controllers
 {
     [RequirePermission(Permissions.Nutrition.View)]
@@ -12,15 +13,18 @@ namespace SafyaClinic.Web.Controllers
         private readonly INutritionService _nutritionService;
         private readonly IPatientService _patientService;
         private readonly IUserService _userService;
+        private readonly IClinicClock _clock;
 
         public NutritionController(
             INutritionService nutritionService,
             IPatientService patientService,
-            IUserService userService)
+            IUserService userService,
+            IClinicClock clock)
         {
             _nutritionService = nutritionService;
             _patientService = patientService;
             _userService = userService;
+            _clock = clock;
         }
 
         // ── Packages ─────────────────────────────────────────────
@@ -100,15 +104,21 @@ namespace SafyaClinic.Web.Controllers
         [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> Enroll(int patientId)
         {
+            await LoadEnrollListsAsync();
+            return View(new CreateEnrollmentDto
+            {
+                PatientId = patientId,
+                StartDate = _clock.Today   // M4a: the clinic's date, not the server's
+            });
+        }
+
+        // M4a: the package and doctor lists, also when a refused form is shown again (they came back empty before).
+        private async Task LoadEnrollListsAsync()
+        {
             var packages = await _nutritionService.GetActivePackagesAsync();
             var doctors = await _userService.GetDoctorsAsync();
             ViewBag.Packages = packages.Data;
             ViewBag.Doctors = doctors.Data;
-            return View(new CreateEnrollmentDto
-            {
-                PatientId = patientId,
-                StartDate = DateTime.Today
-            });
         }
 
         [HttpPost]
@@ -118,14 +128,11 @@ namespace SafyaClinic.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                var packages = await _nutritionService.GetActivePackagesAsync();
-                var doctors = await _userService.GetDoctorsAsync();
-                ViewBag.Packages = packages.Data;
-                ViewBag.Doctors = doctors.Data;
+                await LoadEnrollListsAsync();
                 return View(model);
             }
             var result = await _nutritionService.EnrollPatientAsync(model, CurrentUserId);
-            if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+            if (!result.IsSuccess) { ApplyErrors(result); await LoadEnrollListsAsync(); return View(model); }
             return RedirectWithSuccess(
                 "Patient enrolled.", nameof(EnrollmentDetails),
                 routeValues: new { id = result.Data!.Id });
@@ -136,7 +143,10 @@ namespace SafyaClinic.Web.Controllers
         [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> UpdateEnrollmentStatus(int id, string status, int patientId)
         {
-            await _nutritionService.UpdateEnrollmentStatusAsync(id, status);
+            // M4a: the rules are the service's; say what happened instead of ignoring a refusal.
+            var result = await _nutritionService.UpdateEnrollmentStatusAsync(id, status);
+            if (result.IsSuccess) Success(string.IsNullOrEmpty(result.Message) ? "Enrollment status updated." : result.Message);
+            else Error(result.Errors.FirstOrDefault() ?? "The enrollment status could not be changed.");
             return RedirectToAction(nameof(EnrollmentDetails), new { id });
         }
 

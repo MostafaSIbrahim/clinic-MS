@@ -23,6 +23,9 @@ public static class StatusStyles
         // lab requests (M1b)
         ["Requested"] = "booked",
         ["InProgress"] = "in-consultation",
+        // nutrition enrollments (M4a)
+        ["Active"] = "in-consultation",
+        ["OnHold"] = "waiting",
         // payments
         ["Covered"] = "paid",
         ["Paid"] = "paid",

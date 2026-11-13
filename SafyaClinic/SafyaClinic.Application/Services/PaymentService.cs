@@ -373,9 +373,12 @@ public class PaymentService : IPaymentService
             .Select(s => s.Id)
             .ToListAsync();
 
+        // M4a: a cancelled enrollment is charged only what was already paid for it; the rest is not owed.
         var totalEnrollmentCharges = await _uow.NutritionEnrollments.Query()
             .Where(e => e.PatientId == patientId)
-            .SumAsync(e => e.BasePrice * (1 - e.DiscountPercent / 100));
+            .SumAsync(e => e.Status == EnrollmentStatus.Cancelled && e.TotalPaid < e.BasePrice * (1 - e.DiscountPercent / 100)
+                ? e.TotalPaid
+                : e.BasePrice * (1 - e.DiscountPercent / 100));
 
 
         var totalReservationCharges = await _uow.Reservations.Query()
@@ -420,7 +423,7 @@ public class PaymentService : IPaymentService
         // Preserve the existing nutrition balance calculation.
         var enrollmentBalances = await _uow.NutritionEnrollments
             .Query()
-            .Where(e => e.PatientId == patientId)
+            .Where(e => e.PatientId == patientId && e.Status != EnrollmentStatus.Cancelled)   // M4a
             .Select(e => new
             {
                 e.Id,
@@ -1083,6 +1086,10 @@ public class PaymentService : IPaymentService
             if (enrollment is null || enrollment.PatientId != patientId)
                 return ServiceResult<decimal>.Failure(
                     "Nutrition enrollment not found for this patient.");
+
+            // M4a: nothing more is owed on a cancelled enrollment.
+            if (enrollment.Status == EnrollmentStatus.Cancelled)
+                return ServiceResult<decimal>.Success(0m);
 
             var due = Math.Max(
                 0m,

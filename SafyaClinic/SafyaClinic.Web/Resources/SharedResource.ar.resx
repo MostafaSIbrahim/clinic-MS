@@ -1689,4 +1689,82 @@
   <data name="Tick each analysis to request. A request slip opens to print for the patient." xml:space="preserve">
     <value>اختر كل تحليل مطلوب. تُفتح ورقة الطلب لطباعتها للمريض.</value>
   </data>
+  <data name="All enrollments" xml:space="preserve">
+    <value>كل الاشتراكات</value>
+  </data>
+  <data name="Amount due" xml:space="preserve">
+    <value>المبلغ المستحق</value>
+  </data>
+  <data name="Cancel enrollment" xml:space="preserve">
+    <value>إلغاء الاشتراك</value>
+  </data>
+  <data name="Cancel this enrollment? Any unpaid balance will no longer be owed. This can't be undone." xml:space="preserve">
+    <value>إلغاء هذا الاشتراك؟ لن يكون أي مبلغ غير مدفوع مستحقًا بعد ذلك. لا يمكن التراجع عن ذلك.</value>
+  </data>
+  <data name="Choose a doctor" xml:space="preserve">
+    <value>اختر طبيبًا</value>
+  </data>
+  <data name="Choose a package" xml:space="preserve">
+    <value>اختر باقة</value>
+  </data>
+  <data name="Delete the week {0} follow-up" xml:space="preserve">
+    <value>حذف متابعة الأسبوع {0}</value>
+  </data>
+  <data name="Delete the week {0} follow-up?" xml:space="preserve">
+    <value>حذف متابعة الأسبوع {0}؟</value>
+  </data>
+  <data name="Discount %" xml:space="preserve">
+    <value>الخصم ٪</value>
+  </data>
+  <data name="Enroll" xml:space="preserve">
+    <value>تسجيل الاشتراك</value>
+  </data>
+  <data name="Final price" xml:space="preserve">
+    <value>السعر النهائي</value>
+  </data>
+  <data name="Maximum discount: {0}%" xml:space="preserve">
+    <value>أقصى خصم: {0}٪</value>
+  </data>
+  <data name="Not recorded yet" xml:space="preserve">
+    <value>لم تُسجَّل بعد</value>
+  </data>
+  <data name="Package price" xml:space="preserve">
+    <value>سعر الباقة</value>
+  </data>
+  <data name="Put on hold" xml:space="preserve">
+    <value>إيقاف مؤقت</value>
+  </data>
+  <data name="Record week {0}" xml:space="preserve">
+    <value>تسجيل الأسبوع {0}</value>
+  </data>
+  <data name="Resume" xml:space="preserve">
+    <value>استئناف</value>
+  </data>
+  <data name="Start date" xml:space="preserve">
+    <value>تاريخ البدء</value>
+  </data>
+  <data name="Supervising doctor" xml:space="preserve">
+    <value>الطبيب المشرف</value>
+  </data>
+  <data name="The package's weekly follow-ups start from the start date." xml:space="preserve">
+    <value>تبدأ المتابعات الأسبوعية للباقة من تاريخ البدء.</value>
+  </data>
+  <data name="There are no active nutrition packages yet." xml:space="preserve">
+    <value>لا توجد باقات تغذية نشطة بعد.</value>
+  </data>
+  <data name="This enrollment is cancelled. Nothing more is owed on it. To continue, enroll the patient again." xml:space="preserve">
+    <value>هذا الاشتراك ملغى ولا يُستحق عليه أي مبلغ آخر. للاستمرار، اشترك للمريض من جديد.</value>
+  </data>
+  <data name="This enrollment is completed. To continue, enroll the patient again." xml:space="preserve">
+    <value>اكتمل هذا الاشتراك. للاستمرار، اشترك للمريض من جديد.</value>
+  </data>
+  <data name="Up to the package's maximum." xml:space="preserve">
+    <value>حتى الحد الأقصى للباقة.</value>
+  </data>
+  <data name="Week {0}" xml:space="preserve">
+    <value>الأسبوع {0}</value>
+  </data>
+  <data name="Weekly follow-ups" xml:space="preserve">
+    <value>المتابعات الأسبوعية</value>
+  </data>
 </root>

@@ -1,168 +1,149 @@
 @model PatientEnrollmentDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Domain.Enums
+@using SafyaClinic.Application.Services
 @{
-    ViewData["Title"] = "Enrollment Details";
-    var nextWeek = Model.WeeklyFollowUps.Any() ? Model.WeeklyFollowUps.Max(f => f.WeekNumber) + 1 : 1;
+    // M4a: one nutrition enrollment. Shared layout, the patient header, English and Arabic. Only the status
+    // changes the rules allow are offered (EnrollmentRules); the server checks them again. Actions are shown
+    // only to people who may use them.
+    ViewData["Title"] = Model.PackageName;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string D(DateTime d) => d.ToString("dd MMM yyyy", inv);
+    var status = Enum.TryParse<EnrollmentStatus>(Model.Status, out var parsed) ? parsed : EnrollmentStatus.Active;
+    var canManage = await Can.HasAsync(Permissions.Nutrition.Manage);
+    var canCollect = await Can.HasAsync(Permissions.Payments.Collect);
+    const int Weeks = 4;   // packages run four weekly follow-ups (the server's rule)
+    var byWeek = Model.WeeklyFollowUps.GroupBy(f => f.WeekNumber).ToDictionary(g => g.Key, g => g.First());
+    var nextWeek = byWeek.Count == 0 ? 1 : byWeek.Keys.Max() + 1;
+    var canRecord = canManage && status == EnrollmentStatus.Active && nextWeek <= Weeks;
+    string ActionLabel(EnrollmentStatus s) => s switch
+    {
+        EnrollmentStatus.OnHold => T["Put on hold"].Value,
+        EnrollmentStatus.Active => T["Resume"].Value,
+        EnrollmentStatus.Cancelled => T["Cancel enrollment"].Value,
+        _ => T[Labels.Humanize(s.ToString())].Value,
+    };
 }
-
-<div class="d-flex justify-content-between align-items-start mb-3">
+<div class="page-toolbar">
     <div>
-        <h4 class="mb-0">@Model.PackageName</h4>
-        <small class="text-muted">@Model.PatientName • Supervised by @Model.DoctorName</small>
+        <h1 dir="auto">@Model.PackageName</h1>
+        <p class="text-muted mb-0">
+            <span dir="auto">@T["Dr. {0}", Model.DoctorName]</span> · @D(Model.StartDate) – @D(Model.EndDate) ·
+            <partial name="_StatusBadge" model="Model.Status" />
+        </p>
     </div>
-    <div class="d-flex gap-2">
-        @if (Model.Status == "Active" && nextWeek <= 4)
+    <div class="page-actions">
+        @if (canRecord)
         {
-            <a asp-action="RecordFollowUp" asp-route-enrollmentId="@Model.Id" class="btn btn-sm btn-primary">
-                <i class="bi bi-plus-lg me-1"></i>Record Week @nextWeek Follow-Up
+            <a asp-action="RecordFollowUp" asp-route-enrollmentId="@Model.Id" class="btn btn-primary">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i> @T["Record week {0}", nextWeek]
             </a>
         }
-        @if (Model.Status == "Active")
+        @if (canManage)
         {
-            <form asp-action="UpdateEnrollmentStatus" method="post" class="d-inline">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="patientId" value="@Model.PatientId" />
-                <input type="hidden" name="status" value="Cancelled" />
-                <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Cancel this enrollment?">
-                    <i class="bi bi-x-circle me-1"></i>Cancel
-                </button>
-            </form>
-            <form asp-action="UpdateEnrollmentStatus" method="post" class="d-inline">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="patientId" value="@Model.PatientId" />
-                <input type="hidden" name="status" value="OnHold" />
-                <button type="submit" class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-pause-circle me-1"></i>Put On Hold
-                </button>
-            </form>
+            @foreach (var next in EnrollmentRules.NextStatuses(status))
+            {
+                <form asp-action="UpdateEnrollmentStatus" method="post" class="d-inline"
+                      data-confirm="@(next == EnrollmentStatus.Cancelled ? T["Cancel this enrollment? Any unpaid balance will no longer be owed. This can't be undone."].Value : null)">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="patientId" value="@Model.PatientId" />
+                    <input type="hidden" name="status" value="@next" />
+                    <button type="submit" class="btn @(next == EnrollmentStatus.Cancelled ? "btn-outline-danger" : "btn-outline-secondary")">@ActionLabel(next)</button>
+                </form>
+            }
         }
-        @if (Model.Status == "OnHold")
-        {
-            <form asp-action="UpdateEnrollmentStatus" method="post" class="d-inline">
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="patientId" value="@Model.PatientId" />
-                <input type="hidden" name="status" value="Active" />
-                <button type="submit" class="btn btn-sm btn-outline-success">
-                    <i class="bi bi-play-circle me-1"></i>Resume
-                </button>
-            </form>
-        }
+        <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" asp-route-tab="nutrition" class="btn btn-outline-secondary">@T["All enrollments"]</a>
     </div>
 </div>
 
+@await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
+
+@if (EnrollmentRules.IsFinal(status))
+{
+    <p class="alert alert-info" role="status">
+        @(status == EnrollmentStatus.Cancelled
+            ? T["This enrollment is cancelled. Nothing more is owed on it. To continue, enroll the patient again."]
+            : T["This enrollment is completed. To continue, enroll the patient again."])
+    </p>
+}
+
 <div class="row g-3 mb-3">
-    <div class="col-md-3">
+    <div class="col-6 col-md">
         <div class="stat-card bg-primary-soft">
-            <div class="small opacity-75">Base Price</div>
+            <div class="small">@T["Package price"]</div>
             <div class="fs-5 fw-bold">@Model.BasePrice.ToMoney()</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md">
         <div class="stat-card bg-amber-soft">
-            <div class="small opacity-75">Discount</div>
-            <div class="fs-5 fw-bold">@Model.DiscountPercent%</div>
+            <div class="small">@T["Discount"]</div>
+            <div class="fs-5 fw-bold">@Model.DiscountPercent.ToString("0.##", inv)%</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md">
         <div class="stat-card bg-teal-soft">
-            <div class="small opacity-75">Final Price</div>
+            <div class="small">@T["Final price"]</div>
             <div class="fs-5 fw-bold">@Model.FinalPrice.ToMoney()</div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="stat-card @(Model.FinalPrice - Model.TotalPaid > 0 ? "bg-rose-soft" : "bg-teal-soft")">
-            <div class="small opacity-75">Balance</div>
-            <div class="fs-5 fw-bold">@((Model.FinalPrice - Model.TotalPaid).ToMoney())</div>
+    <div class="col-6 col-md">
+        <div class="stat-card bg-teal-soft">
+            <div class="small">@T["Paid"]</div>
+            <div class="fs-5 fw-bold">@Model.TotalPaid.ToMoney()</div>
+        </div>
+    </div>
+    <div class="col-12 col-md">
+        <div class="stat-card @(Model.AmountDue > 0 ? "bg-rose-soft" : "bg-teal-soft")">
+            <div class="small">@T["Amount due"]</div>
+            <div class="fs-5 fw-bold">@Model.AmountDue.ToMoney()</div>
+            @if (Model.AmountDue > 0 && canCollect)
+            {
+                <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@Model.PatientId" asp-route-enrollmentId="@Model.Id"
+                   class="btn btn-sm btn-success mt-2">@T["Collect"]</a>
+            }
         </div>
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-header"><i class="bi bi-info-circle me-2"></i>Enrollment Info</div>
-    <div class="card-body">
-        <dl class="row mb-0">
-            <dt class="col-3 text-muted">Status</dt>
-            <dd class="col-9">
-                @{
-                    var cls = Model.Status switch
-                    {
-                        "Active" => "bg-success",
-                        "Completed" => "bg-primary",
-                        "Cancelled" => "bg-danger",
-                        _ => "bg-warning text-dark"
-                    };
-                }
-                <span class="badge @cls">@Model.Status</span>
-            </dd>
-            <dt class="col-3 text-muted">Period</dt>
-            <dd class="col-9">@Model.StartDate.ToString("dd MMM yyyy") — @Model.EndDate.ToString("dd MMM yyyy")</dd>
-            <dt class="col-3 text-muted">Total Paid</dt>
-            <dd class="col-9">@Model.TotalPaid.ToMoney()</dd>
-        </dl>
-        @if (Model.FinalPrice - Model.TotalPaid > 0)
+<app-card id="enrollment-weeks" title="@T["Weekly follow-ups"].Value" level="2" icon="bi-calendar-check">
+    <ol class="enrollment-weeks list-unstyled mb-0">
+        @for (var week = 1; week <= Weeks; week++)
         {
-            <a asp-controller="Payments" asp-action="Collect" asp-route-patientId="@Model.PatientId"
-               asp-route-enrollmentId="@Model.Id" class="btn btn-sm btn-success mt-2">
-                <i class="bi bi-cash-coin me-1"></i>Collect Payment
-            </a>
-        }
-        else
-        {
-            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" disabled title="No payment required">
-                <i class="bi bi-check-circle me-1"></i>Fully Paid
-            </button>
-        }
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header"><i class="bi bi-calendar-check me-2"></i>Weekly Progress</div>
-    <div class="card-body">
-        @if (!Model.WeeklyFollowUps.Any())
-        {
-            <p class="text-muted small mb-0">No follow-ups recorded yet.</p>
-        }
-        else
-        {
-            <div class="row g-3">
-                @foreach (var f in Model.WeeklyFollowUps.OrderBy(f => f.WeekNumber))
+            <li class="enrollment-week">
+                <div class="enrollment-week__title">@T["Week {0}", week]</div>
+                @if (byWeek.TryGetValue(week, out var f))
                 {
-                    <div class="col-md-3">
-                        <div class="card h-100">
-                            <a asp-action="FollowUpDetails" asp-route-id="@f.Id" class="text-decoration-none">
-                                <div class="card-body text-center">
-                                    <div class="fw-bold">Week @f.WeekNumber</div>
-                                    <div class="small text-muted">@f.FollowUpDate.ToString("dd MMM")</div>
-                                    @if (f.WeightKg != null)
-                                    {
-                                        <div class="mt-2"><i class="bi bi-speedometer2 text-primary"></i> @f.WeightKg kg</div>
-                                    }
-                                    @if (f.IsCompleted)
-                                    {
-                                        <span class="badge bg-success mt-1">Completed</span>
-                                    }
-                                </div>
-                            </a>
-                            <div class="card-footer bg-transparent border-0 d-flex justify-content-center gap-2 pb-3">
-                                <a asp-action="EditFollowUp" asp-route-id="@f.Id" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </a>
-                                <form asp-action="DeleteFollowUp" method="post" class="d-inline"
-                                      data-confirm="Delete Week @f.WeekNumber follow-up?">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@f.Id" />
-                                    <input type="hidden" name="enrollmentId" value="@Model.Id" />
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                    <div class="small text-muted">@D(f.FollowUpDate)</div>
+                    @if (f.WeightKg != null)
+                    {
+                        <div>@T["{0} kg", f.WeightKg.Value.ToString("0.#", inv)]</div>
+                    }
+                    @if (f.IsCompleted)
+                    {
+                        <span class="app-status app-status--completed">@T["Completed"]</span>
+                    }
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        <a asp-action="FollowUpDetails" asp-route-id="@f.Id" class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @T["Week {0}", week]</span></a>
+                        @if (canManage)
+                        {
+                            <a asp-action="EditFollowUp" asp-route-id="@f.Id" class="btn btn-sm btn-outline-secondary">@T["Edit"]<span class="visually-hidden"> @T["Week {0}", week]</span></a>
+                            <form asp-action="DeleteFollowUp" method="post" class="d-inline" data-confirm="@T["Delete the week {0} follow-up?", week]">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@f.Id" />
+                                <input type="hidden" name="enrollmentId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Delete the week {0} follow-up", week]</span>
+                                </button>
+                            </form>
+                        }
                     </div>
                 }
-            </div>
+                else
+                {
+                    <div class="small text-muted">@T["Not recorded yet"]</div>
+                }
+            </li>
         }
-    </div>
-</div>
+    </ol>
+</app-card>
