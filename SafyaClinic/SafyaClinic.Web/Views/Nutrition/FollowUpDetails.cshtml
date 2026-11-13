@@ -92,7 +92,11 @@
                     @foreach (var a in Model.AdministeredItems)
                     {
                         <li class="mb-2">
-                            <strong dir="auto">@a.ItemName</strong> · @a.ActualQuantity.ToString("0.##", inv)
+                            <strong dir="auto">@a.ItemName</strong> · @a.ActualQuantity.ToString("0.##", inv) @a.Unit
+                            @if (a.OutsidePackage)
+                            {
+                                <span class="app-status app-status--neutral ms-1">@T["Outside the package"]</span>
+                            }
                             @if (!string.IsNullOrWhiteSpace(a.Notes))
                             {
                                 <span class="text-muted" dir="auto"> · @a.Notes</span>

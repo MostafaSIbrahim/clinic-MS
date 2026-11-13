@@ -395,6 +395,71 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.ToTable("TreatmentTypes", (string)null);
                 });
 
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.EnrollmentPlannedItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("EnrollmentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InjectionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("PackageItemId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("VitaminId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WeekNumber")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InjectionId");
+
+                    b.HasIndex("PackageItemId");
+
+                    b.HasIndex("VitaminId");
+
+                    b.HasIndex("EnrollmentId", "WeekNumber");
+
+                    b.ToTable("EnrollmentPlannedItems", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_EnrollmentPlannedItems_OneItem", "(CASE WHEN [PackageItemId] IS NULL THEN 0 ELSE 1 END + CASE WHEN [InjectionId] IS NULL THEN 0 ELSE 1 END + CASE WHEN [VitaminId] IS NULL THEN 0 ELSE 1 END + CASE WHEN [CustomName] IS NULL THEN 0 ELSE 1 END) = 1");
+
+                            t.HasCheckConstraint("CK_EnrollmentPlannedItems_Quantity", "[Quantity] > 0");
+
+                            t.HasCheckConstraint("CK_EnrollmentPlannedItems_Week", "[WeekNumber] BETWEEN 1 AND 4");
+                        });
+                });
+
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.InjectionType", b =>
                 {
                     b.Property<int>("Id")
@@ -649,14 +714,28 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Property<int>("AdministeredBy")
                         .HasColumnType("int");
 
+                    b.Property<string>("CustomName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<int>("FollowUpId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InjectionId")
                         .HasColumnType("int");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("PackageItemId")
+                    b.Property<int?>("PackageItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("VitaminId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -665,9 +744,16 @@ namespace SafyaClinic.Infrastructure.Migrations
 
                     b.HasIndex("FollowUpId");
 
+                    b.HasIndex("InjectionId");
+
                     b.HasIndex("PackageItemId");
 
-                    b.ToTable("WeeklyAdministeredItems", (string)null);
+                    b.HasIndex("VitaminId");
+
+                    b.ToTable("WeeklyAdministeredItems", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_WeeklyAdministeredItems_OneItem", "(CASE WHEN [PackageItemId] IS NULL THEN 0 ELSE 1 END + CASE WHEN [InjectionId] IS NULL THEN 0 ELSE 1 END + CASE WHEN [VitaminId] IS NULL THEN 0 ELSE 1 END + CASE WHEN [CustomName] IS NULL THEN 0 ELSE 1 END) = 1");
+                        });
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.WeeklyFollowUp", b =>
@@ -1925,6 +2011,38 @@ namespace SafyaClinic.Infrastructure.Migrations
                     b.Navigation("Record");
                 });
 
+            modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.EnrollmentPlannedItem", b =>
+                {
+                    b.HasOne("SafyaClinic.Domain.Entities.Nutrition.PatientNutritionEnrollment", "Enrollment")
+                        .WithMany("PlannedItems")
+                        .HasForeignKey("EnrollmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SafyaClinic.Domain.Entities.Nutrition.InjectionType", "Injection")
+                        .WithMany()
+                        .HasForeignKey("InjectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SafyaClinic.Domain.Entities.Nutrition.PackageItem", "PackageItem")
+                        .WithMany()
+                        .HasForeignKey("PackageItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SafyaClinic.Domain.Entities.Nutrition.VitaminType", "Vitamin")
+                        .WithMany()
+                        .HasForeignKey("VitaminId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Enrollment");
+
+                    b.Navigation("Injection");
+
+                    b.Navigation("PackageItem");
+
+                    b.Navigation("Vitamin");
+                });
+
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.PackageItem", b =>
                 {
                     b.HasOne("SafyaClinic.Domain.Entities.Nutrition.InjectionType", "Injection")
@@ -1989,17 +2107,30 @@ namespace SafyaClinic.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
+                    b.HasOne("SafyaClinic.Domain.Entities.Nutrition.InjectionType", "Injection")
+                        .WithMany()
+                        .HasForeignKey("InjectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SafyaClinic.Domain.Entities.Nutrition.PackageItem", "PackageItem")
                         .WithMany("AdministeredItems")
                         .HasForeignKey("PackageItemId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("SafyaClinic.Domain.Entities.Nutrition.VitaminType", "Vitamin")
+                        .WithMany()
+                        .HasForeignKey("VitaminId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("AdministerByUser");
 
                     b.Navigation("FollowUp");
 
+                    b.Navigation("Injection");
+
                     b.Navigation("PackageItem");
+
+                    b.Navigation("Vitamin");
                 });
 
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.WeeklyFollowUp", b =>
@@ -2363,6 +2494,8 @@ namespace SafyaClinic.Infrastructure.Migrations
             modelBuilder.Entity("SafyaClinic.Domain.Entities.Nutrition.PatientNutritionEnrollment", b =>
                 {
                     b.Navigation("Payments");
+
+                    b.Navigation("PlannedItems");
 
                     b.Navigation("WeeklyFollowUps");
                 });

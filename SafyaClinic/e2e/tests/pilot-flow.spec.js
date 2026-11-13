@@ -275,7 +275,10 @@ test('nutrition: package, enroll, record and edit a week', async ({ browser }) =
         await apage.locator('main').getByRole('link', { name: /Record week 1$/ }).click();
         await checkA11y(apage, 'Record week 1 follow-up');
         await apage.locator('input[name="WeightKg"]').fill('80');
-        await apage.locator('#item-0').check();
+        await expect(apage.locator('#given-0-given')).toBeChecked();   // M4d: this week's planned item starts ticked
+        // M4d: plan an item outside the package for week 2 (the first injection in the list).
+        await apage.locator('#add-plan-2').selectOption({ index: 1 });
+        await apage.locator('[data-add-for="add-plan-2"]').click();
         await apage.getByRole('button', { name: 'Save follow-up' }).click();
         await expectMovedTo(apage, /\/Nutrition\/EnrollmentDetails\/\d+/, 'Recording week 1');
         await expect(apage.locator('main').getByRole('link', { name: /Record week 2$/ })).toBeVisible();
@@ -285,7 +288,7 @@ test('nutrition: package, enroll, record and edit a week', async ({ browser }) =
         screens['Weekly follow-up'] = new URL(apage.url()).pathname;
         await checkA11y(apage, 'Weekly follow-up');
         await apage.locator('a[href*="/Nutrition/EditFollowUp/"]').first().click();
-        await expect(apage.locator('#item-0')).toBeChecked();
+        await expect(apage.locator('#given-0-given')).toBeChecked();
         await apage.locator('input[name="WeightKg"]').fill('78');
         await apage.getByRole('button', { name: 'Save changes' }).click();
         await expectMovedTo(apage, /\/Nutrition\/FollowUpDetails\/\d+/, 'Saving the edited week 1');
@@ -293,6 +296,13 @@ test('nutrition: package, enroll, record and edit a week', async ({ browser }) =
         await expect(apage.locator('#followup-measurements')).toContainText('78 kg');
         await apage.goto(screens['Enrollment']);
         await expect(apage.locator('main').getByRole('link', { name: /Record week 2$/ })).toBeVisible();   // still only week 1
+        await expect(apage.locator('#enrollment-weeks')).toContainText('Outside the package');      // M4d: the plan for week 2
+
+        // M4d: week 2's form starts from the plan, with the planned item outside the package ticked.
+        await apage.locator('main').getByRole('link', { name: /Record week 2$/ }).click();
+        await expect(apage.locator('#given-rows .followup-item', { hasText: 'Outside the package' }).locator('input[type="checkbox"]')).toBeChecked();
+        screens['Record a week from the plan'] = new URL(apage.url()).pathname + new URL(apage.url()).search;
+        await checkA11y(apage, 'Record week 2 follow-up (from the plan)');
     });
 
     await admin.context.close();

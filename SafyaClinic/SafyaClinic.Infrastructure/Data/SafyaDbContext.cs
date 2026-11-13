@@ -74,6 +74,7 @@ namespace SafyaClinic.Infrastructure.Data
         public DbSet<WeeklyFollowUp> WeeklyFollowUps { get; set; }
         public DbSet<WeeklyFollowUpLabResult> WeeklyFollowUpLabResults { get; set; }
         public DbSet<WeeklyAdministeredItem> WeeklyAdministeredItems { get; set; }
+        public DbSet<EnrollmentPlannedItem> EnrollmentPlannedItems { get; set; }   // M4d
 
         // Audit
         public DbSet<AuditLog> AuditLogs { get; set; }

@@ -23,6 +23,7 @@ namespace SafyaClinic.Domain.Entities.Nutrition
         public virtual NutritionPackage Package { get; set; } = null!;
         public virtual User Doctor { get; set; } = null!;
         public virtual ICollection<WeeklyFollowUp> WeeklyFollowUps { get; set; } = new List<WeeklyFollowUp>();
+        public virtual ICollection<EnrollmentPlannedItem> PlannedItems { get; set; } = new List<EnrollmentPlannedItem>();   // M4d
         public virtual ICollection<Payment.Payment> Payments { get; set; } = new List<Payment.Payment>();
     }
 }

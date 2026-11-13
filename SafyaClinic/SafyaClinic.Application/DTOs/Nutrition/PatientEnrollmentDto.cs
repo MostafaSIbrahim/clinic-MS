@@ -25,6 +25,8 @@ namespace SafyaClinic.Application.DTOs.Nutrition
         /// <summary>M4a: what is still owed. Nothing is owed on a cancelled enrollment.</summary>
         public decimal AmountDue => Status == "Cancelled" ? 0m : Math.Max(0m, FinalPrice - TotalPaid);
         public List<WeeklyFollowUpDto> WeeklyFollowUps { get; set; } = new List<WeeklyFollowUpDto>();
+        /// <summary>M4d: the patient's plan for weeks not recorded yet (empty when nothing was planned).</summary>
+        public List<FollowUpLineDto> PlannedItems { get; set; } = new List<FollowUpLineDto>();
     }
     public class CreateEnrollmentDto
     {

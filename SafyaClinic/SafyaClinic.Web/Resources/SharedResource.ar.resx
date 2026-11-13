@@ -2016,4 +2016,43 @@
   <data name="{0} weeks" xml:space="preserve">
     <value>{0} أسابيع</value>
   </data>
+  <data name="Add" xml:space="preserve">
+    <value>إضافة</value>
+  </data>
+  <data name="Add an item given this week" xml:space="preserve">
+    <value>إضافة عنصر أُعطي هذا الأسبوع</value>
+  </data>
+  <data name="Add an item to week {0}" xml:space="preserve">
+    <value>إضافة عنصر إلى الأسبوع {0}</value>
+  </data>
+  <data name="Drug name" xml:space="preserve">
+    <value>اسم الدواء</value>
+  </data>
+  <data name="Given" xml:space="preserve">
+    <value>أُعطي</value>
+  </data>
+  <data name="Other drug" xml:space="preserve">
+    <value>دواء آخر</value>
+  </data>
+  <data name="Other drug (type the name)" xml:space="preserve">
+    <value>دواء آخر (اكتب الاسم)</value>
+  </data>
+  <data name="Outside the package" xml:space="preserve">
+    <value>خارج الباقة</value>
+  </data>
+  <data name="Plan for the coming weeks" xml:space="preserve">
+    <value>خطة الأسابيع القادمة</value>
+  </data>
+  <data name="Planned for week {0}" xml:space="preserve">
+    <value>مخطط للأسبوع {0}</value>
+  </data>
+  <data name="Planned items start ticked. Untick what wasn't given, and check the quantity." xml:space="preserve">
+    <value>العناصر المخططة محددة مسبقًا. أزل التحديد عمّا لم يُعطَ، وتحقق من الكمية.</value>
+  </data>
+  <data name="Planned:" xml:space="preserve">
+    <value>المخطط:</value>
+  </data>
+  <data name="This patient's plan only; the package doesn't change. Each week's form starts from it." xml:space="preserve">
+    <value>هذه خطة هذا المريض فقط؛ لا تتغير الباقة. يبدأ نموذج كل أسبوع منها.</value>
+  </data>
 </root>
