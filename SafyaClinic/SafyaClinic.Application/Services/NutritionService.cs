@@ -25,6 +25,8 @@ public class NutritionService : INutritionService
     public async Task<ServiceResult<NutritionPackageDto>> CreatePackageAsync(
         CreateNutritionPackageDto request, int createdBy)
     {
+        if (string.IsNullOrWhiteSpace(request.PackageName))
+            return ServiceResult<NutritionPackageDto>.Failure("Enter the package name.");   // M4c
         if (request.BasePrice <= 0)
             return ServiceResult<NutritionPackageDto>.Failure("Base price must be greater than zero.");
         if (request.MaxDiscountPercent < 0 || request.MaxDiscountPercent > 100)
@@ -45,6 +47,9 @@ public class NutritionService : INutritionService
             if (item.WeekNumber < 1 || item.WeekNumber > 4)
                 return ServiceResult<NutritionPackageDto>.Failure(
                     "Week number must be between 1 and 4.");
+
+            if (item.Quantity <= 0)   // M4c
+                return ServiceResult<NutritionPackageDto>.Failure("Each item needs a quantity above zero.");
         }
 
         var injectionIds = request.Items

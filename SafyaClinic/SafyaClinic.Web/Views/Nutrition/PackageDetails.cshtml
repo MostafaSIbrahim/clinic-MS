@@ -1,74 +1,86 @@
 @model NutritionPackageDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
+    // M4c: one nutrition package and its weekly items. Shared layout, English and Arabic.
     ViewData["Title"] = Model.PackageName;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var canManage = await Can.HasAsync(Permissions.Nutrition.ManagePackages);
 }
-
-<div class="d-flex justify-content-between align-items-start mb-3">
+<div class="page-toolbar">
     <div>
-        <h4 class="mb-0">@Model.PackageName</h4>
-        <small class="text-muted">@Model.Description</small>
+        <h1 dir="auto">@Model.PackageName</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <p class="text-muted mb-0" dir="auto">@Model.Description</p>
+        }
+        @if (!Model.IsActive)
+        {
+            <span class="app-status app-status--cancelled">@T["Deactivated"]</span>
+        }
     </div>
-    @if (await Can.HasAsync(Permissions.Nutrition.ManagePackages))
-    {
-        <form asp-action="DeactivatePackage" asp-route-id="@Model.Id" method="post" data-confirm="Deactivate this package?">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-slash-circle me-1"></i>Deactivate</button>
-        </form>
-    }
+    <div class="page-actions">
+        @if (canManage && Model.IsActive)
+        {
+            <form asp-action="DeactivatePackage" asp-route-id="@Model.Id" method="post" class="d-inline"
+                  data-confirm="@T["Deactivate this package? Current enrollments continue; new patients can't be enrolled in it."]">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger">@T["Deactivate"]</button>
+            </form>
+        }
+        <a asp-action="Packages" class="btn btn-outline-secondary">@T["All packages"]</a>
+    </div>
 </div>
 
 <div class="row g-3 mb-3">
-    <div class="col-md-3">
+    <div class="col-sm-4">
         <div class="stat-card bg-primary-soft">
-            <div class="small opacity-75">Base Price</div>
+            <div class="small">@T["Price"]</div>
             <div class="fs-4 fw-bold">@Model.BasePrice.ToMoney()</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-sm-4">
         <div class="stat-card bg-teal-soft">
-            <div class="small opacity-75">Max Discount</div>
-            <div class="fs-4 fw-bold">@Model.MaxDiscountPercent%</div>
+            <div class="small">@T["Maximum discount"]</div>
+            <div class="fs-4 fw-bold">@Model.MaxDiscountPercent.ToString("0.##", inv)%</div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-sm-4">
         <div class="stat-card bg-amber-soft">
-            <div class="small opacity-75">Duration</div>
-            <div class="fs-4 fw-bold">@Model.DurationWeeks weeks</div>
+            <div class="small">@T["Duration"]</div>
+            <div class="fs-4 fw-bold">@T["{0} weeks", Model.DurationWeeks]</div>
         </div>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header"><i class="bi bi-calendar-week me-2"></i>Weekly Schedule</div>
-    <div class="card-body">
-        @for (int week = 1; week <= Model.DurationWeeks; week++)
+<app-card id="package-weeks" title="@T["Weekly items"].Value" level="2" icon="bi-calendar-week">
+    <ol class="enrollment-weeks list-unstyled mb-0">
+        @for (var week = 1; week <= Model.DurationWeeks; week++)
         {
-            var weekItems = Model.Items.Where(i => i.WeekNumber == week);
-            <h6 class="text-muted text-uppercase small mt-2">Week @week</h6>
-            @if (!weekItems.Any())
-            {
-                <p class="small text-muted">No items scheduled.</p>
-            }
-            else
-            {
-                <ul class="list-group list-group-flush mb-3">
-                    @foreach (var item in weekItems)
-                    {
-                        <li class="list-group-item px-0">
-                            @if (item.InjectionName != null)
-                            {
-                                <span class="badge bg-info me-1">Injection</span> @item.InjectionName
-                            }
-                            else if (item.VitaminName != null)
-                            {
-                                <span class="badge bg-success me-1">Vitamin</span> @item.VitaminName
-                            }
-                            — @item.Quantity @item.Unit
-                            @if (item.Notes != null) { <span class="text-muted small"> (@item.Notes)</span> }
-                        </li>
-                    }
-                </ul>
-            }
+            var items = Model.Items.Where(i => i.WeekNumber == week).ToList();
+            <li class="enrollment-week">
+                <div class="enrollment-week__title">@T["Week {0}", week]</div>
+                @if (!items.Any())
+                {
+                    <div class="small text-muted">@T["Nothing planned."]</div>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var item in items)
+                        {
+                            <li class="mt-1">
+                                <span class="small text-muted">@(item.InjectionName != null ? T["Injection"] : T["Vitamin"])</span>
+                                <div dir="auto">@(item.InjectionName ?? item.VitaminName)</div>
+                                <div class="small">@item.Quantity.ToString("0.##", inv) @item.Unit</div>
+                                @if (!string.IsNullOrWhiteSpace(item.Notes))
+                                {
+                                    <div class="small text-muted" dir="auto">@item.Notes</div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </li>
         }
-    </div>
-</div>
+    </ol>
+</app-card>

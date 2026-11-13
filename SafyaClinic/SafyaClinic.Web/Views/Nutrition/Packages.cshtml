@@ -1,49 +1,68 @@
 @model IEnumerable<NutritionPackageDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
 @{
-    ViewData["Title"] = "Nutrition Packages";
+    // M4c: the active nutrition packages. Shared layout, table (cards on phones), English and Arabic.
+    ViewData["Title"] = T["Nutrition packages"].Value;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var canManage = await Can.HasAsync(Permissions.Nutrition.ManagePackages);
+    var canCatalogues = await Can.HasAsync(Permissions.Settings.Lookups);
+    var none = new EmptyStateModel(T["No active packages."].Value, Icon: "bi-capsule",
+        ActionText: canManage ? T["New package"].Value : null, ActionUrl: canManage ? Url.Action("CreatePackage") : null);
 }
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-capsule me-2"></i>Nutrition Packages</span>
-        @if (await Can.HasAsync(Permissions.Nutrition.ManagePackages))
-        {
-            <div class="d-flex gap-2">
-                <a asp-action="InjectionTypes" class="btn btn-sm btn-outline-secondary"><i class="bi bi-syringe me-1"></i>Injection Types</a>
-                <a asp-action="VitaminTypes" class="btn btn-sm btn-outline-secondary"><i class="bi bi-capsule me-1"></i>Vitamin Types</a>
-                <a asp-action="CreatePackage" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Package</a>
-            </div>
-        }
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Nutrition packages"]</h1>
+        <p class="text-muted mb-0">@T["Four weekly follow-ups each. Patients are enrolled from their Nutrition tab."]</p>
     </div>
-    <div class="card-body">
-        @if (!Model.Any())
+    <div class="page-actions">
+        @if (canCatalogues)
         {
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-capsule fs-1 d-block mb-2 opacity-50"></i>
-                No active packages.
-            </div>
+            <a asp-action="InjectionTypes" class="btn btn-outline-secondary">@T["Injection types"]</a>
+            <a asp-action="VitaminTypes" class="btn btn-outline-secondary">@T["Vitamin types"]</a>
         }
-        else
+        @if (canManage)
         {
-            <div class="row g-3">
-                @foreach (var p in Model)
-                {
-                    <div class="col-md-4">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h6 class="fw-bold">@p.PackageName</h6>
-                                <p class="small text-muted">@(p.Description ?? "")</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fs-5 fw-bold text-primary">@p.BasePrice.ToMoney()</span>
-                                    <span class="badge bg-light text-dark border">Max @p.MaxDiscountPercent% off</span>
-                                </div>
-                                <div class="small text-muted mt-1">@p.DurationWeeks weeks • @p.SessionsPerWeek session/week</div>
-                                <a asp-action="PackageDetails" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary w-100 mt-3">View Details</a>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
+            <a asp-action="CreatePackage" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> @T["New package"]</a>
         }
     </div>
 </div>
+
+@if (!Model.Any())
+{
+    <partial name="_AppEmpty" model="none" />
+}
+else
+{
+    <app-table caption="@T["Nutrition packages"].Value" caption-hidden="true" stack="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Package"]</th>
+                <th scope="col" class="app-table__num">@T["Price"]</th>
+                <th scope="col" class="app-table__num">@T["Maximum discount"]</th>
+                <th scope="col">@T["Items"]</th>
+                <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <th scope="row" data-label="@T["Package"]" dir="auto">
+                        <a asp-action="PackageDetails" asp-route-id="@p.Id">@p.PackageName</a>
+                        @if (!string.IsNullOrWhiteSpace(p.Description))
+                        {
+                            <div class="small text-muted fw-normal">@p.Description</div>
+                        }
+                    </th>
+                    <td data-label="@T["Price"]" class="app-table__num">@p.BasePrice.ToMoney()</td>
+                    <td data-label="@T["Maximum discount"]" class="app-table__num">@p.MaxDiscountPercent.ToString("0.##", inv)%</td>
+                    <td data-label="@T["Items"]">@T["{0} item(s) over {1} weeks", p.Items.Count, p.DurationWeeks]</td>
+                    <td class="app-table__actions">
+                        <a asp-action="PackageDetails" asp-route-id="@p.Id" class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @p.PackageName</span></a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </app-table>
+}

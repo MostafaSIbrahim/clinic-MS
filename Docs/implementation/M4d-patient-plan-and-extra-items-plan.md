@@ -1,6 +1,6 @@
 # M4d plan: the patient's weekly plan, and items outside the package
 
-From the owner's manual test of M4b (13 Nov 2026). This is the plan for review. **Nothing has been changed yet.**
+From the owner's manual test of M4b (13 Nov 2026). **Approved 13 Nov 2026 with the recommended choices:** extra items not charged; planned items start ticked; M4b committed first, and M4d done after M4c.
 
 ## What was asked
 

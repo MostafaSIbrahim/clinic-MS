@@ -6,7 +6,7 @@ Group 4, item **M4** (nutrition), slice c. Follows the approved plan (`M4-nutrit
 
 | | |
 |---|---|
-| Branch | `feature/m4c-packages` (from `main` after M4b) |
+| Branch | `feature/m4c-packages-code`. PR #74 (`feature/m4c-packages`) carried only this document, because the code wasn't in the folder yet; this branch carries the code |
 | Database | None |
 
 ## Behaviour change
@@ -70,10 +70,10 @@ Revert the PR's merge commit.
 
 ## Your steps
 
-In PowerShell, on `main` after M4b is merged:
+In PowerShell (the code is in your folder):
 
 ```powershell
-.\.assessment\slice.ps1 -Branch feature/m4c-packages `
+.\.assessment\slice.ps1 -Branch feature/m4c-packages-code `
   -Message 'M4c: package list, page and New package in the shared layout and Arabic; one item list per row; name and quantity checks; browser test for the nutrition flow'
 ```
 

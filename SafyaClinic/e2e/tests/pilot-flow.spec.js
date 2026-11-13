@@ -230,6 +230,74 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
     for (const s of [reception, doctor, supervisor]) await s.context.close();
 });
 
+// M4c: nutrition as Admin: create a package through the screens, enroll a patient, record week 1, then edit it.
+// Editing must change week 1, not add a week (M4b, defect N1).
+test('nutrition: package, enroll, record and edit a week', async ({ browser }) => {
+    const admin = await newSession(browser, USERS.admin);
+    const apage = admin.page;
+    const packageName = `E2E Package ${stamp}`;
+    let patientId;
+
+    await test.step('Admin creates a package with one item in week 1', async () => {
+        await apage.goto('/Nutrition/CreatePackage');
+        await checkA11y(apage, 'New package');
+        await apage.locator('input[name="PackageName"]').fill(packageName);
+        await apage.locator('input[name="BasePrice"]').fill('1000');
+        await apage.locator('#pkg-0-item').selectOption({ index: 1 });
+        await apage.getByRole('button', { name: 'Create package' }).click();
+        await expectMovedTo(apage, /\/Nutrition\/PackageDetails\/\d+/, 'Creating the package');
+        screens['Nutrition package'] = new URL(apage.url()).pathname;
+        screens['Nutrition packages'] = '/Nutrition/Packages';
+        screens['New package'] = '/Nutrition/CreatePackage';
+        await checkA11y(apage, 'Nutrition package');
+    });
+
+    await test.step('Admin enrolls a new patient', async () => {
+        await apage.goto('/Patients/Create');
+        await apage.locator('input[name="FirstName"]').fill('E2E');
+        await apage.locator('input[name="LastName"]').fill(`Nutrition ${stamp}`);
+        await apage.locator('input[name="Phones[0].PhoneNumber"]').fill(`011${Date.now().toString().slice(-8)}`);
+        await apage.getByRole('button', { name: 'Register Patient' }).click();
+        await expectMovedTo(apage, /\/Patients\/Details\/\d+/, 'Registering the nutrition patient');
+        patientId = Number(apage.url().match(/Details\/(\d+)/)[1]);
+
+        await apage.goto(`/Nutrition/Enroll?patientId=${patientId}`);
+        const option = await apage.locator('#PackageId option', { hasText: packageName }).getAttribute('value');
+        await apage.locator('#PackageId').selectOption(option);
+        await apage.locator('#DoctorId').selectOption({ index: 1 });
+        await apage.getByRole('button', { name: 'Enroll', exact: true }).click();
+        await expectMovedTo(apage, /\/Nutrition\/EnrollmentDetails\/\d+/, 'Enrolling the patient');
+        screens['Enrollment'] = new URL(apage.url()).pathname;
+        await checkA11y(apage, 'Enrollment');
+    });
+
+    await test.step('Week 1 is recorded, then edited without adding a week', async () => {
+        await apage.locator('main').getByRole('link', { name: /Record week 1$/ }).click();
+        await checkA11y(apage, 'Record week 1 follow-up');
+        await apage.locator('input[name="WeightKg"]').fill('80');
+        await apage.locator('#item-0').check();
+        await apage.getByRole('button', { name: 'Save follow-up' }).click();
+        await expectMovedTo(apage, /\/Nutrition\/EnrollmentDetails\/\d+/, 'Recording week 1');
+        await expect(apage.locator('main').getByRole('link', { name: /Record week 2$/ })).toBeVisible();
+
+        await apage.locator('main').getByRole('link', { name: /^Open\s+Week 1/ }).click();
+        await expectMovedTo(apage, /\/Nutrition\/FollowUpDetails\/\d+/, 'Opening week 1');
+        screens['Weekly follow-up'] = new URL(apage.url()).pathname;
+        await checkA11y(apage, 'Weekly follow-up');
+        await apage.locator('a[href*="/Nutrition/EditFollowUp/"]').first().click();
+        await expect(apage.locator('#item-0')).toBeChecked();
+        await apage.locator('input[name="WeightKg"]').fill('78');
+        await apage.getByRole('button', { name: 'Save changes' }).click();
+        await expectMovedTo(apage, /\/Nutrition\/FollowUpDetails\/\d+/, 'Saving the edited week 1');
+        await expect(apage.locator('h1')).toContainText('Week 1 follow-up');
+        await expect(apage.locator('#followup-measurements')).toContainText('78 kg');
+        await apage.goto(screens['Enrollment']);
+        await expect(apage.locator('main').getByRole('link', { name: /Record week 2$/ })).toBeVisible();   // still only week 1
+    });
+
+    await admin.context.close();
+});
+
 test('pilot screens at 1366, 1024 and 390 px', async ({ browser }) => {
     const visited = loadScreens();
     test.skip(Object.keys(visited).length === 0, 'needs the pilot visit to have run');
