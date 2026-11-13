@@ -185,6 +185,8 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         await expect(page.getByRole('link', { name: 'Payments', exact: true })).toHaveAttribute('aria-current', 'page');
         screens['Patient payments'] = `/Patients/Details/${patientId}?tab=payments`;
         screens['Patient nutrition'] = `/Patients/Details/${patientId}?tab=nutrition`;
+        // M4a: the Enroll form (no packages exist in a test run yet, so it shows that message).
+        screens['Enroll in a package'] = `/Nutrition/Enroll?patientId=${patientId}`;
         // M2b: the payment dashboards, checked at the three widths by the screen test (as admin).
         screens['Payment dashboard'] = '/Payments/Dashboard';
         screens['Payment dashboard, all time'] = '/Payments/Dashboard?all=true';

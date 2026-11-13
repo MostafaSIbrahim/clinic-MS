@@ -1,109 +1,98 @@
 @model CreateEnrollmentDto
-@using SafyaClinic.Application.DTOs.Patient
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
-    ViewData["Title"] = "Enroll Patient";
+    // M4a: enroll a patient in a nutrition package. Shared fields, the patient header, English and Arabic.
+    // The price preview is in EGP (it showed US dollars). The rules (maximum discount, one active enrollment)
+    // are the server's.
+    ViewData["Title"] = T["Enroll in a package"].Value;
     var packages = ViewBag.Packages as IEnumerable<NutritionPackageDto> ?? Enumerable.Empty<NutritionPackageDto>();
     var doctors = ViewBag.Doctors as IEnumerable<UserDto> ?? Enumerable.Empty<UserDto>();
+    var packageItems = packages
+        .Select(p => new SelectListItem($"{p.PackageName} ({p.BasePrice.ToMoney()})", p.Id.ToString(), p.Id == Model.PackageId))
+        .ToList();
+    var doctorItems = doctors
+        .Select(d => new SelectListItem(T["Dr. {0}", d.FullName].Value, d.Id.ToString(), d.Id == Model.DoctorId))
+        .ToList();
+    var prices = packages.ToDictionary(p => p.Id.ToString(), p => new { price = p.BasePrice, maxDiscount = p.MaxDiscountPercent });
 }
-
-<div class="page-toolbar d-flex justify-content-between align-items-start mb-3">
-    <h1 class="mb-0">Enroll Patient in Nutrition Package</h1>
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Enroll in a package"]</h1>
+        <p class="text-muted mb-0">@T["The package's weekly follow-ups start from the start date."]</p>
+    </div>
 </div>
 
-<div class="card" style="max-width:600px;">
+@await Component.InvokeAsync("PatientHeader", new { patientId = Model.PatientId })
+
+<div class="card record-form-card">
     <div class="card-body">
-        <form asp-action="Enroll" method="post">
+        <form asp-action="Enroll" method="post" data-draft-key="enroll-@Model.PatientId" data-draft-restore="@(Context.Request.Method == "GET" ? "true" : "false")">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="All"
-                 class="alert alert-danger d-flex justify-content-center align-items-center py-1"
-                 role="alert" tabindex="-1">
-                Enroll Patient in Nutrition Package
-            </div>
+            <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
             <input type="hidden" asp-for="PatientId" />
 
-            <div class="mb-3">
-                <label asp-for="PackageId" class="form-label">Package *</label>
-                <select asp-for="PackageId" class="form-select" required id="packageSelect">
-                    <option value="">— Select Package —</option>
-                    @foreach (var p in packages)
-                    {
-                        <option value="@p.Id" data-price="@p.BasePrice" data-maxdiscount="@p.MaxDiscountPercent">
-                            @p.PackageName (@p.BasePrice.ToMoney()) — max @p.MaxDiscountPercent% off
-                        </option>
-                    }
-                </select>
-                <span asp-validation-for="PackageId" class="text-danger"></span>
+            @if (!packageItems.Any())
+            {
+                <div class="alert alert-warning" role="status">@T["There are no active nutrition packages yet."]</div>
+            }
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <app-field asp-for="PackageId" label="@T["Package"].Value" type="select" asp-items="packageItems" option-label="@T["Choose a package"].Value" required="true" />
+                </div>
+                <div class="col-md-6">
+                    <app-field asp-for="DoctorId" label="@T["Supervising doctor"].Value" type="select" asp-items="doctorItems" option-label="@T["Choose a doctor"].Value" required="true" />
+                </div>
+                <div class="col-md-6">
+                    <app-field asp-for="StartDate" label="@T["Start date"].Value" type="date" required="true" />
+                </div>
+                <div class="col-md-6">
+                    <app-field asp-for="DiscountPercent" label="@T["Discount %"].Value" type="number" step="0.1" hint="@T["Up to the package's maximum."].Value" />
+                </div>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="DoctorId" class="form-label">Supervising Doctor *</label>
-                <select asp-for="DoctorId" class="form-select" required>
-                    <option value="">— Select —</option>
-                    @foreach (var d in doctors)
-                    {
-                        <option value="@d.Id">@d.FullName</option>
-                    }
-                </select>
-                <span asp-validation-for="DoctorId" class="text-danger"></span>
-            </div>
+            <p class="enroll-price mt-3" id="enroll-price" role="status" aria-live="polite" hidden>
+                <span>@T["Final price"]:</span> <strong id="enroll-price-value"></strong>
+                <span class="text-muted small" id="enroll-price-max"></span>
+            </p>
 
-            <div class="mb-3">
-                <label asp-for="StartDate" class="form-label">Start Date *</label>
-                <input asp-for="StartDate" type="date" class="form-control" required />
-                <span asp-validation-for="StartDate" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="DiscountPercent" class="form-label">Discount % <span id="maxDiscountHint" class="text-muted small"></span></label>
-                @* No value="0": asp-for re-renders the attempted value from the model/ModelState *@
-                <input asp-for="DiscountPercent" type="number" step="0.1" class="form-control" id="discountInput" />
-                <span asp-validation-for="DiscountPercent" class="text-danger"></span>
-            </div>
-
-            <div class="alert alert-light border d-flex justify-content-between" id="pricePreview" style="display:none;">
-                <span>Final Price</span>
-                <strong id="finalPriceText">—</strong>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Notes" class="form-label">Notes</label>
-                <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
-                <span asp-validation-for="Notes" class="text-danger"></span>
-            </div>
+            <app-field asp-for="Notes" label="@T["Notes"].Value" type="textarea" rows="2" />
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Enroll Patient</button>
-                <a asp-action="PatientEnrollments" asp-route-patientId="@Model.PatientId" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">@T["Enroll"]</button>
+                <a asp-controller="Patients" asp-action="Details" asp-route-id="@Model.PatientId" asp-route-tab="nutrition"
+                   class="btn btn-outline-secondary" data-draft-discard="enroll-@Model.PatientId">@T["Cancel"]</a>
             </div>
         </form>
     </div>
 </div>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script src="~/js/form-draft.js" asp-append-version="true"></script>
     <script>
-        const pkgSelect = document.getElementById('packageSelect');
-        const discount = document.getElementById('discountInput');
-        const preview = document.getElementById('pricePreview');
-        const priceText = document.getElementById('finalPriceText');
-        const maxHint = document.getElementById('maxDiscountHint');
-
-        function recalc() {
-            const opt = pkgSelect.options[pkgSelect.selectedIndex];
-            if (!opt || !opt.value) { preview.style.display = 'none'; return; }
-            const price = parseFloat(opt.dataset.price);
-            const max = parseFloat(opt.dataset.maxdiscount);
-            maxHint.textContent = `(max ${max}%)`;
-            let d = parseFloat(discount.value) || 0;
-            const final = price * (1 - d / 100);
-            priceText.textContent = final.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
-            preview.style.display = 'flex';
-        }
-        pkgSelect.addEventListener('change', recalc);
-        discount.addEventListener('input', recalc);
-        // Review fix: show the preview for values restored after a rejected submission without changing them.
-        recalc();
+        (function () {
+            const prices = @Html.Raw(Json.Serialize(prices));
+            const maxText = @Json.Serialize(T["Maximum discount: {0}%", "{0}"].Value);
+            const pkg = document.getElementById('PackageId');
+            const discount = document.getElementById('DiscountPercent');
+            const box = document.getElementById('enroll-price');
+            const value = document.getElementById('enroll-price-value');
+            const max = document.getElementById('enroll-price-max');
+            // Same format as the server's Money.Format: "1,250.50 EGP", Western digits.
+            const money = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EGP';
+            function recalc() {
+                const p = prices[pkg.value];
+                if (!p) { box.hidden = true; return; }
+                const d = Math.min(Math.max(parseFloat(discount.value) || 0, 0), 100);
+                value.textContent = money(p.price * (1 - d / 100));
+                max.textContent = '(' + maxText.replace('{0}', p.maxDiscount) + ')';
+                box.hidden = false;
+            }
+            pkg.addEventListener('change', recalc);
+            discount.addEventListener('input', recalc);
+            recalc();
+        })();
     </script>
 }

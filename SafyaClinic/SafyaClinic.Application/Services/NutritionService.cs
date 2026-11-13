@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using SafyaClinic.Application.Common.Auditing;
 using SafyaClinic.Application.DTOs.Common;
 using SafyaClinic.Application.DTOs.Nutrition;
 using SafyaClinic.Application.Interfaces.Services;
@@ -11,8 +12,13 @@ namespace SafyaClinic.Application.Services;
 public class NutritionService : INutritionService
 {
     private readonly IUnitOfWork _uow;
+    private readonly IAuditTrail _audit;
 
-    public NutritionService(IUnitOfWork uow) => _uow = uow;
+    public NutritionService(IUnitOfWork uow, IAuditTrail? audit = null)
+    {
+        _uow = uow;
+        _audit = audit ?? NoAuditTrail.Instance;
+    }
 
     // ── Packages ─────────────────────────────────────────────
 
@@ -270,17 +276,36 @@ public class NutritionService : INutritionService
 
     public async Task<ServiceResult> UpdateEnrollmentStatusAsync(int enrollmentId, string status)
     {
-        if (!Enum.TryParse<EnrollmentStatus>(status, out var enrollmentStatus))
-            return ServiceResult.Failure(
-                "Invalid status. Valid: Active, Completed, Cancelled, OnHold.");
+        if (!Enum.TryParse<EnrollmentStatus>(status, out var target) || !Enum.IsDefined(target))
+            return ServiceResult.Failure("Choose a valid enrollment status.");
 
         var enrollment = await _uow.NutritionEnrollments.GetByIdAsync(enrollmentId);
         if (enrollment is null) return ServiceResult.Failure("Enrollment not found.");
 
-        enrollment.Status = enrollmentStatus;
+        // M4a: the status rules (EnrollmentRules), enforced here so every screen and request follows them.
+        var current = enrollment.Status;
+        if (current == target) return ServiceResult.Success("No change.");
+        var problem = EnrollmentRules.CheckStatusChange(current, target);
+        if (problem is not null) return ServiceResult.Failure(problem);
+
+        // One active enrollment per patient, as when enrolling: resuming must not create a second one.
+        if (target == EnrollmentStatus.Active && await _uow.NutritionEnrollments.Query()
+                .AnyAsync(e => e.PatientId == enrollment.PatientId && e.Id != enrollment.Id && e.Status == EnrollmentStatus.Active))
+            return ServiceResult.Failure(EnrollmentRules.AnotherActiveMessage);
+
+        enrollment.Status = target;
+        enrollment.UpdatedAt = DateTime.UtcNow;
         _uow.NutritionEnrollments.Update(enrollment);
+        await _audit.RecordAsync(AuditActions.EnrollmentStatusChanged, "NutritionEnrollment", enrollment.Id,
+            new { from = current.ToString(), to = target.ToString() });
         await _uow.SaveChangesAsync();
-        return ServiceResult.Success("Enrollment status updated.");
+        return ServiceResult.Success(target switch
+        {
+            EnrollmentStatus.OnHold => "Enrollment put on hold.",
+            EnrollmentStatus.Active => "Enrollment resumed.",
+            EnrollmentStatus.Cancelled => "Enrollment cancelled.",
+            _ => "Enrollment status updated.",
+        });
     }
 
     // ── Weekly Follow-Ups ────────────────────────────────────

@@ -1181,6 +1181,26 @@ a.app-kpi:focus-visible {
     border-radius: var(--radius-md);
 }
 
+/* M4a: the four weeks of a nutrition enrollment, side by side on wider screens. */
+.enrollment-weeks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: var(--space-3);
+}
+.enrollment-week {
+    padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+.enrollment-week__title {
+    font-weight: 600;
+}
+.enroll-price {
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
 /* M2c: a voided payment stays in the history, struck through. */
 .payment-row--void > * {
     color: var(--color-text-muted);

@@ -38,6 +38,7 @@ public static class AuditActions
     public const string ReservationAutoNoShow = "Reservation.AutoNoShow"; // P9b: not checked in within 24 hours
     public const string AllergyOverride = "Prescription.AllergyOverride"; // P5a
     public const string RecordVisitLinked = "MedicalRecord.VisitLinked";  // P5c: a visit continues an existing record
+    public const string EnrollmentStatusChanged = "Enrollment.StatusChanged"; // M4a
 }
 
 /// <summary>Who is acting and from where — supplied by the web layer.</summary>

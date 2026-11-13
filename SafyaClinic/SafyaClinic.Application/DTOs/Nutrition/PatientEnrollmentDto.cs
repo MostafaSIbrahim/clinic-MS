@@ -22,7 +22,8 @@ namespace SafyaClinic.Application.DTOs.Nutrition
         public decimal FinalPrice { get; set; }
         public string Status { get; set; } = string.Empty;
         public decimal TotalPaid { get; set; }
-        public decimal RemainingAmount => FinalPrice - TotalPaid;
+        /// <summary>M4a: what is still owed. Nothing is owed on a cancelled enrollment.</summary>
+        public decimal AmountDue => Status == "Cancelled" ? 0m : Math.Max(0m, FinalPrice - TotalPaid);
         public List<WeeklyFollowUpDto> WeeklyFollowUps { get; set; } = new List<WeeklyFollowUpDto>();
     }
     public class CreateEnrollmentDto
