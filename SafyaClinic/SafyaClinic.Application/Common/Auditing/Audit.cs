@@ -39,6 +39,8 @@ public static class AuditActions
     public const string AllergyOverride = "Prescription.AllergyOverride"; // P5a
     public const string RecordVisitLinked = "MedicalRecord.VisitLinked";  // P5c: a visit continues an existing record
     public const string EnrollmentStatusChanged = "Enrollment.StatusChanged"; // M4a
+    public const string FollowUpEdited = "FollowUp.Edited";    // M4b
+    public const string FollowUpDeleted = "FollowUp.Deleted";  // M4b
 }
 
 /// <summary>Who is acting and from where — supplied by the web layer.</summary>

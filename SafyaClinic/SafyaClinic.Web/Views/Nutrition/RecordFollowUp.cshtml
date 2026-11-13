@@ -1,174 +1,191 @@
 @model RecordFollowUpDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
-    ViewData["Title"] = "Record Weekly Follow-Up";
-    var enrollmentId = Model.FollowUpId;
+    // M4b: record or edit a weekly follow-up. Edit saves to the same week (it added a new week before).
+    // Items are ticked from the enrollment's package and lab results chosen from the analysis list; before,
+    // people had to type database numbers. Shared fields, the patient header, English and Arabic.
+    var isEdit = ViewBag.IsEdit == true;
+    var followUpId = ViewBag.FollowUpId as int?;
+    var week = ViewBag.WeekNumber as int? ?? 1;
+    var enrollment = ViewBag.Enrollment as PatientEnrollmentDto;
+    var enrollmentId = Model.FollowUpId;   // this form carries the enrollment's number in FollowUpId
+    var packageItems = ViewBag.PackageItems as List<PackageItemDto> ?? new();
+    var analyses = (ViewBag.AnalysisTypes as IEnumerable<SafyaClinic.Application.DTOs.Analysis.AnalysisTypeDto>
+        ?? Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.AnalysisTypeDto>()).ToList();
+    ViewData["Title"] = isEdit ? T["Edit week {0} follow-up", week].Value : T["Record week {0} follow-up", week].Value;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+
+    var given = Model.AdministeredItems.Where(a => a.PackageItemId.HasValue)
+        .GroupBy(a => a.PackageItemId!.Value).ToDictionary(g => g.Key, g => g.First());
+    var thisWeek = packageItems.Where(i => i.WeekNumber == week).OrderBy(i => i.Id).ToList();
+    var otherWeeks = packageItems.Where(i => i.WeekNumber != week).OrderBy(i => i.WeekNumber).ThenBy(i => i.Id).ToList();
+    var diet = new[] { "Excellent", "Good", "Fair", "Poor" }
+        .Select(d => new SelectListItem(T[d].Value, d, d == Model.DietCompliance)).ToList();
+    var labRows = Model.LabResults.Where(l => l.AnalysisTypeId.HasValue || !string.IsNullOrWhiteSpace(l.ResultValue)).ToList();
+    var draftKey = isEdit ? $"followup-edit-{followUpId}" : $"followup-new-{enrollmentId}";
+    var restoreDraft = Context.Request.Method == "GET" ? "true" : "false";
+    var backUrl = isEdit
+        ? Url.Action("FollowUpDetails", new { id = followUpId })
+        : Url.Action("EnrollmentDetails", new { id = enrollmentId });
+    SafyaClinic.Web.Models.FollowUpItemRow Row(int index, PackageItemDto item) =>
+        new(index, item, given.GetValueOrDefault(item.Id), item.InjectionName != null ? T["Injection"].Value : T["Vitamin"].Value);
+    var labOptions = analyses.Select(a => new { value = a.Id.ToString(), label = a.TypeName }).ToList();
 }
-
-<div class="page-toolbar d-flex justify-content-between align-items-start mb-3">
-    <h1 class="mb-0">Record Weekly Follow-Up</h1>
-</div>
-
-<div class="card" style="max-width:800px;">
-    <div class="card-body">
-        <form asp-action="RecordFollowUp" asp-route-enrollmentId="@enrollmentId" method="post">
-            @Html.AntiForgeryToken()
-            <div asp-validation-summary="All"
-                 class="alert alert-danger d-flex justify-content-center align-items-center py-1"
-                 role="alert" tabindex="-1">
-                Record Weekly Follow-Up for the Patient
-            </div>
-            <input type="hidden" asp-for="FollowUpId" />
-
-            <div class="mb-3">
-                <label asp-for="FollowUpDate" class="form-label">Follow-Up Date *</label>
-                <input asp-for="FollowUpDate" type="date" class="form-control" required />
-            </div>
-
-            <h6 class="text-muted text-uppercase small mb-3">Vitals & Measurements</h6>
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <label asp-for="WeightKg" class="form-label">Weight (kg)</label>
-                    <input asp-for="WeightKg" type="number" step="0.1" class="form-control" />
-                </div>
-                <div class="col-md-4">
-                    <label asp-for="HeightCm" class="form-label">Height (cm)</label>
-                    <input asp-for="HeightCm" type="number" step="0.1" class="form-control" />
-                </div>
-                <div class="col-md-4">
-                    <label asp-for="BodyFatPercent" class="form-label">Body Fat %</label>
-                    <input asp-for="BodyFatPercent" type="number" step="0.1" class="form-control" />
-                </div>
-                <div class="col-md-4">
-                    <label asp-for="MuscleMassKg" class="form-label">Muscle Mass (kg)</label>
-                    <input asp-for="MuscleMassKg" type="number" step="0.1" class="form-control" />
-                </div>
-                <div class="col-md-4">
-                    <label asp-for="WaistCircumferenceCm" class="form-label">Waist (cm)</label>
-                    <input asp-for="WaistCircumferenceCm" type="number" step="0.1" class="form-control" />
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="BloodPressureSys" class="form-label">BP Sys</label>
-                    <input asp-for="BloodPressureSys" type="number" class="form-control" />
-                </div>
-                <div class="col-md-2">
-                    <label asp-for="BloodPressureDia" class="form-label">BP Dia</label>
-                    <input asp-for="BloodPressureDia" type="number" class="form-control" />
-                </div>
-            </div>
-
-            <h6 class="text-muted text-uppercase small mb-3">Clinical Notes</h6>
-            <div class="row g-3 mb-4">
-                <div class="col-md-6">
-                    <label asp-for="DietCompliance" class="form-label">Diet Compliance</label>
-                    <select asp-for="DietCompliance" class="form-select">
-                        <option value="">— Select —</option>
-                        <option value="Excellent">Excellent</option>
-                        <option value="Good">Good</option>
-                        <option value="Fair">Fair</option>
-                        <option value="Poor">Poor</option>
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="SideEffects" class="form-label">Side Effects</label>
-                    <input asp-for="SideEffects" class="form-control" />
-                </div>
-                <div class="col-12">
-                    <label asp-for="LabResultsSummary" class="form-label">Lab Results Summary</label>
-                    <textarea asp-for="LabResultsSummary" class="form-control" rows="2"></textarea>
-                </div>
-                <div class="col-12">
-                    <label asp-for="DoctorNotes" class="form-label">Doctor's Notes</label>
-                    <textarea asp-for="DoctorNotes" class="form-control" rows="2"></textarea>
-                </div>
-                <div class="col-12">
-                    <label asp-for="NextWeekAdjustments" class="form-label">Next Week Adjustments</label>
-                    <textarea asp-for="NextWeekAdjustments" class="form-control" rows="2"></textarea>
-                </div>
-            </div>
-
-            <h6 class="text-muted text-uppercase small mb-3">Administered Items</h6>
-            <div id="items-container">
-                <div class="row g-2 mb-2">
-                    <div class="col-md-4">
-                        <input type="number" name="AdministeredItems[0].PackageItemId" class="form-control form-control-sm" placeholder="Package Item ID" />
-                    </div>
-                    <div class="col-md-3">
-                        <input type="number" step="0.01" name="AdministeredItems[0].ActualQuantity" class="form-control form-control-sm" placeholder="Actual Qty" />
-                    </div>
-                    <div class="col-md-5">
-                        <input type="text" name="AdministeredItems[0].Notes" class="form-control form-control-sm" placeholder="Notes" />
-                    </div>
-                </div>
-            </div>
-            <button type="button" id="add-item" class="btn btn-sm btn-outline-secondary mb-4">
-                <i class="bi bi-plus"></i> Add Item
-            </button>
-
-            <h6 class="text-muted text-uppercase small mb-3">Lab Results</h6>
-            <div id="labs-container">
-                <div class="row g-2 mb-2">
-                    <div class="col-md-3">
-                        <input type="number" name="LabResults[0].AnalysisTypeId" class="form-control form-control-sm" placeholder="Analysis Type ID" />
-                    </div>
-                    <div class="col-md-3">
-                        <input type="text" name="LabResults[0].ResultValue" class="form-control form-control-sm" placeholder="Result" />
-                    </div>
-                    <div class="col-md-3">
-                        <input type="text" name="LabResults[0].ReferenceRange" class="form-control form-control-sm" placeholder="Reference Range" />
-                    </div>
-                    <div class="col-md-3">
-                        <select name="LabResults[0].IsNormal" class="form-select form-select-sm">
-                            <option value="">Normal?</option>
-                            <option value="true">Normal</option>
-                            <option value="false">Abnormal</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <button type="button" id="add-lab" class="btn btn-sm btn-outline-secondary mb-4">
-                <i class="bi bi-plus"></i> Add Lab Result
-            </button>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Follow-Up</button>
-                <a asp-action="EnrollmentDetails" asp-route-id="@enrollmentId" class="btn btn-outline-secondary">Cancel</a>
-            </div>
-        </form>
+<div class="page-toolbar">
+    <div>
+        <h1>@ViewData["Title"]</h1>
+        @if (enrollment != null)
+        {
+            <p class="text-muted mb-0" dir="auto">@enrollment.PackageName</p>
+        }
     </div>
 </div>
 
+@if (enrollment != null)
+{
+    @await Component.InvokeAsync("PatientHeader", new { patientId = enrollment.PatientId })
+}
+
+<form method="post" action="@(isEdit ? Url.Action("EditFollowUp", new { id = followUpId }) : Url.Action("RecordFollowUp", new { enrollmentId }))"
+      class="followup-form" data-draft-key="@draftKey" data-draft-restore="@restoreDraft" data-draft-prepare="ensureLabRows">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
+    <input type="hidden" asp-for="FollowUpId" />
+
+    <app-card id="followup-measurements" title="@T["Measurements"].Value" level="2" icon="bi-speedometer2">
+        <div class="row g-3">
+            <div class="col-md-4"><app-field asp-for="FollowUpDate" label="@T["Follow-up date"].Value" type="date" required="true" /></div>
+            <div class="col-6 col-md-4"><app-field asp-for="WeightKg" label="@T["Weight (kg)"].Value" type="number" /></div>
+            <div class="col-6 col-md-4"><app-field asp-for="HeightCm" label="@T["Height (cm)"].Value" type="number" /></div>
+            <div class="col-6 col-md-4"><app-field asp-for="BodyFatPercent" label="@T["Body fat %"].Value" type="number" /></div>
+            <div class="col-6 col-md-4"><app-field asp-for="MuscleMassKg" label="@T["Muscle mass (kg)"].Value" type="number" /></div>
+            <div class="col-6 col-md-4"><app-field asp-for="WaistCircumferenceCm" label="@T["Waist (cm)"].Value" type="number" /></div>
+            <div class="col-6 col-md-4"><app-field asp-for="BloodPressureSys" label="@T["Blood pressure, systolic"].Value" type="number" step="1" /></div>
+            <div class="col-6 col-md-4"><app-field asp-for="BloodPressureDia" label="@T["Blood pressure, diastolic"].Value" type="number" step="1" /></div>
+        </div>
+    </app-card>
+
+    <app-card id="followup-notes" title="@T["Clinical notes"].Value" level="2" icon="bi-journal-text">
+        <div class="row g-3">
+            <div class="col-md-6"><app-field asp-for="DietCompliance" label="@T["Diet compliance"].Value" type="select" asp-items="diet" option-label="—" /></div>
+            <div class="col-md-6"><app-field asp-for="SideEffects" label="@T["Side effects"].Value" /></div>
+        </div>
+        <app-field asp-for="DoctorNotes" label="@T["Doctor's notes"].Value" type="textarea" rows="2" />
+        <app-field asp-for="NextWeekAdjustments" label="@T["Next week's adjustments"].Value" type="textarea" rows="2" />
+    </app-card>
+
+    <app-card id="followup-items" title="@T["Given this week"].Value" level="2" icon="bi-capsule">
+        @if (!packageItems.Any())
+        {
+            <p class="text-muted mb-0">@T["This package has no injections or vitamins."]</p>
+        }
+        else
+        {
+            <p class="text-muted small">@T["Tick each item given and check the quantity."]</p>
+            @for (var n = 0; n < thisWeek.Count; n++)
+            {
+                <partial name="_FollowUpItemRow" model="Row(n, thisWeek[n])" />
+            }
+            @if (!thisWeek.Any())
+            {
+                <p class="text-muted small">@T["The package plans nothing for week {0}.", week]</p>
+            }
+            @if (otherWeeks.Any())
+            {
+                <details class="mt-2" open="@(otherWeeks.Any(i => given.ContainsKey(i.Id)))">
+                    <summary>@T["Items from other weeks (given early or late)"]</summary>
+                    @for (var n = 0; n < otherWeeks.Count; n++)
+                    {
+                        <partial name="_FollowUpItemRow" model="Row(thisWeek.Count + n, otherWeeks[n])" />
+                    }
+                </details>
+            }
+        }
+    </app-card>
+
+    <app-card id="followup-labs" title="@T["Lab results"].Value" level="2" icon="bi-clipboard2-pulse">
+        <app-field asp-for="LabResultsSummary" label="@T["Lab results summary"].Value" type="textarea" rows="2" />
+        <div id="lab-rows"></div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addLabRow()">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> @T["Add lab result"]
+        </button>
+    </app-card>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">@(isEdit ? T["Save changes"] : T["Save follow-up"])</button>
+        <a href="@backUrl" class="btn btn-outline-secondary" data-draft-discard="@draftKey">@T["Cancel"]</a>
+    </div>
+</form>
+
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
     <script>
-        let itemIdx = 1, labIdx = 1;
-        document.getElementById('add-item').addEventListener('click', function () {
-            const c = document.getElementById('items-container');
-            const row = document.createElement('div');
-            row.className = 'row g-2 mb-2';
-            row.innerHTML = `
-                        <div class="col-md-4"><input type="number" name="AdministeredItems[${itemIdx}].PackageItemId" class="form-control form-control-sm" placeholder="Package Item ID" /></div>
-                        <div class="col-md-3"><input type="number" step="0.01" name="AdministeredItems[${itemIdx}].ActualQuantity" class="form-control form-control-sm" placeholder="Actual Qty" /></div>
-                        <div class="col-md-5"><input type="text" name="AdministeredItems[${itemIdx}].Notes" class="form-control form-control-sm" placeholder="Notes" /></div>`;
-            c.appendChild(row);
-            itemIdx++;
-        });
-        document.getElementById('add-lab').addEventListener('click', function () {
-            const c = document.getElementById('labs-container');
-            const row = document.createElement('div');
-            row.className = 'row g-2 mb-2';
-            row.innerHTML = `
-                        <div class="col-md-3"><input type="number" name="LabResults[${labIdx}].AnalysisTypeId" class="form-control form-control-sm" placeholder="Analysis Type ID" /></div>
-                        <div class="col-md-3"><input type="text" name="LabResults[${labIdx}].ResultValue" class="form-control form-control-sm" placeholder="Result" /></div>
-                        <div class="col-md-3"><input type="text" name="LabResults[${labIdx}].ReferenceRange" class="form-control form-control-sm" placeholder="Reference Range" /></div>
-                        <div class="col-md-3">
-                            <select name="LabResults[${labIdx}].IsNormal" class="form-select form-select-sm">
-                                <option value="">Normal?</option><option value="true">Normal</option><option value="false">Abnormal</option>
-                            </select>
-                        </div>`;
-            c.appendChild(row);
-            labIdx++;
-        });
+        const labOptions = @Html.Raw(Json.Serialize(labOptions));
+        const labText = @Html.Raw(Json.Serialize(new
+        {
+            analysis = T["Analysis"].Value, result = T["Result"].Value, range = T["Reference range"].Value,
+            normal = T["Normal?"].Value, yes = T["Normal"].Value, no = T["Abnormal"].Value,
+            remove = T["Remove this lab result"].Value, row = T["Lab result {0}", "{0}"].Value
+        }));
+        const enteredLabs = @Html.Raw(Json.Serialize(labRows));
+        const escHtml = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        let labIndex = 0;
+
+        function addLabRow(lab) {
+            const i = labIndex++;
+            const id = n => `lab-${i}-${n}`;
+            const opts = labOptions.map(o => `<option value="${escHtml(o.value)}">${escHtml(o.label)}</option>`).join('');
+            document.getElementById('lab-rows').insertAdjacentHTML('beforeend', `
+                <fieldset class="followup-lab" data-index="${i}">
+                    <legend class="visually-hidden">${escHtml(labText.row.replace('{0}', i + 1))}</legend>
+                    <div><label class="form-label small mb-1" for="${id('type')}">${escHtml(labText.analysis)}</label>
+                        <select class="form-select form-select-sm" id="${id('type')}" name="LabResults[${i}].AnalysisTypeId"><option value="">—</option>${opts}</select></div>
+                    <div><label class="form-label small mb-1" for="${id('value')}">${escHtml(labText.result)}</label>
+                        <input class="form-control form-control-sm" id="${id('value')}" name="LabResults[${i}].ResultValue" dir="auto" /></div>
+                    <div><label class="form-label small mb-1" for="${id('range')}">${escHtml(labText.range)}</label>
+                        <input class="form-control form-control-sm" id="${id('range')}" name="LabResults[${i}].ReferenceRange" dir="auto" /></div>
+                    <div><label class="form-label small mb-1" for="${id('normal')}">${escHtml(labText.normal)}</label>
+                        <select class="form-select form-select-sm" id="${id('normal')}" name="LabResults[${i}].IsNormal">
+                            <option value="">—</option><option value="true">${escHtml(labText.yes)}</option><option value="false">${escHtml(labText.no)}</option></select></div>
+                    <div class="followup-lab__remove">
+                        <button type="button" class="btn btn-sm btn-link text-danger" onclick="removeLabRow(this)">
+                            <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">${escHtml(labText.remove)}</span></button></div>
+                </fieldset>`);
+            if (lab) {
+                const row = document.getElementById('lab-rows').lastElementChild;
+                const set = (name, v) => { if (v !== null && v !== undefined) row.querySelector(`[name$=".${name}"]`).value = String(v); };
+                set('AnalysisTypeId', lab.analysisTypeId); set('ResultValue', lab.resultValue);
+                set('ReferenceRange', lab.referenceRange); set('IsNormal', lab.isNormal);
+            }
+        }
+
+        // The server reads LabResults[0], [1]… and stops at a gap, so rows are renumbered after one is removed.
+        function removeLabRow(button) {
+            button.closest('.followup-lab').remove();
+            const rows = document.querySelectorAll('#lab-rows .followup-lab');
+            rows.forEach(function (row, n) {
+                row.dataset.index = n;
+                row.querySelector('legend').textContent = labText.row.replace('{0}', n + 1);
+                row.querySelectorAll('[name], [id], label[for]').forEach(function (el) {
+                    if (el.name) el.name = el.name.replace(/^LabResults\[\d+\]/, 'LabResults[' + n + ']');
+                    if (el.id) el.id = el.id.replace(/^lab-\d+-/, 'lab-' + n + '-');
+                    if (el.htmlFor) el.htmlFor = el.htmlFor.replace(/^lab-\d+-/, 'lab-' + n + '-');
+                });
+            });
+            labIndex = rows.length;
+            document.querySelector('form[data-draft-key]').dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        // form-draft.js: make the kept lab rows exist before their values are put back.
+        function ensureLabRows(names) {
+            let highest = -1;
+            names.forEach(function (n) { const m = /^LabResults\[(\d+)\]\./.exec(n); if (m) highest = Math.max(highest, Number(m[1])); });
+            while (labIndex <= highest) addLabRow();
+        }
+
+        if (enteredLabs.length) enteredLabs.forEach(function (l) { addLabRow(l); });
+        else addLabRow();
     </script>
+    <script src="~/js/form-draft.js" asp-append-version="true"></script>
 }

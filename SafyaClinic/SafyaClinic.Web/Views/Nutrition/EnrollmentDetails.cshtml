@@ -125,9 +125,12 @@
                     }
                     <div class="d-flex flex-wrap gap-1 mt-2">
                         <a asp-action="FollowUpDetails" asp-route-id="@f.Id" class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @T["Week {0}", week]</span></a>
-                        @if (canManage)
+                        @if (canManage && status != EnrollmentStatus.Cancelled)
                         {
                             <a asp-action="EditFollowUp" asp-route-id="@f.Id" class="btn btn-sm btn-outline-secondary">@T["Edit"]<span class="visually-hidden"> @T["Week {0}", week]</span></a>
+                            @* M4b: only the latest week can be deleted, so weeks stay 1–4 with no gaps. *@
+                            if (week == nextWeek - 1)
+                            {
                             <form asp-action="DeleteFollowUp" method="post" class="d-inline" data-confirm="@T["Delete the week {0} follow-up?", week]">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@f.Id" />
@@ -136,6 +139,7 @@
                                     <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Delete the week {0} follow-up", week]</span>
                                 </button>
                             </form>
+                            }
                         }
                     </div>
                 }

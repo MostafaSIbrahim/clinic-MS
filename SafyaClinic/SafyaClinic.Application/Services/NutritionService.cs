@@ -310,6 +310,9 @@ public class NutritionService : INutritionService
 
     // ── Weekly Follow-Ups ────────────────────────────────────
 
+    /// <summary>M4b: the most weekly follow-ups an enrollment has (packages run four weeks).</summary>
+    public const int FollowUpWeeks = 4;
+
     public async Task<ServiceResult<WeeklyFollowUpDto>> RecordFollowUpAsync(
         int enrollmentId, RecordFollowUpDto request, int recordedBy)
     {
@@ -319,99 +322,35 @@ public class NutritionService : INutritionService
         if (enrollment.Status != EnrollmentStatus.Active)
             return ServiceResult<WeeklyFollowUpDto>.Failure("Enrollment is not active.");
 
-        // Determine next week number
-        var maxWeekNumber = await _uow.WeeklyFollowUps
-            .GetMaxWeekNumberAsync(enrollmentId);
-
+        // Weeks are numbered 1, 2, 3, 4 with no gaps: only the latest week can be deleted (M4b).
+        var maxWeekNumber = await _uow.WeeklyFollowUps.GetMaxWeekNumberAsync(enrollmentId);
         var nextWeek = (maxWeekNumber ?? 0) + 1;
-
-        if (nextWeek > 4)
+        if (nextWeek > FollowUpWeeks)
             return ServiceResult<WeeklyFollowUpDto>.Failure(
                 "All 4 weekly follow-ups are already recorded for this enrollment.");
+
+        var checkedInput = await CheckFollowUpInputAsync(enrollment, request);
+        if (checkedInput.Error is not null)
+            return ServiceResult<WeeklyFollowUpDto>.Failure(checkedInput.Error);
 
         var followUp = new WeeklyFollowUp
         {
             EnrollmentId = enrollmentId,
             WeekNumber = nextWeek,
-            FollowUpDate = request.FollowUpDate,
-            WeightKg = request.WeightKg,
-            HeightCm = request.HeightCm,
-            BodyFatPercent = request.BodyFatPercent,
-            MuscleMassKg = request.MuscleMassKg,
-            WaistCircumferenceCm = request.WaistCircumferenceCm,
-            BloodPressureSys = request.BloodPressureSys,
-            BloodPressureDia = request.BloodPressureDia,
-            LabResultsSummary = request.LabResultsSummary?.Trim(),
-            DoctorNotes = request.DoctorNotes?.Trim(),
-            DietCompliance = string.IsNullOrWhiteSpace(request.DietCompliance)
-                ? null
-                : Enum.Parse<DietCompliance>(request.DietCompliance),
-            SideEffects = request.SideEffects?.Trim(),
-            NextWeekAdjustments = request.NextWeekAdjustments?.Trim(),
             IsCompleted = false,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = recordedBy
         };
+        ApplyFollowUpFields(followUp, request, checkedInput.Diet);
 
         await _uow.WeeklyFollowUps.AddAsync(followUp);
         await _uow.SaveChangesAsync();
 
-        // Administered items
-
-        var packageItemIds = request.AdministeredItems
-            .Where(i => i.PackageItemId.HasValue)
-            .Select(i => i.PackageItemId!.Value)
-            .Distinct()
-            .ToList();
-
-        var existingPackageItemIds = packageItemIds.Count == 0
-            ? new HashSet<int>()
-            : (await _uow.PackageItems
-                .Query()
-                .Where(p => packageItemIds.Contains(p.Id))
-                .Select(p => p.Id)
-                .ToListAsync())
-                .ToHashSet();
-
-        var administeredItems = request.AdministeredItems
-                .Where(item => item.PackageItemId.HasValue &&
-                            item.ActualQuantity.HasValue &&
-                            existingPackageItemIds.Contains(item.PackageItemId.Value))
-                .Select(item => new WeeklyAdministeredItem
-                {
-                    FollowUpId = followUp.Id,
-                    PackageItemId = item.PackageItemId!.Value,
-                    ActualQuantity = item.ActualQuantity!.Value,
-                    AdministeredBy = recordedBy,
-                    AdministeredAt = DateTime.UtcNow,
-                    Notes = item.Notes?.Trim()
-                })
-                .ToList();
-
-        await _uow.WeeklyAdministeredItems.AddRangeAsync(administeredItems);
-
-        // Lab results
-
-        var labResults = request.LabResults
-                .Where(lab => lab.AnalysisTypeId.HasValue)
-                .Select(lab => new WeeklyFollowUpLabResult
-                {
-                    FollowUpId = followUp.Id,
-                    AnalysisTypeId = lab.AnalysisTypeId!.Value,
-                    ResultValue = lab.ResultValue?.Trim(),
-                    ReferenceRange = lab.ReferenceRange?.Trim(),
-                    IsNormal = lab.IsNormal,
-                    Notes = lab.Notes?.Trim(),
-                    CreatedAt = DateTime.UtcNow
-                })
-                .ToList();
-
-        await _uow.WeeklyFollowUpLabResults.AddRangeAsync(labResults);
-
+        await AddFollowUpItemsAsync(followUp.Id, request, recordedBy);
         await _uow.SaveChangesAsync();
 
-        // Auto-complete enrollment if all 4 weeks done
-        if (nextWeek == 4)
+        // Auto-complete the enrollment when its last week is recorded.
+        if (nextWeek == FollowUpWeeks)
         {
             enrollment.Status = EnrollmentStatus.Completed;
             _uow.NutritionEnrollments.Update(enrollment);
@@ -420,6 +359,107 @@ public class NutritionService : INutritionService
 
         return ServiceResult<WeeklyFollowUpDto>.Success(
             await BuildFollowUpDtoAsync(followUp));
+    }
+
+    /// <summary>
+    /// M4b: checks a follow-up form. Administered items must be items of this enrollment's package, with a
+    /// quantity; lab results must name a known analysis. Before, unknown numbers were silently dropped.
+    /// </summary>
+    private async Task<(string? Error, DietCompliance? Diet)> CheckFollowUpInputAsync(
+        PatientNutritionEnrollment enrollment, RecordFollowUpDto request)
+    {
+        if (request.FollowUpDate == default)
+            return ("Enter the follow-up date.", null);
+
+        DietCompliance? diet = null;
+        if (!string.IsNullOrWhiteSpace(request.DietCompliance))
+        {
+            if (!Enum.TryParse<DietCompliance>(request.DietCompliance, out var parsed) || !Enum.IsDefined(parsed))
+                return ("Choose a valid diet compliance.", null);
+            diet = parsed;
+        }
+
+        var itemIds = request.AdministeredItems
+            .Where(i => i.PackageItemId.HasValue)
+            .Select(i => i.PackageItemId!.Value)
+            .ToList();
+        if (itemIds.Count != itemIds.Distinct().Count())
+            return ("Each package item can be recorded once per follow-up.", null);
+        if (request.AdministeredItems.Any(i => i.PackageItemId.HasValue && (i.ActualQuantity is null || i.ActualQuantity <= 0)))
+            return ("Enter the quantity given for each item you ticked.", null);
+        if (itemIds.Count > 0)
+        {
+            var packageItemIds = await _uow.PackageItems.Query()
+                .Where(p => p.PackageId == enrollment.PackageId && itemIds.Contains(p.Id))
+                .Select(p => p.Id)
+                .ToListAsync();
+            if (packageItemIds.Count != itemIds.Count)
+                return ("An administered item isn't part of this enrollment's package.", null);
+        }
+
+        var analysisIds = request.LabResults
+            .Where(l => l.AnalysisTypeId.HasValue)
+            .Select(l => l.AnalysisTypeId!.Value)
+            .Distinct()
+            .ToList();
+        if (analysisIds.Count > 0)
+        {
+            var known = await _uow.AnalysisTypes.Query().CountAsync(a => analysisIds.Contains(a.Id));
+            if (known != analysisIds.Count)
+                return ("A lab result names an analysis that doesn't exist.", null);
+        }
+        if (request.LabResults.Any(l => !l.AnalysisTypeId.HasValue
+                && (!string.IsNullOrWhiteSpace(l.ResultValue) || !string.IsNullOrWhiteSpace(l.ReferenceRange))))
+            return ("Choose the analysis for each lab result.", null);
+
+        return (null, diet);
+    }
+
+    private static void ApplyFollowUpFields(WeeklyFollowUp followUp, RecordFollowUpDto request, DietCompliance? diet)
+    {
+        followUp.FollowUpDate = request.FollowUpDate.Date;
+        followUp.WeightKg = request.WeightKg;
+        followUp.HeightCm = request.HeightCm;
+        followUp.BodyFatPercent = request.BodyFatPercent;
+        followUp.MuscleMassKg = request.MuscleMassKg;
+        followUp.WaistCircumferenceCm = request.WaistCircumferenceCm;
+        followUp.BloodPressureSys = request.BloodPressureSys;
+        followUp.BloodPressureDia = request.BloodPressureDia;
+        followUp.LabResultsSummary = request.LabResultsSummary?.Trim();
+        followUp.DoctorNotes = request.DoctorNotes?.Trim();
+        followUp.DietCompliance = diet;
+        followUp.SideEffects = request.SideEffects?.Trim();
+        followUp.NextWeekAdjustments = request.NextWeekAdjustments?.Trim();
+    }
+
+    private async Task AddFollowUpItemsAsync(int followUpId, RecordFollowUpDto request, int recordedBy)
+    {
+        await _uow.WeeklyAdministeredItems.AddRangeAsync(request.AdministeredItems
+            .Where(item => item.PackageItemId.HasValue && item.ActualQuantity.HasValue)
+            .Select(item => new WeeklyAdministeredItem
+            {
+                FollowUpId = followUpId,
+                PackageItemId = item.PackageItemId!.Value,
+                ActualQuantity = item.ActualQuantity!.Value,
+                AdministeredBy = recordedBy,
+                AdministeredAt = DateTime.UtcNow,
+                Notes = item.Notes?.Trim()
+            })
+            .ToList());
+
+        await _uow.WeeklyFollowUpLabResults.AddRangeAsync(request.LabResults
+            .Where(lab => lab.AnalysisTypeId.HasValue)
+            .Select(lab => new WeeklyFollowUpLabResult
+            {
+                FollowUpId = followUpId,
+                AnalysisTypeId = lab.AnalysisTypeId!.Value,
+                ResultValue = lab.ResultValue?.Trim(),
+                ReferenceRange = lab.ReferenceRange?.Trim(),
+                IsNormal = lab.IsNormal,
+                Notes = lab.Notes?.Trim(),
+                CreatedAt = DateTime.UtcNow
+            })
+            .ToList());
     }
 
     public async Task<ServiceResult<WeeklyFollowUpDto>> GetFollowUpByIdAsync(int followUpId)
@@ -451,63 +491,83 @@ public class NutritionService : INutritionService
         await _uow.SaveChangesAsync();
         return ServiceResult.Success("Follow-up marked as completed.");
     }
-    // In NutritionService.cs
-
     public async Task<ServiceResult<WeeklyFollowUpDto>> UpdateFollowUpAsync(
         int followUpId, RecordFollowUpDto request, int updatedBy)
     {
         var followUp = await _uow.WeeklyFollowUps.GetByIdAsync(followUpId);
         if (followUp is null)
             return ServiceResult<WeeklyFollowUpDto>.Failure("Follow-up not found.");
+        var enrollment = await _uow.NutritionEnrollments.GetByIdAsync(followUp.EnrollmentId);
+        if (enrollment is null)
+            return ServiceResult<WeeklyFollowUpDto>.Failure("Enrollment not found.");
+        if (enrollment.Status == EnrollmentStatus.Cancelled)
+            return ServiceResult<WeeklyFollowUpDto>.Failure(CancelledFollowUpMessage);
 
-        // Update scalar properties
-        followUp.FollowUpDate = request.FollowUpDate;
-        followUp.WeightKg = request.WeightKg;
-        followUp.HeightCm = request.HeightCm;
-        followUp.BodyFatPercent = request.BodyFatPercent;
-        followUp.MuscleMassKg = request.MuscleMassKg;
-        followUp.WaistCircumferenceCm = request.WaistCircumferenceCm;
-        followUp.BloodPressureSys = request.BloodPressureSys;
-        followUp.BloodPressureDia = request.BloodPressureDia;
-        followUp.LabResultsSummary = request.LabResultsSummary?.Trim();
-        followUp.DoctorNotes = request.DoctorNotes?.Trim();
-        followUp.DietCompliance = string.IsNullOrWhiteSpace(request.DietCompliance)
-            ? null
-            : Enum.Parse<DietCompliance>(request.DietCompliance);
-        followUp.SideEffects = request.SideEffects?.Trim();
-        followUp.NextWeekAdjustments = request.NextWeekAdjustments?.Trim();
-        followUp.UpdatedAt = DateTime.UtcNow;
-        followUp.UpdatedBy = updatedBy;
+        var checkedInput = await CheckFollowUpInputAsync(enrollment, request);
+        if (checkedInput.Error is not null)
+            return ServiceResult<WeeklyFollowUpDto>.Failure(checkedInput.Error);
 
+        // M4b: the same week is changed (its number never changes), including its items and lab results,
+        // which are replaced by what the form now lists.
+        ApplyFollowUpFields(followUp, request, checkedInput.Diet);
         _uow.WeeklyFollowUps.Update(followUp);
+        _uow.WeeklyAdministeredItems.DeleteRange(await _uow.WeeklyAdministeredItems.FindAsync(a => a.FollowUpId == followUpId));
+        _uow.WeeklyFollowUpLabResults.DeleteRange(await _uow.WeeklyFollowUpLabResults.FindAsync(l => l.FollowUpId == followUpId));
+        await AddFollowUpItemsAsync(followUpId, request, updatedBy);
+        await _audit.RecordAsync(AuditActions.FollowUpEdited, "WeeklyFollowUp", followUpId,
+            new { enrollmentId = followUp.EnrollmentId, week = followUp.WeekNumber });
         await _uow.SaveChangesAsync();
-
-        // Optional: Update administered items and lab results
-        // (Delete existing and re-add, or implement merge logic)
 
         return ServiceResult<WeeklyFollowUpDto>.Success(
             await BuildFollowUpDtoAsync(followUp));
     }
+
+    public const string CancelledFollowUpMessage = "This enrollment is cancelled; its follow-ups can't be changed.";
+    public const string OnlyLatestWeekMessage = "Only the latest week's follow-up can be deleted.";
 
     public async Task<ServiceResult> DeleteFollowUpAsync(int followUpId)
     {
         var followUp = await _uow.WeeklyFollowUps.GetByIdAsync(followUpId);
         if (followUp is null)
             return ServiceResult.Failure("Follow-up not found.");
+        var enrollment = await _uow.NutritionEnrollments.GetByIdAsync(followUp.EnrollmentId);
+        if (enrollment is null)
+            return ServiceResult.Failure("Enrollment not found.");
+        if (enrollment.Status == EnrollmentStatus.Cancelled)
+            return ServiceResult.Failure(CancelledFollowUpMessage);
 
-        // Delete related records first
-        var administeredItems = await _uow.WeeklyAdministeredItems
-            .FindAsync(a => a.FollowUpId == followUpId);
-        _uow.WeeklyAdministeredItems.DeleteRange(administeredItems);
+        // M4b (decision 3): only the latest week, so weeks stay 1, 2, 3, 4 with no gaps.
+        var latest = await _uow.WeeklyFollowUps.GetMaxWeekNumberAsync(followUp.EnrollmentId);
+        if (followUp.WeekNumber != latest)
+            return ServiceResult.Failure(OnlyLatestWeekMessage);
 
-        var labResults = await _uow.WeeklyFollowUpLabResults
-            .FindAsync(l => l.FollowUpId == followUpId);
-        _uow.WeeklyFollowUpLabResults.DeleteRange(labResults);
+        // Deleting the last week of a completed enrollment makes it active again, unless the patient has
+        // since started another active enrollment (one active enrollment per patient).
+        var reopen = enrollment.Status == EnrollmentStatus.Completed;
+        if (reopen && await _uow.NutritionEnrollments.Query()
+                .AnyAsync(e => e.PatientId == enrollment.PatientId && e.Id != enrollment.Id && e.Status == EnrollmentStatus.Active))
+            return ServiceResult.Failure(
+                "The patient has another active enrollment, so this completed one can't be reopened by deleting its last week.");
 
+        _uow.WeeklyAdministeredItems.DeleteRange(await _uow.WeeklyAdministeredItems.FindAsync(a => a.FollowUpId == followUpId));
+        _uow.WeeklyFollowUpLabResults.DeleteRange(await _uow.WeeklyFollowUpLabResults.FindAsync(l => l.FollowUpId == followUpId));
         _uow.WeeklyFollowUps.Delete(followUp);
+
+        if (reopen)
+        {
+            enrollment.Status = EnrollmentStatus.Active;
+            enrollment.UpdatedAt = DateTime.UtcNow;
+            _uow.NutritionEnrollments.Update(enrollment);
+            await _audit.RecordAsync(AuditActions.EnrollmentStatusChanged, "NutritionEnrollment", enrollment.Id,
+                new { from = nameof(EnrollmentStatus.Completed), to = nameof(EnrollmentStatus.Active), reason = "last week deleted" });
+        }
+        await _audit.RecordAsync(AuditActions.FollowUpDeleted, "WeeklyFollowUp", followUpId,
+            new { enrollmentId = followUp.EnrollmentId, week = followUp.WeekNumber });
         await _uow.SaveChangesAsync();
 
-        return ServiceResult.Success("Follow-up deleted.");
+        return ServiceResult.Success(reopen
+            ? "Follow-up deleted. The enrollment is active again."
+            : "Follow-up deleted.");
     }
     // ── Injection Type catalog ───────────────────────────────
 
@@ -854,6 +914,8 @@ public class NutritionService : INutritionService
             administeredDtos.Add(new AdministeredItemDto
             {
                 Id = a.Id,
+                PackageItemId = a.PackageItemId,
+                Notes = a.Notes,
                 ItemName = itemName,
                 ActualQuantity = a.ActualQuantity,
                 AdministeredByName = administerer?.FullName ?? "",
@@ -868,6 +930,8 @@ public class NutritionService : INutritionService
             labDtos.Add(new LabResultDto
             {
                 Id = l.Id,
+                AnalysisTypeId = l.AnalysisTypeId,
+                Notes = l.Notes,
                 AnalysisTypeName = aType?.TypeName ?? "",
                 ResultValue = l.ResultValue,
                 ReferenceRange = l.ReferenceRange,
@@ -882,6 +946,7 @@ public class NutritionService : INutritionService
             WeekNumber = f.WeekNumber,
             FollowUpDate = f.FollowUpDate,
             WeightKg = f.WeightKg,
+            HeightCm = f.HeightCm,   // M4b: was missing, so editing a follow-up cleared the height
             BMI = f.BMI,
             BodyFatPercent = f.BodyFatPercent,
             MuscleMassKg = f.MuscleMassKg,
@@ -889,6 +954,8 @@ public class NutritionService : INutritionService
             BloodPressure = (f.BloodPressureSys.HasValue && f.BloodPressureDia.HasValue)
                 ? $"{f.BloodPressureSys}/{f.BloodPressureDia}"
                 : null,
+            BloodPressureSys = f.BloodPressureSys,
+            BloodPressureDia = f.BloodPressureDia,
             LabResultsSummary = f.LabResultsSummary,
             DoctorNotes = f.DoctorNotes,
             DietCompliance = f.DietCompliance?.ToString(),

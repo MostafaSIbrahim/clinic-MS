@@ -1767,4 +1767,160 @@
   <data name="Weekly follow-ups" xml:space="preserve">
     <value>المتابعات الأسبوعية</value>
   </data>
+  <data name="Abnormal" xml:space="preserve">
+    <value>غير طبيعي</value>
+  </data>
+  <data name="Add lab result" xml:space="preserve">
+    <value>إضافة نتيجة تحليل</value>
+  </data>
+  <data name="BMI" xml:space="preserve">
+    <value>مؤشر كتلة الجسم</value>
+  </data>
+  <data name="Back to the enrollment" xml:space="preserve">
+    <value>العودة إلى الاشتراك</value>
+  </data>
+  <data name="Blood pressure" xml:space="preserve">
+    <value>ضغط الدم</value>
+  </data>
+  <data name="Blood pressure, diastolic" xml:space="preserve">
+    <value>ضغط الدم الانبساطي</value>
+  </data>
+  <data name="Blood pressure, systolic" xml:space="preserve">
+    <value>ضغط الدم الانقباضي</value>
+  </data>
+  <data name="Body fat" xml:space="preserve">
+    <value>نسبة الدهون</value>
+  </data>
+  <data name="Body fat %" xml:space="preserve">
+    <value>نسبة الدهون ٪</value>
+  </data>
+  <data name="Clinical notes" xml:space="preserve">
+    <value>ملاحظات سريرية</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>حذف</value>
+  </data>
+  <data name="Diet compliance" xml:space="preserve">
+    <value>الالتزام بالنظام الغذائي</value>
+  </data>
+  <data name="Doctor's notes" xml:space="preserve">
+    <value>ملاحظات الطبيب</value>
+  </data>
+  <data name="Edit week {0} follow-up" xml:space="preserve">
+    <value>تعديل متابعة الأسبوع {0}</value>
+  </data>
+  <data name="Excellent" xml:space="preserve">
+    <value>ممتاز</value>
+  </data>
+  <data name="Fair" xml:space="preserve">
+    <value>مقبول</value>
+  </data>
+  <data name="Given this week" xml:space="preserve">
+    <value>ما أُعطي هذا الأسبوع</value>
+  </data>
+  <data name="Good" xml:space="preserve">
+    <value>جيد</value>
+  </data>
+  <data name="Height (cm)" xml:space="preserve">
+    <value>الطول (سم)</value>
+  </data>
+  <data name="Injection" xml:space="preserve">
+    <value>حقنة</value>
+  </data>
+  <data name="Items from other weeks (given early or late)" xml:space="preserve">
+    <value>عناصر من أسابيع أخرى (أُعطيت مبكرًا أو متأخرًا)</value>
+  </data>
+  <data name="Lab result {0}" xml:space="preserve">
+    <value>نتيجة التحليل {0}</value>
+  </data>
+  <data name="Lab results" xml:space="preserve">
+    <value>نتائج التحاليل</value>
+  </data>
+  <data name="Lab results summary" xml:space="preserve">
+    <value>ملخص نتائج التحاليل</value>
+  </data>
+  <data name="Mark completed" xml:space="preserve">
+    <value>تحديد كمكتمل</value>
+  </data>
+  <data name="Measurements" xml:space="preserve">
+    <value>القياسات</value>
+  </data>
+  <data name="Muscle mass" xml:space="preserve">
+    <value>الكتلة العضلية</value>
+  </data>
+  <data name="Muscle mass (kg)" xml:space="preserve">
+    <value>الكتلة العضلية (كجم)</value>
+  </data>
+  <data name="Next week's adjustments" xml:space="preserve">
+    <value>تعديلات الأسبوع القادم</value>
+  </data>
+  <data name="No lab results recorded." xml:space="preserve">
+    <value>لا توجد نتائج تحاليل مسجلة.</value>
+  </data>
+  <data name="None reported" xml:space="preserve">
+    <value>لا يوجد</value>
+  </data>
+  <data name="Normal" xml:space="preserve">
+    <value>طبيعي</value>
+  </data>
+  <data name="Normal?" xml:space="preserve">
+    <value>طبيعي؟</value>
+  </data>
+  <data name="Nothing recorded." xml:space="preserve">
+    <value>لم يُسجَّل شيء.</value>
+  </data>
+  <data name="Planned: {0} {1}" xml:space="preserve">
+    <value>المخطط: {0} {1}</value>
+  </data>
+  <data name="Poor" xml:space="preserve">
+    <value>ضعيف</value>
+  </data>
+  <data name="Quantity given" xml:space="preserve">
+    <value>الكمية المعطاة</value>
+  </data>
+  <data name="Record week {0} follow-up" xml:space="preserve">
+    <value>تسجيل متابعة الأسبوع {0}</value>
+  </data>
+  <data name="Reference range" xml:space="preserve">
+    <value>المعدل المرجعي</value>
+  </data>
+  <data name="Remove this lab result" xml:space="preserve">
+    <value>إزالة نتيجة التحليل هذه</value>
+  </data>
+  <data name="Result" xml:space="preserve">
+    <value>النتيجة</value>
+  </data>
+  <data name="Save follow-up" xml:space="preserve">
+    <value>حفظ المتابعة</value>
+  </data>
+  <data name="Side effects" xml:space="preserve">
+    <value>الآثار الجانبية</value>
+  </data>
+  <data name="The package plans nothing for week {0}." xml:space="preserve">
+    <value>لا تخطط الباقة شيئًا للأسبوع {0}.</value>
+  </data>
+  <data name="This package has no injections or vitamins." xml:space="preserve">
+    <value>لا تحتوي هذه الباقة على حقن أو فيتامينات.</value>
+  </data>
+  <data name="Tick each item given and check the quantity." xml:space="preserve">
+    <value>اختر كل عنصر أُعطي وتحقق من الكمية.</value>
+  </data>
+  <data name="Vitamin" xml:space="preserve">
+    <value>فيتامين</value>
+  </data>
+  <data name="Waist" xml:space="preserve">
+    <value>محيط الخصر</value>
+  </data>
+  <data name="Waist (cm)" xml:space="preserve">
+    <value>محيط الخصر (سم)</value>
+  </data>
+  <data name="Week {0} follow-up" xml:space="preserve">
+    <value>متابعة الأسبوع {0}</value>
+  </data>
+  <data name="Weight (kg)" xml:space="preserve">
+    <value>الوزن (كجم)</value>
+  </data>
+  <data name="reference {0}" xml:space="preserve">
+    <value>المرجع {0}</value>
+  </data>
 </root>

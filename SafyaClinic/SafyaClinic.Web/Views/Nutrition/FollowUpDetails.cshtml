@@ -1,118 +1,145 @@
 @model WeeklyFollowUpDto
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
-    ViewData["Title"] = $"Week {Model.WeekNumber} Follow-Up";
+    // M4b: one weekly follow-up. Shared layout, the patient header, English and Arabic. Edit and Delete are
+    // shown to people who manage nutrition; Delete only on the latest week (the server checks again).
+    ViewData["Title"] = T["Week {0} follow-up", Model.WeekNumber].Value;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var enrollment = ViewBag.Enrollment as PatientEnrollmentDto;
+    var canManage = await Can.HasAsync(Permissions.Nutrition.Manage);
+    var cancelled = enrollment?.Status == "Cancelled";
+    var isLatest = enrollment == null || enrollment.WeeklyFollowUps.Max(f => (int?)f.WeekNumber) == Model.WeekNumber;
+    string N(decimal? v, string unitKey) => v is decimal d ? T[unitKey, d.ToString("0.##", inv)].Value : "—";
 }
-
-<div class="d-flex justify-content-between align-items-start mb-3">
+<div class="page-toolbar">
     <div>
-        <h4 class="mb-0">Week @Model.WeekNumber Follow-Up</h4>
-        <small class="text-muted">@Model.FollowUpDate.ToString("dd MMM yyyy")</small>
+        <h1>@T["Week {0} follow-up", Model.WeekNumber]</h1>
+        <p class="text-muted mb-0">
+            @Model.FollowUpDate.ToString("dd MMM yyyy", inv)
+            @if (enrollment != null)
+            {
+                <span> · </span><span dir="auto">@enrollment.PackageName</span>
+            }
+            @if (Model.IsCompleted)
+            {
+                <span> · </span><span class="app-status app-status--completed">@T["Completed"]</span>
+            }
+        </p>
     </div>
-    @if (!Model.IsCompleted)
-    {
-        <form asp-action="CompleteFollowUp" asp-route-id="@Model.Id" asp-route-enrollmentId="@Model.EnrollmentId" method="post">
-            @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg me-1"></i>Mark Completed</button>
-        </form>
-    }
-    else
-    {
-        <span class="badge bg-success fs-6">Completed</span>
-    }
+    <div class="page-actions">
+        @if (canManage && !cancelled)
+        {
+            @if (!Model.IsCompleted)
+            {
+                <form asp-action="CompleteFollowUp" asp-route-id="@Model.Id" asp-route-enrollmentId="@Model.EnrollmentId" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-success">@T["Mark completed"]</button>
+                </form>
+            }
+            <a asp-action="EditFollowUp" asp-route-id="@Model.Id" class="btn btn-outline-primary">@T["Edit"]</a>
+            @if (isLatest)
+            {
+                <form asp-action="DeleteFollowUp" method="post" class="d-inline" data-confirm="@T["Delete the week {0} follow-up?", Model.WeekNumber]">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="enrollmentId" value="@Model.EnrollmentId" />
+                    <button type="submit" class="btn btn-outline-danger">@T["Delete"]</button>
+                </form>
+            }
+        }
+        <a asp-action="EnrollmentDetails" asp-route-id="@Model.EnrollmentId" class="btn btn-outline-secondary">@T["Back to the enrollment"]</a>
+    </div>
 </div>
 
-<div class="row g-3">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-speedometer2 me-2"></i>Vitals & Measurements</div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-6 text-muted">Weight</dt>
-                    <dd class="col-6">@(Model.WeightKg != null ? $"{Model.WeightKg} kg" : "—")</dd>
-                    <dt class="col-6 text-muted">BMI</dt>
-                    <dd class="col-6">@(Model.BMI != null ? Model.BMI.Value.ToString("0.0") : "—")</dd>
-                    <dt class="col-6 text-muted">Body Fat %</dt>
-                    <dd class="col-6">@(Model.BodyFatPercent != null ? $"{Model.BodyFatPercent}%" : "—")</dd>
-                    <dt class="col-6 text-muted">Muscle Mass</dt>
-                    <dd class="col-6">@(Model.MuscleMassKg != null ? $"{Model.MuscleMassKg} kg" : "—")</dd>
-                    <dt class="col-6 text-muted">Waist</dt>
-                    <dd class="col-6">@(Model.WaistCircumferenceCm != null ? $"{Model.WaistCircumferenceCm} cm" : "—")</dd>
-                    <dt class="col-6 text-muted">Blood Pressure</dt>
-                    <dd class="col-6">@(Model.BloodPressure ?? "—")</dd>
-                </dl>
-            </div>
-        </div>
+@if (enrollment != null)
+{
+    @await Component.InvokeAsync("PatientHeader", new { patientId = enrollment.PatientId })
+}
 
-        <div class="card mt-3">
-            <div class="card-header"><i class="bi bi-journal-text me-2"></i>Doctor's Notes</div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-5 text-muted">Diet Compliance</dt>
-                    <dd class="col-7">@(Model.DietCompliance ?? "—")</dd>
-                    <dt class="col-5 text-muted">Side Effects</dt>
-                    <dd class="col-7">@(Model.SideEffects ?? "None reported")</dd>
-                    <dt class="col-5 text-muted">Notes</dt>
-                    <dd class="col-7">@(Model.DoctorNotes ?? "—")</dd>
-                    <dt class="col-5 text-muted">Next Week Adjustments</dt>
-                    <dd class="col-7">@(Model.NextWeekAdjustments ?? "—")</dd>
-                </dl>
-            </div>
-        </div>
+<div class="row g-3 followup-details">
+    <div class="col-lg-6">
+        <app-card id="followup-measurements" title="@T["Measurements"].Value" level="2" icon="bi-speedometer2">
+            <dl class="row mb-0">
+                <dt class="col-6">@T["Weight"]</dt><dd class="col-6">@N(Model.WeightKg, "{0} kg")</dd>
+                <dt class="col-6">@T["Height"]</dt><dd class="col-6">@N(Model.HeightCm, "{0} cm")</dd>
+                <dt class="col-6">@T["BMI"]</dt><dd class="col-6">@(Model.BMI?.ToString("0.0", inv) ?? "—")</dd>
+                <dt class="col-6">@T["Body fat"]</dt><dd class="col-6">@(Model.BodyFatPercent is decimal bf ? bf.ToString("0.##", inv) + "%" : "—")</dd>
+                <dt class="col-6">@T["Muscle mass"]</dt><dd class="col-6">@N(Model.MuscleMassKg, "{0} kg")</dd>
+                <dt class="col-6">@T["Waist"]</dt><dd class="col-6">@N(Model.WaistCircumferenceCm, "{0} cm")</dd>
+                <dt class="col-6">@T["Blood pressure"]</dt><dd class="col-6" dir="ltr">@(Model.BloodPressure ?? "—")</dd>
+            </dl>
+        </app-card>
+
+        <app-card id="followup-notes" title="@T["Clinical notes"].Value" level="2" icon="bi-journal-text">
+            <dl class="row mb-0">
+                <dt class="col-sm-5">@T["Diet compliance"]</dt><dd class="col-sm-7">@(Model.DietCompliance is { } dc ? T[dc].Value : "—")</dd>
+                <dt class="col-sm-5">@T["Side effects"]</dt><dd class="col-sm-7 clinical-text" dir="auto">@(Model.SideEffects ?? T["None reported"].Value)</dd>
+                <dt class="col-sm-5">@T["Doctor's notes"]</dt><dd class="col-sm-7 clinical-text" dir="auto">@(Model.DoctorNotes ?? "—")</dd>
+                <dt class="col-sm-5">@T["Next week's adjustments"]</dt><dd class="col-sm-7 clinical-text" dir="auto">@(Model.NextWeekAdjustments ?? "—")</dd>
+            </dl>
+        </app-card>
     </div>
 
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header"><i class="bi bi-syringe me-2"></i>Administered Items</div>
-            <div class="card-body">
-                @if (!Model.AdministeredItems.Any())
-                {
-                    <p class="text-muted small mb-0">No items recorded.</p>
-                }
-                else
-                {
-                    <ul class="list-group list-group-flush">
-                        @foreach (var a in Model.AdministeredItems)
-                        {
-                            <li class="list-group-item px-0">
-                                <strong>@a.ItemName</strong> — @a.ActualQuantity
-                                <div class="small text-muted">
-                                    @(a.AdministeredByName ?? "—") • @a.AdministeredAt.ToString("dd MMM yyyy HH:mm")
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                }
-            </div>
-        </div>
+    <div class="col-lg-6">
+        <app-card id="followup-items" title="@T["Given this week"].Value" level="2" icon="bi-capsule">
+            @if (!Model.AdministeredItems.Any())
+            {
+                <p class="text-muted small mb-0">@T["Nothing recorded."]</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var a in Model.AdministeredItems)
+                    {
+                        <li class="mb-2">
+                            <strong dir="auto">@a.ItemName</strong> · @a.ActualQuantity.ToString("0.##", inv)
+                            @if (!string.IsNullOrWhiteSpace(a.Notes))
+                            {
+                                <span class="text-muted" dir="auto"> · @a.Notes</span>
+                            }
+                            <div class="small text-muted">
+                                <span dir="auto">@(string.IsNullOrEmpty(a.AdministeredByName) ? "—" : a.AdministeredByName)</span> ·
+                                @Clock.ToClinicTime(DateTime.SpecifyKind(a.AdministeredAt, DateTimeKind.Utc)).ToString("dd MMM yyyy HH:mm", inv)
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </app-card>
 
-        <div class="card mt-3">
-            <div class="card-header"><i class="bi bi-clipboard2-pulse me-2"></i>Lab Results</div>
-            <div class="card-body">
-                @if (!Model.LabResults.Any())
-                {
-                    <p class="text-muted small mb-0">@(Model.LabResultsSummary ?? "No lab results recorded.")</p>
-                }
-                else
-                {
-                    <ul class="list-group list-group-flush">
-                        @foreach (var l in Model.LabResults)
-                        {
-                            <li class="list-group-item px-0 d-flex justify-content-between">
-                                <div>
-                                    <strong>@l.AnalysisTypeName</strong>
-                                    <div class="small text-muted">@(l.ResultValue ?? "—") @(l.ReferenceRange != null ? $"(ref: {l.ReferenceRange})" : "")</div>
+        <app-card id="followup-labs" title="@T["Lab results"].Value" level="2" icon="bi-clipboard2-pulse">
+            @if (!string.IsNullOrWhiteSpace(Model.LabResultsSummary))
+            {
+                <p class="clinical-text" dir="auto">@Model.LabResultsSummary</p>
+            }
+            @if (!Model.LabResults.Any())
+            {
+                <p class="text-muted small mb-0">@T["No lab results recorded."]</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var l in Model.LabResults)
+                    {
+                        <li class="d-flex justify-content-between gap-2 mb-2">
+                            <div>
+                                <strong dir="auto">@l.AnalysisTypeName</strong>
+                                <div class="small text-muted" dir="auto">
+                                    @(l.ResultValue ?? "—")
+                                    @if (!string.IsNullOrWhiteSpace(l.ReferenceRange))
+                                    {
+                                        <span>(@T["reference {0}", l.ReferenceRange])</span>
+                                    }
                                 </div>
-                                @if (l.IsNormal.HasValue)
-                                {
-                                    <span class="badge @(l.IsNormal == true ? "bg-success" : "bg-danger")">
-                                        @(l.IsNormal == true ? "Normal" : "Abnormal")
-                                    </span>
-                                }
-                            </li>
-                        }
-                    </ul>
-                }
-            </div>
-        </div>
+                            </div>
+                            @if (l.IsNormal.HasValue)
+                            {
+                                <span class="app-status @(l.IsNormal == true ? "app-status--completed" : "app-status--due")">@(l.IsNormal == true ? T["Normal"] : T["Abnormal"])</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </app-card>
     </div>
 </div>

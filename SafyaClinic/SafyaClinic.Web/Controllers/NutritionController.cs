@@ -14,13 +14,16 @@ namespace SafyaClinic.Web.Controllers
         private readonly IPatientService _patientService;
         private readonly IUserService _userService;
         private readonly IClinicClock _clock;
+        private readonly IAnalysisService _analysisService;
 
         public NutritionController(
             INutritionService nutritionService,
             IPatientService patientService,
             IUserService userService,
-            IClinicClock clock)
+            IClinicClock clock,
+            IAnalysisService analysisService)
         {
+            _analysisService = analysisService;
             _nutritionService = nutritionService;
             _patientService = patientService;
             _userService = userService;
@@ -151,18 +154,54 @@ namespace SafyaClinic.Web.Controllers
         }
 
         // ── Weekly Follow-Ups ────────────────────────────────────
+        // M4b: Edit really edits (it saved a new week before); items are chosen from the enrollment's package and
+        // lab results from the analysis list (people had to type database numbers); a refused form keeps its lists.
 
         public async Task<IActionResult> FollowUpDetails(int id)
         {
             var result = await _nutritionService.GetFollowUpByIdAsync(id);
             if (!result.IsSuccess) { Error("Follow-up not found."); return RedirectToAction(nameof(Packages)); }
+            var enrollment = await _nutritionService.GetEnrollmentByIdAsync(result.Data!.EnrollmentId);
+            ViewBag.Enrollment = enrollment.Data;
             return View(result.Data);
         }
 
+        /// <summary>The enrollment, its package's items and the analysis list for the follow-up form.</summary>
+        private async Task<bool> LoadFollowUpFormAsync(int enrollmentId, int weekNumber, int? followUpId)
+        {
+            var enrollment = await _nutritionService.GetEnrollmentByIdAsync(enrollmentId);
+            if (!enrollment.IsSuccess || enrollment.Data is null) return false;
+            var package = await _nutritionService.GetPackageByIdAsync(enrollment.Data.PackageId);
+            var analyses = await _analysisService.GetAnalysisTypesAsync();
+            ViewBag.Enrollment = enrollment.Data;
+            ViewBag.PackageItems = package.Data?.Items ?? new List<PackageItemDto>();
+            ViewBag.AnalysisTypes = analyses.Data ?? Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.AnalysisTypeDto>();
+            ViewBag.WeekNumber = weekNumber;
+            ViewBag.FollowUpId = followUpId;
+            ViewBag.IsEdit = followUpId.HasValue;
+            return true;
+        }
+
+        private int NextWeek(PatientEnrollmentDto enrollment) =>
+            enrollment.WeeklyFollowUps.Count == 0 ? 1 : enrollment.WeeklyFollowUps.Max(f => f.WeekNumber) + 1;
+
         [HttpGet]
         [RequirePermission(Permissions.Nutrition.Manage)]
-        public IActionResult RecordFollowUp(int enrollmentId) =>
-            View(new RecordFollowUpDto { FollowUpId = enrollmentId });
+        public async Task<IActionResult> RecordFollowUp(int enrollmentId)
+        {
+            var enrollment = await _nutritionService.GetEnrollmentByIdAsync(enrollmentId);
+            if (!enrollment.IsSuccess || enrollment.Data is null) { Error("Enrollment not found."); return RedirectToAction(nameof(Packages)); }
+            var week = NextWeek(enrollment.Data);
+            if (enrollment.Data.Status != "Active" || week > 4)
+            {
+                Error(enrollment.Data.Status != "Active"
+                    ? "Follow-ups can only be recorded while the enrollment is active."
+                    : "All 4 weekly follow-ups are already recorded for this enrollment.");
+                return RedirectToAction(nameof(EnrollmentDetails), new { id = enrollmentId });
+            }
+            await LoadFollowUpFormAsync(enrollmentId, week, null);
+            return View(new RecordFollowUpDto { FollowUpId = enrollmentId, FollowUpDate = _clock.Today });
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -170,18 +209,25 @@ namespace SafyaClinic.Web.Controllers
         public async Task<IActionResult> RecordFollowUp(int enrollmentId, RecordFollowUpDto model)
         {
             var actualEnrollmentId = enrollmentId > 0 ? enrollmentId : model.FollowUpId;
-
             if (actualEnrollmentId <= 0)
             {
                 Error("Invalid enrollment.");
                 return RedirectToAction(nameof(Packages));
             }
-            if (!ModelState.IsValid) return View(model);
-            var result = await _nutritionService.RecordFollowUpAsync(enrollmentId, model, CurrentUserId);
-            if (!result.IsSuccess) { ApplyErrors(result); return View(model); }
+
+            async Task<IActionResult> Again()
+            {
+                var enrollment = await _nutritionService.GetEnrollmentByIdAsync(actualEnrollmentId);
+                await LoadFollowUpFormAsync(actualEnrollmentId, enrollment.Data is null ? 1 : NextWeek(enrollment.Data), null);
+                return View(model);
+            }
+
+            if (!ModelState.IsValid) return await Again();
+            var result = await _nutritionService.RecordFollowUpAsync(actualEnrollmentId, model, CurrentUserId);
+            if (!result.IsSuccess) { ApplyErrors(result); return await Again(); }
             return RedirectWithSuccess(
                 $"Week {result.Data!.WeekNumber} follow-up recorded.",
-                nameof(EnrollmentDetails), routeValues: new { id = enrollmentId });
+                nameof(EnrollmentDetails), routeValues: new { id = actualEnrollmentId });
         }
 
         [HttpPost]
@@ -189,46 +235,48 @@ namespace SafyaClinic.Web.Controllers
         [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> CompleteFollowUp(int id, int enrollmentId)
         {
-            await _nutritionService.CompleteFollowUpAsync(id);
-            return RedirectToAction(nameof(EnrollmentDetails), new { id = enrollmentId });
+            var result = await _nutritionService.CompleteFollowUpAsync(id);
+            if (result.IsSuccess) Success("Follow-up marked as completed.");
+            else Error(result.Errors.FirstOrDefault() ?? "The follow-up could not be completed.");
+            return RedirectToAction(nameof(FollowUpDetails), new { id });
         }
-        // In NutritionController.cs
 
         [HttpGet]
         [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> EditFollowUp(int id)
         {
             var result = await _nutritionService.GetFollowUpByIdAsync(id);
-            if (!result.IsSuccess) { Error("Follow-up not found."); return RedirectToAction(nameof(Packages)); }
+            if (!result.IsSuccess || result.Data is null) { Error("Follow-up not found."); return RedirectToAction(nameof(Packages)); }
 
             var dto = result.Data;
-            if (dto is null)
-            {
-                Error("Follow-up could not be loaded.");
-                return RedirectToAction(nameof(Packages));
-            }
             var model = new RecordFollowUpDto
             {
                 FollowUpId = dto.EnrollmentId,
                 FollowUpDate = dto.FollowUpDate,
                 WeightKg = dto.WeightKg,
-                HeightCm = dto.HeightCm, 
+                HeightCm = dto.HeightCm,
                 BodyFatPercent = dto.BodyFatPercent,
                 MuscleMassKg = dto.MuscleMassKg,
                 WaistCircumferenceCm = dto.WaistCircumferenceCm,
-                // Parse BloodPressure back to Sys/Dia if stored as string
-                BloodPressureSys = dto.BloodPressure != null ? int.Parse(dto.BloodPressure.Split('/')[0]) : null,
-                BloodPressureDia = dto.BloodPressure != null ? int.Parse(dto.BloodPressure.Split('/')[1]) : null,
+                BloodPressureSys = dto.BloodPressureSys,
+                BloodPressureDia = dto.BloodPressureDia,
                 LabResultsSummary = dto.LabResultsSummary,
                 DoctorNotes = dto.DoctorNotes,
                 DietCompliance = dto.DietCompliance,
                 SideEffects = dto.SideEffects,
                 NextWeekAdjustments = dto.NextWeekAdjustments,
-                // AdministeredItems and LabResults would need separate loading
+                AdministeredItems = dto.AdministeredItems.Select(a => new RecordAdministeredItemDto
+                {
+                    PackageItemId = a.PackageItemId, ActualQuantity = a.ActualQuantity, Notes = a.Notes
+                }).ToList(),
+                LabResults = dto.LabResults.Select(l => new RecordLabResultDto
+                {
+                    AnalysisTypeId = l.AnalysisTypeId, ResultValue = l.ResultValue, ReferenceRange = l.ReferenceRange,
+                    IsNormal = l.IsNormal, Notes = l.Notes
+                }).ToList(),
             };
 
-            ViewBag.FollowUpId = id;
-            ViewBag.IsEdit = true;
+            await LoadFollowUpFormAsync(dto.EnrollmentId, dto.WeekNumber, id);
             return View("RecordFollowUp", model);
         }
 
@@ -237,14 +285,20 @@ namespace SafyaClinic.Web.Controllers
         [RequirePermission(Permissions.Nutrition.Manage)]
         public async Task<IActionResult> EditFollowUp(int id, RecordFollowUpDto model)
         {
-            if (!ModelState.IsValid) return View("RecordFollowUp", model);
+            var current = await _nutritionService.GetFollowUpByIdAsync(id);
+            if (!current.IsSuccess || current.Data is null) { Error("Follow-up not found."); return RedirectToAction(nameof(Packages)); }
+            var enrollmentId = current.Data.EnrollmentId;   // from the database, not the form
 
-            var result = await _nutritionService.UpdateFollowUpAsync(id, model, CurrentUserId);
-            if (!result.IsSuccess) { ApplyErrors(result); return View("RecordFollowUp", model); }
-
-            return RedirectWithSuccess(
-                "Follow-up updated.",
-                nameof(EnrollmentDetails), routeValues: new { id = model.FollowUpId });
+            if (ModelState.IsValid)
+            {
+                var result = await _nutritionService.UpdateFollowUpAsync(id, model, CurrentUserId);
+                if (result.IsSuccess)
+                    return RedirectWithSuccess($"Week {current.Data.WeekNumber} follow-up updated.",
+                        nameof(FollowUpDetails), routeValues: new { id });
+                ApplyErrors(result);
+            }
+            await LoadFollowUpFormAsync(enrollmentId, current.Data.WeekNumber, id);
+            return View("RecordFollowUp", model);
         }
 
         [HttpPost]
@@ -253,8 +307,8 @@ namespace SafyaClinic.Web.Controllers
         public async Task<IActionResult> DeleteFollowUp(int id, int enrollmentId)
         {
             var result = await _nutritionService.DeleteFollowUpAsync(id);
-            if (!result.IsSuccess) Error(result.Errors.First());
-            else Success("Follow-up deleted.");
+            if (!result.IsSuccess) Error(result.Errors.FirstOrDefault() ?? "The follow-up could not be deleted.");
+            else Success(string.IsNullOrEmpty(result.Message) ? "Follow-up deleted." : result.Message);
 
             return RedirectToAction(nameof(EnrollmentDetails), new { id = enrollmentId });
         }
