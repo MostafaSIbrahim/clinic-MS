@@ -1923,4 +1923,97 @@
   <data name="reference {0}" xml:space="preserve">
     <value>المرجع {0}</value>
   </data>
+  <data name="A package runs four weekly follow-ups. Add what is given each week." xml:space="preserve">
+    <value>تشمل الباقة أربع متابعات أسبوعية. أضف ما يُعطى كل أسبوع.</value>
+  </data>
+  <data name="Add item" xml:space="preserve">
+    <value>إضافة عنصر</value>
+  </data>
+  <data name="All packages" xml:space="preserve">
+    <value>كل الباقات</value>
+  </data>
+  <data name="Choose an item" xml:space="preserve">
+    <value>اختر عنصرًا</value>
+  </data>
+  <data name="Create package" xml:space="preserve">
+    <value>إنشاء الباقة</value>
+  </data>
+  <data name="Deactivate" xml:space="preserve">
+    <value>إيقاف</value>
+  </data>
+  <data name="Deactivate this package? Current enrollments continue; new patients can't be enrolled in it." xml:space="preserve">
+    <value>إيقاف هذه الباقة؟ تستمر الاشتراكات الحالية، ولا يمكن اشتراك مرضى جدد فيها.</value>
+  </data>
+  <data name="Deactivated" xml:space="preserve">
+    <value>موقوفة</value>
+  </data>
+  <data name="Each row is one injection or vitamin in one week." xml:space="preserve">
+    <value>كل صف حقنة أو فيتامين واحد في أسبوع واحد.</value>
+  </data>
+  <data name="Four weekly follow-ups each. Patients are enrolled from their Nutrition tab." xml:space="preserve">
+    <value>أربع متابعات أسبوعية لكل باقة. يتم اشتراك المرضى من تبويب التغذية الخاص بهم.</value>
+  </data>
+  <data name="Injection types" xml:space="preserve">
+    <value>أنواع الحقن</value>
+  </data>
+  <data name="Injections" xml:space="preserve">
+    <value>الحقن</value>
+  </data>
+  <data name="Item" xml:space="preserve">
+    <value>العنصر</value>
+  </data>
+  <data name="Item {0}" xml:space="preserve">
+    <value>العنصر {0}</value>
+  </data>
+  <data name="Items" xml:space="preserve">
+    <value>العناصر</value>
+  </data>
+  <data name="Maximum discount" xml:space="preserve">
+    <value>أقصى خصم</value>
+  </data>
+  <data name="Maximum discount %" xml:space="preserve">
+    <value>أقصى خصم ٪</value>
+  </data>
+  <data name="New package" xml:space="preserve">
+    <value>باقة جديدة</value>
+  </data>
+  <data name="No active packages." xml:space="preserve">
+    <value>لا توجد باقات نشطة.</value>
+  </data>
+  <data name="No injection or vitamin types are set up yet. Add them first under Injection types or Vitamin types." xml:space="preserve">
+    <value>لم تُضف أنواع حقن أو فيتامينات بعد. أضفها أولًا من أنواع الحقن أو أنواع الفيتامينات.</value>
+  </data>
+  <data name="Nothing planned." xml:space="preserve">
+    <value>لا شيء مخطط.</value>
+  </data>
+  <data name="Nutrition packages" xml:space="preserve">
+    <value>باقات التغذية</value>
+  </data>
+  <data name="Package name" xml:space="preserve">
+    <value>اسم الباقة</value>
+  </data>
+  <data name="Quantity" xml:space="preserve">
+    <value>الكمية</value>
+  </data>
+  <data name="Remove this item" xml:space="preserve">
+    <value>إزالة هذا العنصر</value>
+  </data>
+  <data name="Unit" xml:space="preserve">
+    <value>الوحدة</value>
+  </data>
+  <data name="Vitamin types" xml:space="preserve">
+    <value>أنواع الفيتامينات</value>
+  </data>
+  <data name="Vitamins" xml:space="preserve">
+    <value>الفيتامينات</value>
+  </data>
+  <data name="Weekly items" xml:space="preserve">
+    <value>العناصر الأسبوعية</value>
+  </data>
+  <data name="{0} item(s) over {1} weeks" xml:space="preserve">
+    <value>{0} عنصر على {1} أسابيع</value>
+  </data>
+  <data name="{0} weeks" xml:space="preserve">
+    <value>{0} أسابيع</value>
+  </data>
 </root>

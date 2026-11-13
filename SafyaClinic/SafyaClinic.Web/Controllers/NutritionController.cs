@@ -86,7 +86,9 @@ namespace SafyaClinic.Web.Controllers
         [RequirePermission(Permissions.Nutrition.ManagePackages)]
         public async Task<IActionResult> DeactivatePackage(int id)
         {
-            await _nutritionService.DeactivatePackageAsync(id);
+            // M4c: say what happened instead of always reporting success.
+            var result = await _nutritionService.DeactivatePackageAsync(id);
+            if (!result.IsSuccess) { Error(result.Errors.FirstOrDefault() ?? "The package could not be deactivated."); return RedirectToAction(nameof(PackageDetails), new { id }); }
             return RedirectWithSuccess("Package deactivated.", nameof(Packages));
         }
 
