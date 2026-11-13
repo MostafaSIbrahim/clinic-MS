@@ -18,8 +18,8 @@
     <div class="page-actions">
         @if (canCatalogues)
         {
-            <a asp-action="InjectionTypes" class="btn btn-outline-secondary">@T["Injection types"]</a>
-            <a asp-action="VitaminTypes" class="btn btn-outline-secondary">@T["Vitamin types"]</a>
+            <a asp-controller="Lookups" asp-action="Catalogue" asp-route-kind="Injection" class="btn btn-outline-secondary">@T["Injection types"]</a>
+            <a asp-controller="Lookups" asp-action="Catalogue" asp-route-kind="Vitamin" class="btn btn-outline-secondary">@T["Vitamin types"]</a>
         }
         @if (canManage)
         {

@@ -1,417 +1,90 @@
-﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SafyaClinic.Domain.Entities.Analysis;
-using SafyaClinic.Domain.Entities.MedicalRecord;
-using SafyaClinic.Domain.Entities.Nutrition;
-using SafyaClinic.Domain.Entities.Settings;
-using SafyaClinic.Domain.Enums;
-using SafyaClinic.Infrastructure.Data;
-using Microsoft.Extensions.Logging;
-using SafyaClinic.Web.Security;
+using SafyaClinic.Application.Catalogue;
 using SafyaClinic.Application.Security;
+using SafyaClinic.Web.Security;
 
 namespace SafyaClinic.Web.Controllers
 {
+    /// <summary>
+    /// Settings: the lookups home and, since M5a, one editor for the four catalogues (treatment, analysis,
+    /// injection and vitamin types). Forms use their own input model and the rules live in ICatalogueService;
+    /// the old per-catalogue screens (and the duplicate ones under Nutrition) redirect here.
+    /// </summary>
     [RequirePermission(Permissions.Settings.Lookups)]
     public class LookupsController : BaseController
     {
-        private readonly SafyaDbContext _context;
-        private readonly ILogger<LookupsController> _logger;
+        private readonly ICatalogueService _catalogue;
 
-        public LookupsController(SafyaDbContext context, ILogger<LookupsController> logger)
+        public LookupsController(ICatalogueService catalogue) => _catalogue = catalogue;
+
+        public IActionResult Index() => View();
+
+        private static CatalogueKind KindOf(string? kind) =>
+            Enum.TryParse<CatalogueKind>(kind, ignoreCase: true, out var k) && Enum.IsDefined(k) ? k : CatalogueKind.Treatment;
+
+        public async Task<IActionResult> Catalogue(string? kind, string? search)
         {
-            _context = context;
-            _logger = logger;
+            var k = KindOf(kind);
+            ViewBag.Kind = k;
+            ViewBag.Search = search;
+            return View(await _catalogue.ListAsync(k, search));
         }
 
-        // Logs the full exception; shows the user only a generic message with a reference.
-        private string LogFailure(Exception ex, string action)
+        [HttpGet]
+        public async Task<IActionResult> EditCatalogueItem(string? kind, int id = 0)
         {
-            _logger.LogError(ex, "Lookups: could not {Action}", action);
-            return $"Could not {action}. If this keeps happening, give the administrator this reference: {HttpContext.TraceIdentifier}";
-        }
-
-        // --- Index Dashboard for Lookups ---
-        public IActionResult Index()
-        {
-            return View();
-        }
-
-        // --- Analysis Types ---
-        public async Task<IActionResult> AnalysisTypes()
-        {
-            var types = await _context.AnalysisTypes.ToListAsync();
-            return View(types);
+            var k = KindOf(kind);
+            var form = new CatalogueItemForm { Category = k == CatalogueKind.Treatment ? "InternalMedicine" : null, DurationMinutes = k == CatalogueKind.Treatment ? 30 : null };
+            if (id != 0)
+            {
+                var item = await _catalogue.GetAsync(k, id);
+                if (item is null) { Error("Item not found."); return RedirectToAction(nameof(Catalogue), new { kind = k }); }
+                form = new CatalogueItemForm
+                {
+                    Id = item.Id, Name = item.Name, Description = item.Description, Cost = item.Cost, DurationMinutes = item.DurationMinutes,
+                    Category = item.Category, Preparation = item.Preparation, Unit = item.Unit, DefaultDosage = item.DefaultDosage,
+                    Formulation = item.Formulation, IsActive = item.IsActive,
+                };
+                ViewBag.InUse = item.InUse;
+            }
+            ViewBag.Kind = k;
+            return View(form);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateAnalysisType(AnalysisType model)
+        public async Task<IActionResult> SaveCatalogueItem(string? kind, CatalogueItemForm form)
         {
+            var k = KindOf(kind);
+            foreach (var (field, message) in CatalogueService.Check(k, form))
+                ModelState.AddModelError(field, message);
             if (ModelState.IsValid)
             {
-                _context.AnalysisTypes.Add(model);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Analysis Type added successfully.";
-                return RedirectToAction(nameof(AnalysisTypes));
+                var result = await _catalogue.SaveAsync(k, form);
+                if (result.IsSuccess)
+                    return RedirectWithSuccess(form.Id == 0 ? "Added." : "Saved.", nameof(Catalogue), routeValues: new { kind = k });
+                ApplyErrors(result);
             }
-            return View(nameof(AnalysisTypes), await _context.AnalysisTypes.ToListAsync());
-        }
-
-        // --- Treatment Types ---
-        /* public async Task<IActionResult> TreatmentTypes()
-         {
-             var types = await _context.TreatmentTypes.ToListAsync();
-             return View(types);
-         }*/
-        public async Task<IActionResult> TreatmentTypes()
-        {
-            var treatmentTypes = await _context.TreatmentTypes
-                .OrderBy(t => t.Category)
-                .ThenBy(t => t.TypeName)
-                .ToListAsync();
-
-            return View(treatmentTypes);
+            ViewBag.Kind = k;
+            if (form.Id != 0) ViewBag.InUse = (await _catalogue.GetAsync(k, form.Id))?.InUse == true;
+            return View(nameof(EditCatalogueItem), form);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateTreatmentType(TreatmentType model)
+        public async Task<IActionResult> DeleteCatalogueItem(string? kind, int id)
         {
-            if (ModelState.IsValid)
-            {
-                _context.TreatmentTypes.Add(model);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Treatment Type added successfully.";
-                return RedirectToAction(nameof(TreatmentTypes));
-            }
-            return View(nameof(TreatmentTypes), await _context.TreatmentTypes.ToListAsync());
+            var k = KindOf(kind);
+            var result = await _catalogue.DeleteAsync(k, id);
+            if (result.IsSuccess) Success(result.Message);
+            else Error(result.Errors.FirstOrDefault() ?? "The item could not be deleted.");
+            return RedirectToAction(nameof(Catalogue), new { kind = k });
         }
 
-        // --- Injection Types ---
-        public async Task<IActionResult> InjectionTypes()
-        {
-            var types = await _context.InjectionTypes.ToListAsync();
-            return View(types);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateInjectionType(InjectionType model)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.InjectionTypes.Add(model);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Injection Type added successfully.";
-                return RedirectToAction(nameof(InjectionTypes));
-            }
-            return View(nameof(InjectionTypes), await _context.InjectionTypes.ToListAsync());
-        }
-
-        // --- Vitamin Types ---
-        public async Task<IActionResult> VitaminTypes()
-        {
-            var types = await _context.VitaminTypes.ToListAsync();
-            return View(types);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateVitaminType(VitaminType model)
-        {
-            if (ModelState.IsValid)
-            {
-                _context.VitaminTypes.Add(model);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Vitamin Type added successfully.";
-                return RedirectToAction(nameof(VitaminTypes));
-            }
-            return View(nameof(VitaminTypes), await _context.VitaminTypes.ToListAsync());
-        }
-        // POST: Lookups/SaveTreatmentType
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveTreatmentType(TreatmentType model)
-        {
-            if (string.IsNullOrWhiteSpace(model.TypeName))
-            {
-                ModelState.AddModelError(nameof(model.TypeName), "Treatment name is required.");
-            }
-
-            if (model.DefaultCost is null)
-            {
-                ModelState.AddModelError(nameof(model.DefaultCost), "Default cost is required.");
-            }
-            else if (model.DefaultCost.Value < 0)
-            {
-                ModelState.AddModelError(nameof(model.DefaultCost), "Default cost cannot be negative.");
-            }
-            else if (model.DefaultCost.Value == 0m && !IsFreeNutritionFollowUp(model))
-            {
-                // A zero cost is only meaningful for the Nutrition "Follow-up" visit, which is
-                // already covered by the patient's enrollment package and carries no extra
-                // charge. Every other treatment type must have a real, positive price —
-                // otherwise reservations/payments built on it would silently be "free".
-                ModelState.AddModelError(nameof(model.DefaultCost),
-                    "Default cost must be greater than zero. Only the Nutrition \"Follow-up\" visit may be free.");
-            }
-
-            if (!ModelState.IsValid)
-            {
-                TempData["Error"] = string.Join(" ", ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage))
-                    is { Length: > 0 } errors
-                        ? errors
-                        : "Please fill in all required fields properly (Treatment Name and Default Cost are required).";
-                return RedirectToAction(nameof(TreatmentTypes));
-            }
-
-            try
-            {
-                if (model.Id == 0)
-                {
-                    // Create New Treatment Type
-                    model.TypeName = model.TypeName.Trim();
-                    model.Description = model.Description?.Trim();
-                    _context.TreatmentTypes.Add(model);
-                    TempData["Success"] = "Treatment type created successfully.";
-                }
-                else
-                {
-                    // Update Existing Treatment Type
-                    var existing = await _context.TreatmentTypes.FindAsync(model.Id);
-                    if (existing == null)
-                    {
-                        TempData["Error"] = "Treatment type not found.";
-                        return RedirectToAction(nameof(TreatmentTypes));
-                    }
-
-                    existing.TypeName = model.TypeName.Trim();
-                    existing.Category = model.Category;
-                    existing.DefaultCost = model.DefaultCost;
-                    existing.Description = model.Description?.Trim();
-                    existing.IsActive = model.IsActive;
-
-                    _context.TreatmentTypes.Update(existing);
-                    TempData["Success"] = "Treatment type updated successfully.";
-                }
-
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = LogFailure(ex, "save the treatment type");
-            }
-
-            return RedirectToAction(nameof(TreatmentTypes));
-        }
-
-        /// <summary>
-        /// True only for the one deliberate exception to "every treatment type has a real
-        /// price": the Nutrition "Follow-up" visit, which is already paid for as part of the
-        /// patient's enrollment package. Match is case-insensitive/trimmed so "Follow-up",
-        /// "follow-up ", etc. are all treated the same.
-        /// </summary>
-        private static bool IsFreeNutritionFollowUp(TreatmentType model) =>
-            model.Category == TreatmentCategory.Nutritional &&
-            string.Equals(model.TypeName?.Trim(), "Follow-up", StringComparison.OrdinalIgnoreCase);
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteTreatmentType(int id)
-        {
-            try
-            {
-                var treatmentType = await _context.TreatmentTypes.FindAsync(id);
-                if (treatmentType == null)
-                {
-                    TempData["Error"] = "Treatment type not found.";
-                    return RedirectToAction(nameof(TreatmentTypes));
-                }
-
-                bool isUsed = await _context.Reservations.AnyAsync(r => r.TreatmentTypeId == id);
-                if (isUsed)
-                {
-                    treatmentType.IsActive = false;
-                    _context.TreatmentTypes.Update(treatmentType);
-                    TempData["Warning"] = "Treatment type is linked to existing records, so it has been deactivated instead of deleted.";
-                }
-                else
-                {
-                    _context.TreatmentTypes.Remove(treatmentType);
-                    TempData["Success"] = "Treatment type deleted successfully.";
-                }
-
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = LogFailure(ex, "delete the treatment type");
-            }
-
-            return RedirectToAction(nameof(TreatmentTypes));
-        }
-        // POST: Lookups/SaveInjectionType
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveInjectionType(InjectionType model)
-        {
-            if (string.IsNullOrWhiteSpace(model.InjectionName))
-            {
-                ModelState.AddModelError(nameof(model.InjectionName), "Injection name is required.");
-            }
-            if (!ModelState.IsValid)
-            {
-                TempData["Error"] = "Please fill in all required fields properly (Injection Name and Default Cost are required).";
-                return RedirectToAction(nameof(InjectionTypes));
-            }
-            try
-            {
-                if (model.Id == 0)
-                {
-                    // Create New Injection Type
-                    model.InjectionName = model.InjectionName.Trim();
-                    model.Description = model.Description?.Trim();
-                    _context.InjectionTypes.Add(model);
-                    TempData["Success"] = "Injection type created successfully.";
-                }
-                else
-                {
-                    // Update Existing Injection Type
-                    var existing = await _context.InjectionTypes.FindAsync(model.Id);
-                    if (existing == null)
-                    {
-                        TempData["Error"] = "Injection type not found.";
-                        return RedirectToAction(nameof(InjectionTypes));
-                    }
-                    existing.InjectionName = model.InjectionName.Trim();
-                    existing.DefaultDosage = model.DefaultDosage;
-                    existing.Description = model.Description?.Trim();
-                    existing.IsActive = model.IsActive;
-                    _context.InjectionTypes.Update(existing);
-                    TempData["Success"] = "Injection type updated successfully.";
-                }
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = LogFailure(ex, "save the injection type");
-            }
-            return RedirectToAction(nameof(InjectionTypes));
-        }
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteInjectionType(int id)
-        {
-            try
-            {
-                var injectionType = await _context.InjectionTypes.FindAsync(id);
-                if (injectionType == null)
-                {
-                    TempData["Error"] = "Injection type not found.";
-                    return RedirectToAction(nameof(InjectionTypes));
-                }
-                bool isUsed = await _context.PackageItems.AnyAsync(p => p.InjectionId == id);
-                if (isUsed)
-                {
-                    injectionType.IsActive = false;
-                    _context.InjectionTypes.Update(injectionType);
-                    TempData["Warning"] = "Injection type is linked to existing records, so it has been deactivated instead of deleted.";
-                }
-                else
-                {
-                    _context.InjectionTypes.Remove(injectionType);
-                    TempData["Success"] = "Injection type deleted successfully.";
-                }
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = LogFailure(ex, "delete the injection type");
-            }
-            return RedirectToAction(nameof(InjectionTypes));
-        }
-        // POST: Lookups/SaveVitaminType
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveVitaminType(VitaminType model)
-        {
-            if (string.IsNullOrWhiteSpace(model.VitaminName))
-            {
-                ModelState.AddModelError(nameof(model.VitaminName), "Vitamin name is required.");
-            }
-            if (!ModelState.IsValid)
-            {
-                TempData["Error"] = "Please fill in all required fields properly.";
-                return RedirectToAction(nameof(VitaminTypes));
-            }
-            try
-            {
-                if (model.Id == 0)
-                {
-                    // Create New Vitamin Type
-                    model.VitaminName = model.VitaminName.Trim();
-                    model.Description = model.Description?.Trim();
-                    _context.VitaminTypes.Add(model);
-                    TempData["Success"] = "Vitamin type created successfully.";
-                }
-                else
-                {
-                    // Update Existing Vitamin Type
-                    var existing = await _context.VitaminTypes.FindAsync(model.Id);
-                    if (existing == null)
-                    {
-                        TempData["Error"] = "Vitamin type not found.";
-                        return RedirectToAction(nameof(VitaminTypes));
-                    }
-                    existing.VitaminName = model.VitaminName.Trim();
-                    existing.Description = model.Description?.Trim();
-                    existing.IsActive = model.IsActive;
-                    _context.VitaminTypes.Update(existing);
-                    TempData["Success"] = "Vitamin type updated successfully.";
-                }
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = LogFailure(ex, "save the vitamin type");
-            }
-            return RedirectToAction(nameof(VitaminTypes));
-        }
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteVitaminType(int id)
-        {
-            try
-            {
-                var vitaminType = await _context.VitaminTypes.FindAsync(id);
-                if (vitaminType == null)
-                {
-                    TempData["Error"] = "Vitamin type not found.";
-                    return RedirectToAction(nameof(VitaminTypes));
-                }
-                bool isUsed = await _context.PackageItems.AnyAsync(p => p.VitaminId == id);
-                if (isUsed)
-                {
-                    vitaminType.IsActive = false;
-                    _context.VitaminTypes.Update(vitaminType);
-                    TempData["Warning"] = "Vitamin type is linked to existing records, so it has been deactivated instead of deleted.";
-                }
-                else
-                {
-                    _context.VitaminTypes.Remove(vitaminType);
-                    TempData["Success"] = "Vitamin type deleted successfully.";
-                }
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = LogFailure(ex, "delete the vitamin type");
-            }
-            return RedirectToAction(nameof(VitaminTypes));
-        }
+        // The old screens' addresses open the catalogue (M5a).
+        public IActionResult TreatmentTypes() => RedirectToAction(nameof(Catalogue), new { kind = CatalogueKind.Treatment });
+        public IActionResult AnalysisTypes() => RedirectToAction(nameof(Catalogue), new { kind = CatalogueKind.Analysis });
+        public IActionResult InjectionTypes() => RedirectToAction(nameof(Catalogue), new { kind = CatalogueKind.Injection });
+        public IActionResult VitaminTypes() => RedirectToAction(nameof(Catalogue), new { kind = CatalogueKind.Vitamin });
     }
 }

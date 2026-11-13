@@ -1,0 +1,132 @@
+@model IReadOnlyList<SafyaClinic.Application.Catalogue.CatalogueItemDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Application.Catalogue
+@using SafyaClinic.Web.Components
+@{
+    // M5a: one editor for the four catalogues. Shared layout, a table that becomes cards on phones, Arabic.
+    // An item already used is made inactive instead of deleted, so history keeps its name (decision 3).
+    var kind = (CatalogueKind)ViewBag.Kind;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var kinds = new[]
+    {
+        (CatalogueKind.Treatment, "Treatment types"), (CatalogueKind.Analysis, "Analysis types"),
+        (CatalogueKind.Injection, "Injection types"), (CatalogueKind.Vitamin, "Vitamin types"),
+    };
+    var title = kinds.First(k => k.Item1 == kind).Item2;
+    ViewData["Title"] = T[title].Value;
+    string? search = ViewBag.Search as string;
+    var none = new EmptyStateModel(string.IsNullOrWhiteSpace(search) ? T["Nothing here yet."].Value : T["Nothing matches this search."].Value,
+        Icon: "bi-inbox", ActionText: T["Add"].Value, ActionUrl: Url.Action("EditCatalogueItem", new { kind }));
+}
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Catalogues"]</h1>
+        <p class="text-muted mb-0">@T["The lists used when booking, requesting lab tests and building nutrition packages."]</p>
+    </div>
+    <div class="page-actions">
+        <a asp-action="EditCatalogueItem" asp-route-kind="@kind" class="btn btn-primary">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i> @T["Add to {0}", T[title].Value]
+        </a>
+    </div>
+</div>
+
+<nav class="app-tabs__list" aria-label="@T["Catalogues"]">
+    @foreach (var (k, label) in kinds)
+    {
+        <a class="app-tabs__tab" asp-action="Catalogue" asp-route-kind="@k" aria-current="@(k == kind ? "page" : null)">@T[label]</a>
+    }
+</nav>
+
+<app-filter-bar label="@T["Find in {0}", T[title].Value].Value" submit-text="@T["Search"].Value" action="@Url.Action("Catalogue")" clear-url="@Url.Action("Catalogue", new { kind })">
+    <input type="hidden" name="kind" value="@kind" />
+    <div class="app-filter-bar__field">
+        <label for="catalogueSearch" class="form-label">@T["Name"]</label>
+        <input type="text" id="catalogueSearch" name="search" value="@search" class="form-control" autocomplete="off" />
+    </div>
+</app-filter-bar>
+
+@if (!Model.Any())
+{
+    <partial name="_AppEmpty" model="none" />
+}
+else
+{
+    <app-table caption="@T[title].Value" caption-hidden="true" stack="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Name"]</th>
+                @if (kind == CatalogueKind.Treatment)
+                {
+                    <th scope="col">@T["Category"]</th>
+                    <th scope="col" class="app-table__num">@T["Price"]</th>
+                    <th scope="col" class="app-table__num">@T["Duration"]</th>
+                }
+                else if (kind == CatalogueKind.Analysis)
+                {
+                    <th scope="col" class="app-table__num">@T["Price"]</th>
+                    <th scope="col">@T["Preparation"]</th>
+                }
+                else
+                {
+                    <th scope="col">@T["Unit"]</th>
+                    <th scope="col">@(kind == CatalogueKind.Injection ? T["Usual dose"] : T["Form"])</th>
+                }
+                <th scope="col">@T["Status"]</th>
+                <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <th scope="row" data-label="@T["Name"]" dir="auto">
+                        @item.Name
+                        @if (!string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <div class="small text-muted fw-normal">@item.Description</div>
+                        }
+                    </th>
+                    @if (kind == CatalogueKind.Treatment)
+                    {
+                        <td data-label="@T["Category"]">@T[Labels.Humanize(item.Category ?? "")]</td>
+                        <td data-label="@T["Price"]" class="app-table__num">@(item.Cost?.ToMoney() ?? "—")</td>
+                        <td data-label="@T["Duration"]" class="app-table__num">@T["{0} min", item.DurationMinutes ?? 0]</td>
+                    }
+                    else if (kind == CatalogueKind.Analysis)
+                    {
+                        <td data-label="@T["Price"]" class="app-table__num">@(item.Cost?.ToMoney() ?? "—")</td>
+                        <td data-label="@T["Preparation"]" dir="auto">@(item.Preparation ?? "—")</td>
+                    }
+                    else
+                    {
+                        <td data-label="@T["Unit"]" dir="auto">@item.Unit</td>
+                        <td data-label="@(kind == CatalogueKind.Injection ? T["Usual dose"] : T["Form"])" dir="auto">@((kind == CatalogueKind.Injection ? item.DefaultDosage : item.Formulation) ?? "—")</td>
+                    }
+                    <td data-label="@T["Status"]">
+                        @if (item.IsActive)
+                        {
+                            <span class="app-status app-status--completed">@T["Active"]</span>
+                        }
+                        else
+                        {
+                            <span class="app-status app-status--cancelled">@T["Inactive"]</span>
+                        }
+                    </td>
+                    <td class="app-table__actions">
+                        <a asp-action="EditCatalogueItem" asp-route-kind="@kind" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">@T["Edit"]<span class="visually-hidden"> @item.Name</span></a>
+                        @if (!item.InUse || item.IsActive)
+                        {
+                            <form asp-action="DeleteCatalogueItem" method="post" class="d-inline"
+                                  data-confirm="@(item.InUse ? T["Make {0} inactive? It stays in the history and can be made active again.", item.Name] : T["Delete {0}? It has never been used.", item.Name])">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="kind" value="@kind" />
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">@(item.InUse ? T["Make inactive"] : T["Delete"])<span class="visually-hidden"> @item.Name</span></button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </app-table>
+}
