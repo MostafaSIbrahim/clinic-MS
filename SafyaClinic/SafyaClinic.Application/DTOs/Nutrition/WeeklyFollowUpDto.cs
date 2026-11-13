@@ -19,6 +19,8 @@ namespace SafyaClinic.Application.DTOs.Nutrition
         public decimal? MuscleMassKg { get; set; }
         public decimal? WaistCircumferenceCm { get; set; }
         public string? BloodPressure { get; set; }
+        public int? BloodPressureSys { get; set; }   // M4b: for the edit form (it parsed the text and could crash)
+        public int? BloodPressureDia { get; set; }
         public string? LabResultsSummary { get; set; }
         public string? DoctorNotes { get; set; }
         public string? DietCompliance { get; set; }
@@ -31,8 +33,10 @@ namespace SafyaClinic.Application.DTOs.Nutrition
     public class AdministeredItemDto
     {
         public int Id { get; set; }
+        public int PackageItemId { get; set; }   // M4b: for the edit form
         public string ItemName { get; set; } = string.Empty;
         public decimal ActualQuantity { get; set; }
+        public string? Notes { get; set; }
         public string? AdministeredByName { get; set; }
         public DateTime AdministeredAt { get; set; }
     }
@@ -40,7 +44,9 @@ namespace SafyaClinic.Application.DTOs.Nutrition
     public class LabResultDto
     {
         public int Id { get; set; }
+        public int AnalysisTypeId { get; set; }   // M4b: for the edit form
         public string AnalysisTypeName { get; set; } = string.Empty;
+        public string? Notes { get; set; }
         public string? ResultValue { get; set; }
         public string? ReferenceRange { get; set; }
         public bool? IsNormal { get; set; }
