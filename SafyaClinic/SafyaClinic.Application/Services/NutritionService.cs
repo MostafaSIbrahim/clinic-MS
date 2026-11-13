@@ -240,8 +240,20 @@ public class NutritionService : INutritionService
         if (enrollment is null)
             return ServiceResult<PatientEnrollmentDto>.Failure("Enrollment not found.");
 
-        return ServiceResult<PatientEnrollmentDto>.Success(
-            await BuildEnrollmentDtoAsync(enrollment));
+        var dto = await BuildEnrollmentDtoAsync(enrollment);
+        // M4d: the patient's plan for the weeks not recorded yet.
+        var latest = enrollment.WeeklyFollowUps.Count == 0 ? 0 : enrollment.WeeklyFollowUps.Max(f => f.WeekNumber);
+        var planned = await _uow.EnrollmentPlannedItems.Query()
+            .Where(p => p.EnrollmentId == enrollmentId && p.WeekNumber > latest)
+            .OrderBy(p => p.WeekNumber).ThenBy(p => p.Id)
+            .ToListAsync();
+        if (planned.Count > 0)
+        {
+            var names = await LoadItemNamesAsync(enrollment.PackageId);
+            dto.PlannedItems = planned.Select(p => Line(names, p.WeekNumber, p.PackageItemId, p.InjectionId, p.VitaminId,
+                p.CustomName, p.Quantity, p.Unit, p.Notes, false)).ToList();
+        }
+        return ServiceResult<PatientEnrollmentDto>.Success(dto);
     }
 
     public async Task<ServiceResult<IEnumerable<PatientEnrollmentDto>>> GetPatientEnrollmentsAsync(
@@ -334,7 +346,7 @@ public class NutritionService : INutritionService
             return ServiceResult<WeeklyFollowUpDto>.Failure(
                 "All 4 weekly follow-ups are already recorded for this enrollment.");
 
-        var checkedInput = await CheckFollowUpInputAsync(enrollment, request);
+        var checkedInput = await CheckFollowUpInputAsync(enrollment, request, nextWeek + 1);
         if (checkedInput.Error is not null)
             return ServiceResult<WeeklyFollowUpDto>.Failure(checkedInput.Error);
 
@@ -352,6 +364,7 @@ public class NutritionService : INutritionService
         await _uow.SaveChangesAsync();
 
         await AddFollowUpItemsAsync(followUp.Id, request, recordedBy);
+        await SavePlanAsync(enrollmentId, request, nextWeek + 1, recordedBy);   // M4d
         await _uow.SaveChangesAsync();
 
         // Auto-complete the enrollment when its last week is recorded.
@@ -367,11 +380,12 @@ public class NutritionService : INutritionService
     }
 
     /// <summary>
-    /// M4b: checks a follow-up form. Administered items must be items of this enrollment's package, with a
-    /// quantity; lab results must name a known analysis. Before, unknown numbers were silently dropped.
+    /// Checks a follow-up form (M4b), including items outside the package and the plan for the coming weeks
+    /// (M4d). Each given or planned line names exactly one item: a package item of this enrollment, an injection
+    /// type, a vitamin type, or a drug typed by name, with a quantity above zero. Lab results name a known analysis.
     /// </summary>
     private async Task<(string? Error, DietCompliance? Diet)> CheckFollowUpInputAsync(
-        PatientNutritionEnrollment enrollment, RecordFollowUpDto request)
+        PatientNutritionEnrollment enrollment, RecordFollowUpDto request, int firstPlanWeek)
     {
         if (request.FollowUpDate == default)
             return ("Enter the follow-up date.", null);
@@ -384,23 +398,43 @@ public class NutritionService : INutritionService
             diet = parsed;
         }
 
-        var itemIds = request.AdministeredItems
-            .Where(i => i.PackageItemId.HasValue)
-            .Select(i => i.PackageItemId!.Value)
+        var given = request.AdministeredItems.Where(i => i.Given).ToList();
+        var lines = given.Select(i => (PackageItemId: i.PackageItemId, InjectionId: i.InjectionId, VitaminId: i.VitaminId, CustomName: i.CustomName, Quantity: i.ActualQuantity))
+            .Concat(request.PlannedItems.Select(p => (PackageItemId: p.PackageItemId, InjectionId: p.InjectionId, VitaminId: p.VitaminId, CustomName: p.CustomName, Quantity: p.Quantity)))
             .ToList();
-        if (itemIds.Count != itemIds.Distinct().Count())
-            return ("Each package item can be recorded once per follow-up.", null);
-        if (request.AdministeredItems.Any(i => i.PackageItemId.HasValue && (i.ActualQuantity is null || i.ActualQuantity <= 0)))
-            return ("Enter the quantity given for each item you ticked.", null);
-        if (itemIds.Count > 0)
+        foreach (var (packageItemId, injectionId, vitaminId, customName, quantity) in lines)
         {
-            var packageItemIds = await _uow.PackageItems.Query()
-                .Where(p => p.PackageId == enrollment.PackageId && itemIds.Contains(p.Id))
-                .Select(p => p.Id)
-                .ToListAsync();
-            if (packageItemIds.Count != itemIds.Count)
-                return ("An administered item isn't part of this enrollment's package.", null);
+            var named = (packageItemId.HasValue ? 1 : 0) + (injectionId.HasValue ? 1 : 0) + (vitaminId.HasValue ? 1 : 0)
+                + (string.IsNullOrWhiteSpace(customName) ? 0 : 1);
+            if (named != 1)
+                return ("Each item must be one package item, injection, vitamin or drug name.", null);
+            if (customName is { Length: > 200 })
+                return ("A drug name can be at most 200 characters.", null);
+            if (quantity is null || quantity <= 0)
+                return ("Enter a quantity above zero for each item given or planned.", null);
         }
+
+        var givenPackageIds = given.Where(i => i.PackageItemId.HasValue).Select(i => i.PackageItemId!.Value).ToList();
+        if (givenPackageIds.Count != givenPackageIds.Distinct().Count())
+            return ("Each package item can be recorded once per follow-up.", null);
+
+        var packageIds = lines.Where(l => l.PackageItemId.HasValue).Select(l => l.PackageItemId!.Value).Distinct().ToList();
+        if (packageIds.Count > 0)
+        {
+            var found = await _uow.PackageItems.Query()
+                .CountAsync(p => p.PackageId == enrollment.PackageId && packageIds.Contains(p.Id));
+            if (found != packageIds.Count)
+                return ("An item isn't part of this enrollment's package.", null);
+        }
+        var injectionIds = lines.Where(l => l.InjectionId.HasValue).Select(l => l.InjectionId!.Value).Distinct().ToList();
+        if (injectionIds.Count > 0 && await _uow.InjectionTypes.Query().CountAsync(i => injectionIds.Contains(i.Id)) != injectionIds.Count)
+            return ("An injection doesn't exist.", null);
+        var vitaminIds = lines.Where(l => l.VitaminId.HasValue).Select(l => l.VitaminId!.Value).Distinct().ToList();
+        if (vitaminIds.Count > 0 && await _uow.VitaminTypes.Query().CountAsync(v => vitaminIds.Contains(v.Id)) != vitaminIds.Count)
+            return ("A vitamin doesn't exist.", null);
+
+        if (request.PlannedItems.Any(p => p.WeekNumber < firstPlanWeek || p.WeekNumber > FollowUpWeeks))
+            return ("Items can only be planned for the weeks still to come.", null);
 
         var analysisIds = request.LabResults
             .Where(l => l.AnalysisTypeId.HasValue)
@@ -419,6 +453,8 @@ public class NutritionService : INutritionService
 
         return (null, diet);
     }
+
+    private static string? CleanName(string? name) => string.IsNullOrWhiteSpace(name) ? null : name.Trim();
 
     private static void ApplyFollowUpFields(WeeklyFollowUp followUp, RecordFollowUpDto request, DietCompliance? diet)
     {
@@ -440,11 +476,15 @@ public class NutritionService : INutritionService
     private async Task AddFollowUpItemsAsync(int followUpId, RecordFollowUpDto request, int recordedBy)
     {
         await _uow.WeeklyAdministeredItems.AddRangeAsync(request.AdministeredItems
-            .Where(item => item.PackageItemId.HasValue && item.ActualQuantity.HasValue)
+            .Where(item => item.Given && item.ActualQuantity.HasValue)
             .Select(item => new WeeklyAdministeredItem
             {
                 FollowUpId = followUpId,
-                PackageItemId = item.PackageItemId!.Value,
+                PackageItemId = item.PackageItemId,
+                InjectionId = item.InjectionId,
+                VitaminId = item.VitaminId,
+                CustomName = CleanName(item.CustomName),
+                Unit = CleanName(item.Unit),
                 ActualQuantity = item.ActualQuantity!.Value,
                 AdministeredBy = recordedBy,
                 AdministeredAt = DateTime.UtcNow,
@@ -465,6 +505,160 @@ public class NutritionService : INutritionService
                 CreatedAt = DateTime.UtcNow
             })
             .ToList());
+    }
+
+    /// <summary>
+    /// M4d: replaces the patient's plan for weeks <paramref name="firstPlanWeek"/>–4 with the form's lines. Weeks
+    /// already recorded keep their plan as history. The package itself never changes.
+    /// </summary>
+    private async Task SavePlanAsync(int enrollmentId, RecordFollowUpDto request, int firstPlanWeek, int userId)
+    {
+        if (firstPlanWeek > FollowUpWeeks) return;
+        _uow.EnrollmentPlannedItems.DeleteRange(await _uow.EnrollmentPlannedItems
+            .FindAsync(p => p.EnrollmentId == enrollmentId && p.WeekNumber >= firstPlanWeek));
+        await _uow.EnrollmentPlannedItems.AddRangeAsync(request.PlannedItems.Select(p => new EnrollmentPlannedItem
+        {
+            EnrollmentId = enrollmentId,
+            WeekNumber = p.WeekNumber,
+            PackageItemId = p.PackageItemId,
+            InjectionId = p.InjectionId,
+            VitaminId = p.VitaminId,
+            CustomName = CleanName(p.CustomName),
+            Quantity = p.Quantity!.Value,
+            Unit = CleanName(p.Unit),
+            Notes = p.Notes?.Trim(),
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = userId,
+        }).ToList());
+    }
+
+    /// <summary>Names and units for package items, injections and vitamins, for display.</summary>
+    private sealed record ItemNames(
+        Dictionary<int, (string Name, string Kind, string? Unit, int Week, decimal Quantity, string? Notes)> Package,
+        Dictionary<int, (string Name, string Unit)> Injections,
+        Dictionary<int, (string Name, string Unit)> Vitamins);
+
+    private async Task<ItemNames> LoadItemNamesAsync(int packageId)
+    {
+        var package = await _uow.PackageItems.Query()
+            .Where(p => p.PackageId == packageId)
+            .Select(p => new
+            {
+                p.Id, p.WeekNumber, p.Quantity, p.Unit, p.Notes,
+                InjectionName = p.Injection != null ? p.Injection.InjectionName : null,
+                InjectionUnit = p.Injection != null ? p.Injection.Unit : null,
+                VitaminName = p.Vitamin != null ? p.Vitamin.VitaminName : null,
+                VitaminUnit = p.Vitamin != null ? p.Vitamin.Unit : null,
+            })
+            .ToListAsync();
+        var injections = await _uow.InjectionTypes.Query().Select(i => new { i.Id, i.InjectionName, i.Unit }).ToListAsync();
+        var vitamins = await _uow.VitaminTypes.Query().Select(v => new { v.Id, v.VitaminName, v.Unit }).ToListAsync();
+        return new ItemNames(
+            package.ToDictionary(p => p.Id, p => (
+                p.InjectionName ?? p.VitaminName ?? "—",
+                p.InjectionName != null ? "Injection" : "Vitamin",
+                p.Unit ?? p.InjectionUnit ?? p.VitaminUnit,
+                p.WeekNumber, p.Quantity, p.Notes)),
+            injections.ToDictionary(i => i.Id, i => (i.InjectionName, i.Unit)),
+            vitamins.ToDictionary(v => v.Id, v => (v.VitaminName, v.Unit)));
+    }
+
+    private static FollowUpLineDto Line(ItemNames names, int week, int? packageItemId, int? injectionId, int? vitaminId,
+        string? customName, decimal quantity, string? unit, string? notes, bool given)
+    {
+        var line = new FollowUpLineDto
+        {
+            WeekNumber = week, PackageItemId = packageItemId, InjectionId = injectionId, VitaminId = vitaminId,
+            CustomName = customName, Quantity = quantity, Unit = unit, Notes = notes, Given = given,
+        };
+        if (packageItemId is int p && names.Package.TryGetValue(p, out var pi))
+        {
+            line.Name = pi.Name; line.Kind = pi.Kind; line.Unit ??= pi.Unit; line.OtherWeek = pi.Week != week;
+        }
+        else if (injectionId is int i && names.Injections.TryGetValue(i, out var inj))
+        {
+            line.Name = inj.Name; line.Kind = "Injection"; line.Unit ??= inj.Unit; line.OutsidePackage = true;
+        }
+        else if (vitaminId is int v && names.Vitamins.TryGetValue(v, out var vit))
+        {
+            line.Name = vit.Name; line.Kind = "Vitamin"; line.Unit ??= vit.Unit; line.OutsidePackage = true;
+        }
+        else
+        {
+            line.Name = customName ?? "—"; line.Kind = "Other"; line.OutsidePackage = true;
+        }
+        return line;
+    }
+
+    /// <summary>
+    /// M4d: what the follow-up form shows. This week's lines start from the patient's plan once one exists,
+    /// otherwise from the package, and planned lines start ticked; editing shows what was given. The coming
+    /// weeks start from the plan, or the package. After a refused save, the posted lines are shown again.
+    /// </summary>
+    public async Task<ServiceResult<FollowUpFormDto>> GetFollowUpFormAsync(int enrollmentId, int? followUpId, RecordFollowUpDto? posted = null)
+    {
+        var enrollment = await _uow.NutritionEnrollments.GetByIdAsync(enrollmentId);
+        if (enrollment is null) return ServiceResult<FollowUpFormDto>.Failure("Enrollment not found.");
+
+        var names = await LoadItemNamesAsync(enrollment.PackageId);
+        var plan = await _uow.EnrollmentPlannedItems.Query().Where(p => p.EnrollmentId == enrollmentId).ToListAsync();
+        var hasPlan = plan.Count > 0;
+        var latest = await _uow.WeeklyFollowUps.GetMaxWeekNumberAsync(enrollmentId) ?? 0;
+
+        WeeklyFollowUp? followUp = null;
+        if (followUpId is int id)
+        {
+            followUp = await _uow.WeeklyFollowUps.GetByIdAsync(id);
+            if (followUp is null || followUp.EnrollmentId != enrollmentId)
+                return ServiceResult<FollowUpFormDto>.Failure("Follow-up not found.");
+        }
+        var week = followUp?.WeekNumber ?? latest + 1;
+
+        var form = new FollowUpFormDto
+        {
+            EnrollmentId = enrollmentId,
+            Week = week,
+            PackageItems = names.Package.Select(p => Line(names, p.Value.Week, p.Key, null, null, null, p.Value.Quantity, null, p.Value.Notes, false)).ToList(),
+            Injections = names.Injections.Select(i => new CatalogueChoiceDto(i.Key, i.Value.Name, i.Value.Unit)).OrderBy(c => c.Name).ToList(),
+            Vitamins = names.Vitamins.Select(v => new CatalogueChoiceDto(v.Key, v.Value.Name, v.Value.Unit)).OrderBy(c => c.Name).ToList(),
+        };
+        for (var w = Math.Max(latest, week) + 1; w <= FollowUpWeeks; w++) form.PlanWeeks.Add(w);
+
+        if (posted is not null)
+        {
+            form.Lines = posted.AdministeredItems.Select(a => Line(names, week, a.PackageItemId, a.InjectionId, a.VitaminId,
+                a.CustomName, a.ActualQuantity ?? 0m, a.Unit, a.Notes, a.Given)).ToList();
+            form.Plan = posted.PlannedItems.Select(p => Line(names, p.WeekNumber, p.PackageItemId, p.InjectionId, p.VitaminId,
+                p.CustomName, p.Quantity ?? 0m, p.Unit, p.Notes, false)).ToList();
+            return ServiceResult<FollowUpFormDto>.Success(form);
+        }
+
+        IEnumerable<FollowUpLineDto> PackageWeek(int w, bool given) => names.Package.Where(p => p.Value.Week == w)
+            .OrderBy(p => p.Key)
+            .Select(p => Line(names, w, p.Key, null, null, null, p.Value.Quantity, null, p.Value.Notes, given));
+        IEnumerable<FollowUpLineDto> PlanWeek(int w, bool given) => plan.Where(p => p.WeekNumber == w).OrderBy(p => p.Id)
+            .Select(p => Line(names, w, p.PackageItemId, p.InjectionId, p.VitaminId, p.CustomName, p.Quantity, p.Unit, p.Notes, given));
+
+        if (followUp is not null)
+        {
+            var items = await _uow.WeeklyAdministeredItems.FindAsync(a => a.FollowUpId == followUp.Id);
+            form.Lines.AddRange(items.OrderBy(a => a.Id).Select(a => Line(names, week, a.PackageItemId, a.InjectionId, a.VitaminId,
+                a.CustomName, a.ActualQuantity, a.Unit, a.Notes, true)));
+        }
+        else
+        {
+            // Planned items start ticked (decision 2): the plan is what's expected this week.
+            form.Lines.AddRange(hasPlan ? PlanWeek(week, true) : PackageWeek(week, true));
+        }
+        // The package's other items, unticked, for something given early or late.
+        var shown = form.Lines.Where(l => l.PackageItemId.HasValue).Select(l => l.PackageItemId!.Value).ToHashSet();
+        form.Lines.AddRange(names.Package.Where(p => !shown.Contains(p.Key)).OrderBy(p => p.Value.Week).ThenBy(p => p.Key)
+            .Select(p => Line(names, week, p.Key, null, null, null, p.Value.Quantity, null, p.Value.Notes, false)));
+
+        foreach (var w in form.PlanWeeks)
+            form.Plan.AddRange(hasPlan ? PlanWeek(w, false) : PackageWeek(w, false));
+
+        return ServiceResult<FollowUpFormDto>.Success(form);
     }
 
     public async Task<ServiceResult<WeeklyFollowUpDto>> GetFollowUpByIdAsync(int followUpId)
@@ -508,7 +702,8 @@ public class NutritionService : INutritionService
         if (enrollment.Status == EnrollmentStatus.Cancelled)
             return ServiceResult<WeeklyFollowUpDto>.Failure(CancelledFollowUpMessage);
 
-        var checkedInput = await CheckFollowUpInputAsync(enrollment, request);
+        var firstPlanWeek = Math.Max(await _uow.WeeklyFollowUps.GetMaxWeekNumberAsync(followUp.EnrollmentId) ?? 0, followUp.WeekNumber) + 1;
+        var checkedInput = await CheckFollowUpInputAsync(enrollment, request, firstPlanWeek);
         if (checkedInput.Error is not null)
             return ServiceResult<WeeklyFollowUpDto>.Failure(checkedInput.Error);
 
@@ -519,6 +714,7 @@ public class NutritionService : INutritionService
         _uow.WeeklyAdministeredItems.DeleteRange(await _uow.WeeklyAdministeredItems.FindAsync(a => a.FollowUpId == followUpId));
         _uow.WeeklyFollowUpLabResults.DeleteRange(await _uow.WeeklyFollowUpLabResults.FindAsync(l => l.FollowUpId == followUpId));
         await AddFollowUpItemsAsync(followUpId, request, updatedBy);
+        await SavePlanAsync(followUp.EnrollmentId, request, firstPlanWeek, updatedBy);   // M4d
         await _audit.RecordAsync(AuditActions.FollowUpEdited, "WeeklyFollowUp", followUpId,
             new { enrollmentId = followUp.EnrollmentId, week = followUp.WeekNumber });
         await _uow.SaveChangesAsync();
@@ -901,6 +1097,14 @@ public class NutritionService : INutritionService
             : await _uow.WeeklyFollowUps
                 .GetLabResultsWithDetailsAsync(f.Id);
 
+        // M4d: names of items given from the catalogues, outside the package.
+        var extraInjectionIds = administeredItems.Where(a => a.InjectionId.HasValue).Select(a => a.InjectionId!.Value).Distinct().ToList();
+        var extraVitaminIds = administeredItems.Where(a => a.VitaminId.HasValue).Select(a => a.VitaminId!.Value).Distinct().ToList();
+        var injectionNames = extraInjectionIds.Count == 0 ? new Dictionary<int, string>()
+            : await _uow.InjectionTypes.Query().Where(i => extraInjectionIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, i => i.InjectionName);
+        var vitaminNames = extraVitaminIds.Count == 0 ? new Dictionary<int, string>()
+            : await _uow.VitaminTypes.Query().Where(v => extraVitaminIds.Contains(v.Id)).ToDictionaryAsync(v => v.Id, v => v.VitaminName);
+
         var administeredDtos = new List<AdministeredItemDto>();
         foreach (var a in administeredItems)
         {
@@ -915,11 +1119,28 @@ public class NutritionService : INutritionService
             {
                 itemName = packageItem.Vitamin?.VitaminName ?? "";
             }
+            else if (a.InjectionId is int injectionId)
+            {
+                itemName = injectionNames.GetValueOrDefault(injectionId, "");
+            }
+            else if (a.VitaminId is int vitaminId)
+            {
+                itemName = vitaminNames.GetValueOrDefault(vitaminId, "");
+            }
+            else if (a.CustomName is not null)
+            {
+                itemName = a.CustomName;
+            }
 
             administeredDtos.Add(new AdministeredItemDto
             {
                 Id = a.Id,
                 PackageItemId = a.PackageItemId,
+                InjectionId = a.InjectionId,
+                VitaminId = a.VitaminId,
+                CustomName = a.CustomName,
+                Unit = a.Unit ?? packageItem?.Unit,
+                OutsidePackage = a.PackageItemId is null,
                 Notes = a.Notes,
                 ItemName = itemName,
                 ActualQuantity = a.ActualQuantity,

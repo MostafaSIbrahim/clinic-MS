@@ -24,6 +24,8 @@ public interface INutritionService
     Task<ServiceResult> CompleteFollowUpAsync(int followUpId);
     Task<ServiceResult<WeeklyFollowUpDto>> UpdateFollowUpAsync(int followUpId, RecordFollowUpDto request, int updatedBy);
     Task<ServiceResult> DeleteFollowUpAsync(int followUpId);
+    /// <summary>M4d: the follow-up form's lines: this week, the coming weeks' plan, and the item lists.</summary>
+    Task<ServiceResult<FollowUpFormDto>> GetFollowUpFormAsync(int enrollmentId, int? followUpId, RecordFollowUpDto? posted = null);
 
     // ── Injection Type catalog (feature 5) ────────────────────
     Task<ServiceResult<IEnumerable<InjectionTypeDto>>> GetInjectionTypesAsync(bool includeInactive = false);

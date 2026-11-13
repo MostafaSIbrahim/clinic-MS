@@ -168,17 +168,21 @@ namespace SafyaClinic.Web.Controllers
             return View(result.Data);
         }
 
-        /// <summary>The enrollment, its package's items and the analysis list for the follow-up form.</summary>
-        private async Task<bool> LoadFollowUpFormAsync(int enrollmentId, int weekNumber, int? followUpId)
+        /// <summary>
+        /// The enrollment, the form's lines (M4d: this week, the plan for the coming weeks, and the item lists)
+        /// and the analysis list. After a refused save, <paramref name="posted"/> is shown again.
+        /// </summary>
+        private async Task<bool> LoadFollowUpFormAsync(int enrollmentId, int? followUpId, RecordFollowUpDto? posted = null)
         {
             var enrollment = await _nutritionService.GetEnrollmentByIdAsync(enrollmentId);
             if (!enrollment.IsSuccess || enrollment.Data is null) return false;
-            var package = await _nutritionService.GetPackageByIdAsync(enrollment.Data.PackageId);
+            var form = await _nutritionService.GetFollowUpFormAsync(enrollmentId, followUpId, posted);
+            if (!form.IsSuccess || form.Data is null) return false;
             var analyses = await _analysisService.GetAnalysisTypesAsync();
             ViewBag.Enrollment = enrollment.Data;
-            ViewBag.PackageItems = package.Data?.Items ?? new List<PackageItemDto>();
+            ViewBag.Form = form.Data;
             ViewBag.AnalysisTypes = analyses.Data ?? Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.AnalysisTypeDto>();
-            ViewBag.WeekNumber = weekNumber;
+            ViewBag.WeekNumber = form.Data.Week;
             ViewBag.FollowUpId = followUpId;
             ViewBag.IsEdit = followUpId.HasValue;
             return true;
@@ -201,7 +205,7 @@ namespace SafyaClinic.Web.Controllers
                     : "All 4 weekly follow-ups are already recorded for this enrollment.");
                 return RedirectToAction(nameof(EnrollmentDetails), new { id = enrollmentId });
             }
-            await LoadFollowUpFormAsync(enrollmentId, week, null);
+            await LoadFollowUpFormAsync(enrollmentId, null);
             return View(new RecordFollowUpDto { FollowUpId = enrollmentId, FollowUpDate = _clock.Today });
         }
 
@@ -219,8 +223,7 @@ namespace SafyaClinic.Web.Controllers
 
             async Task<IActionResult> Again()
             {
-                var enrollment = await _nutritionService.GetEnrollmentByIdAsync(actualEnrollmentId);
-                await LoadFollowUpFormAsync(actualEnrollmentId, enrollment.Data is null ? 1 : NextWeek(enrollment.Data), null);
+                await LoadFollowUpFormAsync(actualEnrollmentId, null, model);
                 return View(model);
             }
 
@@ -267,10 +270,6 @@ namespace SafyaClinic.Web.Controllers
                 DietCompliance = dto.DietCompliance,
                 SideEffects = dto.SideEffects,
                 NextWeekAdjustments = dto.NextWeekAdjustments,
-                AdministeredItems = dto.AdministeredItems.Select(a => new RecordAdministeredItemDto
-                {
-                    PackageItemId = a.PackageItemId, ActualQuantity = a.ActualQuantity, Notes = a.Notes
-                }).ToList(),
                 LabResults = dto.LabResults.Select(l => new RecordLabResultDto
                 {
                     AnalysisTypeId = l.AnalysisTypeId, ResultValue = l.ResultValue, ReferenceRange = l.ReferenceRange,
@@ -278,7 +277,7 @@ namespace SafyaClinic.Web.Controllers
                 }).ToList(),
             };
 
-            await LoadFollowUpFormAsync(dto.EnrollmentId, dto.WeekNumber, id);
+            await LoadFollowUpFormAsync(dto.EnrollmentId, id);
             return View("RecordFollowUp", model);
         }
 
@@ -299,7 +298,7 @@ namespace SafyaClinic.Web.Controllers
                         nameof(FollowUpDetails), routeValues: new { id });
                 ApplyErrors(result);
             }
-            await LoadFollowUpFormAsync(enrollmentId, current.Data.WeekNumber, id);
+            await LoadFollowUpFormAsync(enrollmentId, id, model);
             return View("RecordFollowUp", model);
         }
 

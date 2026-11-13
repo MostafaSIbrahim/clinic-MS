@@ -3,23 +3,21 @@
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
     // M4b: record or edit a weekly follow-up. Edit saves to the same week (it added a new week before).
-    // Items are ticked from the enrollment's package and lab results chosen from the analysis list; before,
-    // people had to type database numbers. Shared fields, the patient header, English and Arabic.
+    // Lab results are chosen from the analysis list. Shared fields, the patient header, English and Arabic.
+    // M4d: "Given this week" starts from the patient's plan (or the package), planned items ticked; items can be
+    // added from the injection and vitamin lists or typed by name; the plan for the coming weeks is edited here
+    // and pre-fills those weeks' forms. The rows are built by followup-items.js.
     var isEdit = ViewBag.IsEdit == true;
     var followUpId = ViewBag.FollowUpId as int?;
     var week = ViewBag.WeekNumber as int? ?? 1;
     var enrollment = ViewBag.Enrollment as PatientEnrollmentDto;
     var enrollmentId = Model.FollowUpId;   // this form carries the enrollment's number in FollowUpId
-    var packageItems = ViewBag.PackageItems as List<PackageItemDto> ?? new();
+    var form = ViewBag.Form as FollowUpFormDto ?? new FollowUpFormDto();
     var analyses = (ViewBag.AnalysisTypes as IEnumerable<SafyaClinic.Application.DTOs.Analysis.AnalysisTypeDto>
         ?? Enumerable.Empty<SafyaClinic.Application.DTOs.Analysis.AnalysisTypeDto>()).ToList();
     ViewData["Title"] = isEdit ? T["Edit week {0} follow-up", week].Value : T["Record week {0} follow-up", week].Value;
     var inv = System.Globalization.CultureInfo.InvariantCulture;
 
-    var given = Model.AdministeredItems.Where(a => a.PackageItemId.HasValue)
-        .GroupBy(a => a.PackageItemId!.Value).ToDictionary(g => g.Key, g => g.First());
-    var thisWeek = packageItems.Where(i => i.WeekNumber == week).OrderBy(i => i.Id).ToList();
-    var otherWeeks = packageItems.Where(i => i.WeekNumber != week).OrderBy(i => i.WeekNumber).ThenBy(i => i.Id).ToList();
     var diet = new[] { "Excellent", "Good", "Fair", "Poor" }
         .Select(d => new SelectListItem(T[d].Value, d, d == Model.DietCompliance)).ToList();
     var labRows = Model.LabResults.Where(l => l.AnalysisTypeId.HasValue || !string.IsNullOrWhiteSpace(l.ResultValue)).ToList();
@@ -28,8 +26,16 @@
     var backUrl = isEdit
         ? Url.Action("FollowUpDetails", new { id = followUpId })
         : Url.Action("EnrollmentDetails", new { id = enrollmentId });
-    SafyaClinic.Web.Models.FollowUpItemRow Row(int index, PackageItemDto item) =>
-        new(index, item, given.GetValueOrDefault(item.Id), item.InjectionName != null ? T["Injection"].Value : T["Vitamin"].Value);
+    var itemText = new
+    {
+        kinds = new Dictionary<string, string> { ["injection"] = T["Injection"].Value, ["vitamin"] = T["Vitamin"].Value, ["other"] = T["Other drug"].Value },
+        outside = T["Outside the package"].Value, plannedWeek = T["Planned for week {0}", "{0}"].Value,
+        drugName = T["Drug name"].Value, givenLabel = T["Given"].Value, quantityGiven = T["Quantity given"].Value,
+        quantity = T["Quantity"].Value, unit = T["Unit"].Value, notes = T["Notes"].Value, remove = T["Remove"].Value,
+        choose = T["Choose an item"].Value, otherDrug = T["Other drug (type the name)"].Value, add = T["Add"].Value,
+        addThisWeek = T["Add an item given this week"].Value, addToWeek = T["Add an item to week {0}", "{0}"].Value,
+        week = T["Week {0}", "{0}"].Value,
+    };
     var labOptions = analyses.Select(a => new { value = a.Id.ToString(), label = a.TypeName }).ToList();
 }
 <div class="page-toolbar">
@@ -48,7 +54,7 @@
 }
 
 <form method="post" action="@(isEdit ? Url.Action("EditFollowUp", new { id = followUpId }) : Url.Action("RecordFollowUp", new { enrollmentId }))"
-      class="followup-form" data-draft-key="@draftKey" data-draft-restore="@restoreDraft" data-draft-prepare="ensureLabRows">
+      class="followup-form" data-draft-key="@draftKey" data-draft-restore="@restoreDraft" data-draft-prepare="prepareFollowUp">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
     <input type="hidden" asp-for="FollowUpId" />
@@ -76,33 +82,17 @@
     </app-card>
 
     <app-card id="followup-items" title="@T["Given this week"].Value" level="2" icon="bi-capsule">
-        @if (!packageItems.Any())
-        {
-            <p class="text-muted mb-0">@T["This package has no injections or vitamins."]</p>
-        }
-        else
-        {
-            <p class="text-muted small">@T["Tick each item given and check the quantity."]</p>
-            @for (var n = 0; n < thisWeek.Count; n++)
-            {
-                <partial name="_FollowUpItemRow" model="Row(n, thisWeek[n])" />
-            }
-            @if (!thisWeek.Any())
-            {
-                <p class="text-muted small">@T["The package plans nothing for week {0}.", week]</p>
-            }
-            @if (otherWeeks.Any())
-            {
-                <details class="mt-2" open="@(otherWeeks.Any(i => given.ContainsKey(i.Id)))">
-                    <summary>@T["Items from other weeks (given early or late)"]</summary>
-                    @for (var n = 0; n < otherWeeks.Count; n++)
-                    {
-                        <partial name="_FollowUpItemRow" model="Row(thisWeek.Count + n, otherWeeks[n])" />
-                    }
-                </details>
-            }
-        }
+        <p class="text-muted small">@T["Planned items start ticked. Untick what wasn't given, and check the quantity."]</p>
+        <div id="given-rows"></div>
     </app-card>
+
+    @if (form.PlanWeeks.Any())
+    {
+        <app-card id="followup-plan" title="@T["Plan for the coming weeks"].Value" level="2" icon="bi-calendar-week">
+            <p class="text-muted small">@T["This patient's plan only; the package doesn't change. Each week's form starts from it."]</p>
+            <div id="plan-weeks"></div>
+        </app-card>
+    }
 
     <app-card id="followup-labs" title="@T["Lab results"].Value" level="2" icon="bi-clipboard2-pulse">
         <app-field asp-for="LabResultsSummary" label="@T["Lab results summary"].Value" type="textarea" rows="2" />
@@ -120,6 +110,7 @@
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script src="~/js/followup-items.js" asp-append-version="true"></script>
     <script>
         const labOptions = @Html.Raw(Json.Serialize(labOptions));
         const labText = @Html.Raw(Json.Serialize(new
@@ -177,12 +168,15 @@
             document.querySelector('form[data-draft-key]').dispatchEvent(new Event('input', { bubbles: true }));
         }
 
-        // form-draft.js: make the kept lab rows exist before their values are put back.
-        function ensureLabRows(names) {
+        // form-draft.js: make the kept lab rows and item rows exist before their values are put back.
+        function prepareFollowUp(names, values) {
             let highest = -1;
             names.forEach(function (n) { const m = /^LabResults\[(\d+)\]\./.exec(n); if (m) highest = Math.max(highest, Number(m[1])); });
             while (labIndex <= highest) addLabRow();
+            FollowUpItems.prepare(names, values || {});
         }
+
+        FollowUpItems.init(@Html.Raw(Json.Serialize(form)), @Html.Raw(Json.Serialize(itemText)));
 
         if (enteredLabs.length) enteredLabs.forEach(function (l) { addLabRow(l); });
         else addLabRow();

@@ -1,9 +1,9 @@
 // M3b: keeps what someone has typed in a form when the page reloads before it is saved, for example when the
 // language is switched. Forms opt in with data-draft-key="<unique key>". Values are kept in this browser tab only
 // (sessionStorage), for two hours, and are removed when the form is submitted or Cancel (data-draft-discard) is used.
-// Not kept: the anti-forgery token, hidden fields, files, passwords, and fields marked data-draft-ignore
+// Not kept: the anti-forgery token, hidden fields (unless marked data-draft-keep), files, passwords, and fields marked data-draft-ignore
 // (such as "Prescribe anyway", which must always be ticked deliberately).
-// A form can set data-draft-prepare="functionName": that function is called with the saved names first, so it can
+// A form can set data-draft-prepare="functionName": that function is called with the saved names (and values) first, so it can
 // add rows (the drug rows of a new prescription) before the values are put back.
 // Restoring happens only when the page was opened normally (data-draft-restore="true"), not when the server shows
 // the form again with what was submitted.
@@ -36,7 +36,8 @@
         if (!el.name || el.disabled || el.name === '__RequestVerificationToken') return false;
         if (el.hasAttribute('data-draft-ignore')) return false;
         var type = (el.type || '').toLowerCase();
-        return type !== 'hidden' && type !== 'file' && type !== 'password' && type !== 'submit' && type !== 'button';
+        if (type === 'hidden') return el.hasAttribute('data-draft-keep');   // M4d: a row's item reference
+        return type !== 'file' && type !== 'password' && type !== 'submit' && type !== 'button';
     }
 
     function collect(form) {
@@ -56,7 +57,7 @@
 
     function restore(form, values) {
         var prepare = form.getAttribute('data-draft-prepare');
-        if (prepare && typeof global[prepare] === 'function') global[prepare](Object.keys(values));
+        if (prepare && typeof global[prepare] === 'function') global[prepare](Object.keys(values), values);
         Array.prototype.forEach.call(form.elements, function (el) {
             if (!kept(el) || !Object.prototype.hasOwnProperty.call(values, el.name)) return;
             var type = (el.type || '').toLowerCase();

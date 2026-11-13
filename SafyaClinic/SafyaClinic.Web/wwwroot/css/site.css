@@ -1207,12 +1207,25 @@ a.app-kpi:focus-visible {
     margin: 0;
     min-width: 0;
 }
+/* M4d: the coming weeks of the plan, and the "add an item" pickers. */
+.plan-week {
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+.plan-week > summary {
+    font-weight: 600;
+    cursor: pointer;
+}
+.followup-adder {
+    max-width: 32rem;
+    margin-top: var(--space-3);
+}
 .followup-form > .app-card,
 .followup-details .app-card {
     margin-bottom: var(--space-4);
 }
 @media (min-width: 768px) {
-    .followup-item { grid-template-columns: 2fr 1fr 2fr; align-items: end; }
+    .followup-item { grid-template-columns: 2fr 1fr 1fr 2fr auto; align-items: end; }
     .followup-lab { grid-template-columns: 2fr 1fr 1fr 1fr auto; align-items: end; }
     .package-item { grid-template-columns: 1fr 2fr 1fr 1fr 2fr auto; align-items: end; }
 }

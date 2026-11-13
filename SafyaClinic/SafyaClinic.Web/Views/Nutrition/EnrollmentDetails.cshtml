@@ -146,6 +146,19 @@
                 else
                 {
                     <div class="small text-muted">@T["Not recorded yet"]</div>
+                    @* M4d: what is planned for this week, from the patient's plan. *@
+                    var planned = Model.PlannedItems.Where(p => p.WeekNumber == week).ToList();
+                    if (planned.Any())
+                    {
+                        <div class="small mt-1">@T["Planned:"]</div>
+                        <ul class="list-unstyled small mb-0">
+                            @foreach (var p in planned)
+                            {
+                                <li><span dir="auto">@p.Name</span> · @p.Quantity.ToString("0.##", inv) @p.Unit
+                                    @if (p.OutsidePackage) { <span class="text-muted">(@T["Outside the package"])</span> }</li>
+                            }
+                        </ul>
+                    }
                 }
             </li>
         }

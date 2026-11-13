@@ -86,9 +86,9 @@ public class FollowUpTests
     {
         var w = await WorldAsync();
         var id = (await Service(w).RecordFollowUpAsync(w.Enrollment,
-            Form(80m, new RecordAdministeredItemDto { PackageItemId = w.Week1Item, ActualQuantity = 1m }), w.Doctor)).Data!.Id;
+            Form(80m, new RecordAdministeredItemDto { Given = true, PackageItemId = w.Week1Item, ActualQuantity = 1m }), w.Doctor)).Data!.Id;
 
-        var edit = Form(78.5m, new RecordAdministeredItemDto { PackageItemId = w.Week2Item, ActualQuantity = 2m, Notes = "late" });
+        var edit = Form(78.5m, new RecordAdministeredItemDto { Given = true, PackageItemId = w.Week2Item, ActualQuantity = 2m, Notes = "late" });
         edit.LabResults.Add(new RecordLabResultDto { AnalysisTypeId = w.Analysis, ResultValue = "5.6", IsNormal = true });
         var audit = new Recorder();
         var result = await Service(w, audit).UpdateFollowUpAsync(id, edit, w.Doctor);
@@ -117,7 +117,7 @@ public class FollowUpTests
         var w = await WorldAsync();
 
         var result = await Service(w).RecordFollowUpAsync(w.Enrollment,
-            Form(80m, new RecordAdministeredItemDto { PackageItemId = w.OtherPackageItem, ActualQuantity = 1m }), w.Doctor);
+            Form(80m, new RecordAdministeredItemDto { Given = true, PackageItemId = w.OtherPackageItem, ActualQuantity = 1m }), w.Doctor);
 
         Assert.False(result.IsSuccess);
         Assert.Empty(await WeeksAsync(w));
@@ -146,7 +146,7 @@ public class FollowUpTests
         var w = await WorldAsync();
 
         var result = await Service(w).RecordFollowUpAsync(w.Enrollment,
-            Form(80m, new RecordAdministeredItemDto { PackageItemId = w.Week1Item, ActualQuantity = null }), w.Doctor);
+            Form(80m, new RecordAdministeredItemDto { Given = true, PackageItemId = w.Week1Item, ActualQuantity = null }), w.Doctor);
 
         Assert.False(result.IsSuccess);
     }
