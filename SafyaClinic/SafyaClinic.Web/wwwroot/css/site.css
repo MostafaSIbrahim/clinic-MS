@@ -1181,6 +1181,21 @@ a.app-kpi:focus-visible {
     border-radius: var(--radius-md);
 }
 
+/* M5b: a user's groups as small chips, each with its remove button. */
+.user-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+}
+.user-group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
 /* M4a: the four weeks of a nutrition enrollment, side by side on wider screens. */
 .enrollment-weeks {
     display: grid;

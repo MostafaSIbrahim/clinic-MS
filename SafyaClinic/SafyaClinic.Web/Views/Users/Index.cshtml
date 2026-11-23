@@ -1,138 +1,148 @@
 @model PagedResult<UserDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
 @{
-    ViewData["Title"] = "Users";
-    // F4d: users join permission groups; the clinician type decides who appears in doctor pickers.
+    // M5b: users. Shared layout, a search, a table that becomes cards on phones, English and Arabic.
+    // Rules unchanged (F4): groups give access; the clinician type decides who appears in doctor pickers.
+    ViewData["Title"] = T["Users"].Value;
     var allGroups = (ViewBag.AllGroups as IEnumerable<PermissionGroupSummary>
         ?? Enumerable.Empty<PermissionGroupSummary>()).ToList();
+    string? search = ViewBag.Search as string;
+    var none = new EmptyStateModel(string.IsNullOrWhiteSpace(search) ? T["No users yet."].Value : T["No users match this search."].Value,
+        Icon: "bi-people", ActionText: T["Add user"].Value, ActionUrl: Url.Action("Create"));
 }
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-person-gear me-2"></i>System Users</span>
-        <a asp-action="Create" class="btn btn-sm btn-primary">
-            <i class="bi bi-person-plus me-1"></i>Add User
-        </a>
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Users"]</h1>
+        <p class="text-muted mb-0">@T["People who can sign in. What each may do comes from their permission groups."]</p>
     </div>
-    <div class="card-body p-0">
-        @if (!Model.Items.Any())
-        {
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-people fs-1 d-block mb-2 opacity-50"></i>
-                No users found.
-            </div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>Specialization</th>
-                            <th>Groups</th>
-                            <th>Clinician</th>
-                            <th>Status</th>
-                            <th>Last Login</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var u in Model.Items)
-                        {
-                            <tr>
-                                <td class="fw-semibold">@u.FullName</td>
-                                <td>@u.PhoneNumber</td>
-                                <td>@(u.Email ?? "—")</td>
-                                <td>@(u.Specialization ?? "—")</td>
-                                <td>
-                                    @foreach (var groupName in u.Groups)
-                                    {
-                                        <span class="badge bg-light text-dark border me-1 mb-1">
-                                            @groupName
-                                            @if (allGroups.FirstOrDefault(g => g.Name == groupName) is { } memberGroup)
-                                            {
-                                                <form asp-action="RemoveFromGroup" method="post" class="d-inline">
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="hidden" name="userId" value="@u.Id" />
-                                                    <input type="hidden" name="groupId" value="@memberGroup.Id" />
-                                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1"
-                                                            style="font-size:.75rem;" aria-label="Remove from @groupName"
-                                                            data-confirm="Remove this user from the group?">×</button>
-                                                </form>
-                                            }
-                                        </span>
-                                    }
-                                    <div class="dropdown d-inline">
-                                        <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="dropdown" aria-label="Add to a group">
-                                            <i class="bi bi-plus-circle text-primary"></i>
-                                        </button>
-                                        <ul class="dropdown-menu p-2" style="min-width:200px;">
-                                            @foreach (var g in allGroups.Where(g => !u.Groups.Contains(g.Name)))
-                                            {
-                                                <li>
-                                                    <form asp-action="AddToGroup" method="post">
-                                                        @Html.AntiForgeryToken()
-                                                        <input type="hidden" name="userId" value="@u.Id" />
-                                                        <input type="hidden" name="groupId" value="@g.Id" />
-                                                        <button type="submit" class="dropdown-item small">@g.Name</button>
-                                                    </form>
-                                                </li>
-                                            }
-                                        </ul>
-                                    </div>
-                                </td>
-                                <td>
-                                    <form asp-action="SetClinicianType" method="post" class="d-flex gap-1">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="userId" value="@u.Id" />
-                                        <label for="clinician-@u.Id" class="visually-hidden">Clinician type</label>
-                                        <select id="clinician-@u.Id" name="clinicianType" class="form-select form-select-sm" style="min-width:8rem;"
-                                                data-confirm="Change the clinician type? The user will be asked to sign in again." data-confirm-submit>
-                                            @foreach (var type in Enum.GetValues<SafyaClinic.Domain.Enums.ClinicianType>())
-                                            {
-                                                <option value="@type" selected="@(u.ClinicianType == type)">@type</option>
-                                            }
-                                        </select>
-                                    </form>
-                                </td>
-                                <td>
-                                    @if (u.IsActive)
-                                    {
-                                        <span class="badge bg-success">Active</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Inactive</span>
-                                    }
-                                </td>
-                                <td class="small text-muted">@(u.LastLoginAt is DateTime lastLogin ? Clock.ToClinicTime(lastLogin).ToString("dd MMM yyyy HH:mm") : "Never")</td>
-                                <td class="text-end">
-                                    <form asp-action="ToggleActive" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@u.Id" />
-                                        <input type="hidden" name="isActive" value="@(u.IsActive ? "false" : "true")" />
-                                        <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-outline-danger" : "btn-outline-success")">
-                                            @if (u.IsActive)
-                                            {
-                                                <text><i class="bi bi-slash-circle"></i> Deactivate</text>
-                                            }
-                                            else
-                                            {
-                                                <text><i class="bi bi-check-circle"></i> Activate</text>
-                                            }
-                                        </button>
-                                    </form>
-                                    <a asp-action="ResetPassword" asp-route-id="@u.Id" class="btn btn-sm btn-outline-secondary ms-1">
-                                        <i class="bi bi-key" aria-hidden="true"></i> Reset password
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
+    <div class="page-actions">
+        <a asp-controller="PermissionGroups" asp-action="Index" class="btn btn-outline-secondary">@T["Permission Groups"]</a>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> @T["Add user"]</a>
     </div>
 </div>
+
+<app-filter-bar label="@T["Find users"].Value" submit-text="@T["Search"].Value" action="@Url.Action("Index")" clear-url="@Url.Action("Index")">
+    <div class="app-filter-bar__field">
+        <label for="userSearch" class="form-label">@T["Name, phone or email"]</label>
+        <input type="text" id="userSearch" name="search" value="@search" class="form-control" autocomplete="off" />
+    </div>
+</app-filter-bar>
+
+<div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+
+@if (!Model.Items.Any())
+{
+    <partial name="_AppEmpty" model="none" />
+}
+else
+{
+    <app-table caption="@T["Users"].Value" caption-hidden="true" stack="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Name"]</th>
+                <th scope="col">@T["Phone"]</th>
+                <th scope="col">@T["Permission Groups"]</th>
+                <th scope="col">@T["Clinician type"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col">@T["Last sign-in"]</th>
+                <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in Model.Items)
+            {
+                var available = allGroups.Where(g => !u.Groups.Contains(g.Name)).ToList();
+                <tr>
+                    <th scope="row" data-label="@T["Name"]" dir="auto">
+                        @u.FullName
+                        @if (!string.IsNullOrWhiteSpace(u.Specialization) || !string.IsNullOrWhiteSpace(u.Email))
+                        {
+                            <div class="small text-muted fw-normal" dir="auto">@string.Join(" · ", new[] { u.Specialization, u.Email }.Where(s => !string.IsNullOrWhiteSpace(s)))</div>
+                        }
+                    </th>
+                    <td data-label="@T["Phone"]" dir="ltr">@u.PhoneNumber</td>
+                    <td data-label="@T["Permission Groups"]">
+                        <ul class="user-groups list-unstyled mb-1">
+                            @foreach (var groupName in u.Groups)
+                            {
+                                <li class="user-group">
+                                    <span dir="auto">@T[groupName]</span>
+                                    @if (allGroups.FirstOrDefault(g => g.Name == groupName) is { } memberGroup)
+                                    {
+                                        <form asp-action="RemoveFromGroup" method="post" class="d-inline" data-confirm="@T["Remove {0} from {1}?", u.FullName, T[groupName].Value]">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@u.Id" />
+                                            <input type="hidden" name="groupId" value="@memberGroup.Id" />
+                                            <button type="submit" class="btn btn-sm btn-link text-danger p-0">
+                                                <i class="bi bi-x-circle" aria-hidden="true"></i><span class="visually-hidden">@T["Remove {0} from {1}", u.FullName, T[groupName].Value]</span>
+                                            </button>
+                                        </form>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                        @if (available.Any())
+                        {
+                            <form asp-action="AddToGroup" method="post" class="d-flex gap-1">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="userId" value="@u.Id" />
+                                <label for="add-group-@u.Id" class="visually-hidden">@T["Add {0} to a group", u.FullName]</label>
+                                <select id="add-group-@u.Id" name="groupId" class="form-select form-select-sm" required>
+                                    <option value="">@T["Add to a group…"]</option>
+                                    @foreach (var g in available)
+                                    {
+                                        <option value="@g.Id">@T[g.Name]</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">@T["Add"]</button>
+                            </form>
+                        }
+                    </td>
+                    <td data-label="@T["Clinician type"]">
+                        <form asp-action="SetClinicianType" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="userId" value="@u.Id" />
+                            <label for="clinician-@u.Id" class="visually-hidden">@T["Clinician type of {0}", u.FullName]</label>
+                            <select id="clinician-@u.Id" name="clinicianType" class="form-select form-select-sm"
+                                    data-confirm="@T["Change the clinician type? The user will be asked to sign in again."]" data-confirm-submit>
+                                @foreach (var type in Enum.GetValues<SafyaClinic.Domain.Enums.ClinicianType>())
+                                {
+                                    <option value="@type" selected="@(u.ClinicianType == type)">@T[Labels.Humanize(type.ToString())]</option>
+                                }
+                            </select>
+                        </form>
+                    </td>
+                    <td data-label="@T["Status"]">
+                        @if (u.IsActive)
+                        {
+                            <span class="app-status app-status--completed">@T["Active"]</span>
+                        }
+                        else
+                        {
+                            <span class="app-status app-status--cancelled">@T["Inactive"]</span>
+                        }
+                    </td>
+                    <td data-label="@T["Last sign-in"]" class="small">
+                        @(u.LastLoginAt is DateTime lastLogin ? Clock.ToClinicTime(lastLogin).ToString("dd MMM yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture) : T["Never"].Value)
+                    </td>
+                    <td class="app-table__actions">
+                        <form asp-action="ToggleActive" method="post" class="d-inline"
+                              data-confirm="@(u.IsActive ? T["Deactivate {0}? They won't be able to sign in.", u.FullName] : T["Activate {0}?", u.FullName])">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@u.Id" />
+                            <input type="hidden" name="isActive" value="@(u.IsActive ? "false" : "true")" />
+                            <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-outline-danger" : "btn-outline-success")">
+                                @(u.IsActive ? T["Deactivate"] : T["Activate"])<span class="visually-hidden"> @u.FullName</span>
+                            </button>
+                        </form>
+                        <a asp-action="ResetPassword" asp-route-id="@u.Id" class="btn btn-sm btn-outline-secondary">
+                            @T["Reset password"]<span class="visually-hidden"> @u.FullName</span>
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </app-table>
+    <partial name="_AppPagination" model="SafyaClinic.Web.Components.PagerModel.From(Model)" />
+}

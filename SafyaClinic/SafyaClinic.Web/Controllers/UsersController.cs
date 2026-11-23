@@ -26,6 +26,7 @@ public class UsersController : BaseController
     public async Task<IActionResult> Index(PaginationRequest request)
     {
         await LoadGroupsAsync();
+        ViewBag.Search = request.Search;
         var result = await _userService.GetAllUsersAsync(request);
 
         if (!result.IsSuccess)

@@ -2127,4 +2127,352 @@
   <data name="{0} min" xml:space="preserve">
     <value>{0} دقيقة</value>
   </data>
+  <data name="A built-in group. You can change what it may do and who is in it." xml:space="preserve">
+    <value>مجموعة مدمجة. يمكنك تغيير ما يمكنها فعله ومن ينتمي إليها.</value>
+  </data>
+  <data name="Activate" xml:space="preserve">
+    <value>تنشيط</value>
+  </data>
+  <data name="Activate {0}?" xml:space="preserve">
+    <value>تنشيط {0}؟</value>
+  </data>
+  <data name="Add member" xml:space="preserve">
+    <value>إضافة عضو</value>
+  </data>
+  <data name="Add to a group…" xml:space="preserve">
+    <value>إضافة إلى مجموعة…</value>
+  </data>
+  <data name="Add user" xml:space="preserve">
+    <value>إضافة مستخدم</value>
+  </data>
+  <data name="Add {0} to a group" xml:space="preserve">
+    <value>إضافة {0} إلى مجموعة</value>
+  </data>
+  <data name="Administrators always have every permission." xml:space="preserve">
+    <value>يملك المسؤولون جميع الصلاحيات دائمًا.</value>
+  </data>
+  <data name="At least 10 characters." xml:space="preserve">
+    <value>10 أحرف على الأقل.</value>
+  </data>
+  <data name="Back to groups" xml:space="preserve">
+    <value>العودة إلى المجموعات</value>
+  </data>
+  <data name="Built-in" xml:space="preserve">
+    <value>مدمجة</value>
+  </data>
+  <data name="Built-in group names can't be changed." xml:space="preserve">
+    <value>لا يمكن تغيير أسماء المجموعات المدمجة.</value>
+  </data>
+  <data name="Change the clinician type? The user will be asked to sign in again." xml:space="preserve">
+    <value>تغيير نوع الممارس؟ سيُطلب من المستخدم تسجيل الدخول مرة أخرى.</value>
+  </data>
+  <data name="Choose a user…" xml:space="preserve">
+    <value>اختر مستخدمًا…</value>
+  </data>
+  <data name="Choose what members of this group may do, and who they are." xml:space="preserve">
+    <value>اختر ما يمكن لأعضاء هذه المجموعة فعله ومن هم.</value>
+  </data>
+  <data name="Clinician type" xml:space="preserve">
+    <value>نوع الممارس</value>
+  </data>
+  <data name="Clinician type of {0}" xml:space="preserve">
+    <value>نوع الممارس لـ {0}</value>
+  </data>
+  <data name="Confirm password" xml:space="preserve">
+    <value>تأكيد كلمة المرور</value>
+  </data>
+  <data name="Create group" xml:space="preserve">
+    <value>إنشاء المجموعة</value>
+  </data>
+  <data name="Create user" xml:space="preserve">
+    <value>إنشاء المستخدم</value>
+  </data>
+  <data name="Deactivate {0}? They won't be able to sign in." xml:space="preserve">
+    <value>إلغاء تنشيط {0}؟ لن يتمكن من تسجيل الدخول.</value>
+  </data>
+  <data name="Delete group" xml:space="preserve">
+    <value>حذف المجموعة</value>
+  </data>
+  <data name="Delete the group {0}?" xml:space="preserve">
+    <value>حذف المجموعة {0}؟</value>
+  </data>
+  <data name="Doctors and nutritionists appear in doctor lists and queues." xml:space="preserve">
+    <value>يظهر الأطباء وأخصائيو التغذية في قوائم الأطباء والطوابير.</value>
+  </data>
+  <data name="Email" xml:space="preserve">
+    <value>البريد الإلكتروني</value>
+  </data>
+  <data name="Find users" xml:space="preserve">
+    <value>البحث عن مستخدمين</value>
+  </data>
+  <data name="For example internal medicine or nutrition." xml:space="preserve">
+    <value>مثل الباطنة أو التغذية.</value>
+  </data>
+  <data name="Full name" xml:space="preserve">
+    <value>الاسم الكامل</value>
+  </data>
+  <data name="Group" xml:space="preserve">
+    <value>المجموعة</value>
+  </data>
+  <data name="Group name" xml:space="preserve">
+    <value>اسم المجموعة</value>
+  </data>
+  <data name="Last sign-in" xml:space="preserve">
+    <value>آخر تسجيل دخول</value>
+  </data>
+  <data name="Licence number" xml:space="preserve">
+    <value>رقم الترخيص</value>
+  </data>
+  <data name="Members" xml:space="preserve">
+    <value>الأعضاء</value>
+  </data>
+  <data name="Members ({0})" xml:space="preserve">
+    <value>الأعضاء ({0})</value>
+  </data>
+  <data name="Members lose the permissions this group gives them. Their other groups are not affected." xml:space="preserve">
+    <value>يفقد الأعضاء الصلاحيات التي تمنحها هذه المجموعة، ولا تتأثر مجموعاتهم الأخرى.</value>
+  </data>
+  <data name="Name the group; you choose its permissions and members next." xml:space="preserve">
+    <value>سمِّ المجموعة، ثم اختر صلاحياتها وأعضاءها.</value>
+  </data>
+  <data name="Name, phone or email" xml:space="preserve">
+    <value>الاسم أو الهاتف أو البريد</value>
+  </data>
+  <data name="Never" xml:space="preserve">
+    <value>أبدًا</value>
+  </data>
+  <data name="New group" xml:space="preserve">
+    <value>مجموعة جديدة</value>
+  </data>
+  <data name="New permission group" xml:space="preserve">
+    <value>مجموعة صلاحيات جديدة</value>
+  </data>
+  <data name="No members yet." xml:space="preserve">
+    <value>لا يوجد أعضاء بعد.</value>
+  </data>
+  <data name="No users match this search." xml:space="preserve">
+    <value>لا يوجد مستخدمون يطابقون هذا البحث.</value>
+  </data>
+  <data name="No users yet." xml:space="preserve">
+    <value>لا يوجد مستخدمون بعد.</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>لا شيء</value>
+  </data>
+  <data name="Nutritionist" xml:space="preserve">
+    <value>أخصائي تغذية</value>
+  </data>
+  <data name="People who can sign in. What each may do comes from their permission groups." xml:space="preserve">
+    <value>الأشخاص الذين يمكنهم تسجيل الدخول. ما يمكن لكل منهم فعله يأتي من مجموعات صلاحياته.</value>
+  </data>
+  <data name="Permissions" xml:space="preserve">
+    <value>الصلاحيات</value>
+  </data>
+  <data name="Printed on prescriptions." xml:space="preserve">
+    <value>يُطبع على الروشتات.</value>
+  </data>
+  <data name="Remove {0} from {1}" xml:space="preserve">
+    <value>إزالة {0} من {1}</value>
+  </data>
+  <data name="Remove {0} from {1}?" xml:space="preserve">
+    <value>إزالة {0} من {1}؟</value>
+  </data>
+  <data name="Reset password" xml:space="preserve">
+    <value>إعادة تعيين كلمة المرور</value>
+  </data>
+  <data name="Save group" xml:space="preserve">
+    <value>حفظ المجموعة</value>
+  </data>
+  <data name="Sensitive" xml:space="preserve">
+    <value>حساسة</value>
+  </data>
+  <data name="Set a temporary password and give it to the user. They must choose their own password at their next sign-in. This also unlocks the account." xml:space="preserve">
+    <value>عيّن كلمة مرور مؤقتة وأعطها للمستخدم. يجب أن يختار كلمة مروره عند تسجيل الدخول التالي. يؤدي هذا أيضًا إلى فتح الحساب.</value>
+  </data>
+  <data name="Specialization" xml:space="preserve">
+    <value>التخصص</value>
+  </data>
+  <data name="Temporary password" xml:space="preserve">
+    <value>كلمة مرور مؤقتة</value>
+  </data>
+  <data name="They sign in with their phone number and must choose their own password the first time." xml:space="preserve">
+    <value>يسجلون الدخول برقم الهاتف ويجب أن يختاروا كلمة مرورهم في المرة الأولى.</value>
+  </data>
+  <data name="User" xml:space="preserve">
+    <value>المستخدم</value>
+  </data>
+  <data name="What each group of users may see and do. A user's access is everything their groups allow." xml:space="preserve">
+    <value>ما يمكن لكل مجموعة من المستخدمين رؤيته وفعله. صلاحيات المستخدم هي كل ما تسمح به مجموعاته.</value>
+  </data>
+  <data name="What the user may see and do. You can change this later on the Users page." xml:space="preserve">
+    <value>ما يمكن للمستخدم رؤيته وفعله. يمكنك تغيير ذلك لاحقًا من صفحة المستخدمين.</value>
+  </data>
+  <data name="Administrators" xml:space="preserve">
+    <value>المسؤولون</value>
+  </data>
+  <data name="Doctors" xml:space="preserve">
+    <value>الأطباء</value>
+  </data>
+  <data name="Nutritionists" xml:space="preserve">
+    <value>أخصائيو التغذية</value>
+  </data>
+  <data name="Reception" xml:space="preserve">
+    <value>الاستقبال</value>
+  </data>
+  <data name="Reception supervisors" xml:space="preserve">
+    <value>مشرفو الاستقبال</value>
+  </data>
+  <data name="Clinic managers" xml:space="preserve">
+    <value>مديرو العيادة</value>
+  </data>
+  <data name="Scheduling" xml:space="preserve">
+    <value>المواعيد</value>
+  </data>
+  <data name="Full access, including users and settings" xml:space="preserve">
+    <value>وصول كامل، بما في ذلك المستخدمون والإعدادات</value>
+  </data>
+  <data name="Consultations, medical records, lab requests and their own payment report" xml:space="preserve">
+    <value>الكشوفات والسجلات الطبية وطلبات التحاليل وتقرير مدفوعاتهم</value>
+  </data>
+  <data name="Nutrition enrollments and weekly follow-ups" xml:space="preserve">
+    <value>اشتراكات التغذية والمتابعات الأسبوعية</value>
+  </data>
+  <data name="Front desk: patients, reservations, check-in, follow-ups and payments" xml:space="preserve">
+    <value>الاستقبال: المرضى والحجوزات وتسجيل الحضور والمتابعات والمدفوعات</value>
+  </data>
+  <data name="Everything Reception does, plus write-offs and doctors' calendars" xml:space="preserve">
+    <value>كل ما يفعله الاستقبال، بالإضافة إلى الإعفاءات وجداول الأطباء</value>
+  </data>
+  <data name="Everything Reception supervisors do, plus the full payment dashboard, any-date reports and clinic settings" xml:space="preserve">
+    <value>كل ما يفعله مشرفو الاستقبال، بالإضافة إلى لوحة المدفوعات الكاملة وتقارير أي تاريخ وإعدادات العيادة</value>
+  </data>
+  <data name="See the patient list and patient details; search patients" xml:space="preserve">
+    <value>عرض قائمة المرضى وتفاصيلهم؛ البحث عن المرضى</value>
+  </data>
+  <data name="Register patients; edit basic details, phones and addresses" xml:space="preserve">
+    <value>تسجيل المرضى؛ تعديل البيانات الأساسية والهواتف والعناوين</value>
+  </data>
+  <data name="See a patient's clinical timeline" xml:space="preserve">
+    <value>عرض السجل الزمني الطبي للمريض</value>
+  </data>
+  <data name="Edit a patient's medical information" xml:space="preserve">
+    <value>تعديل المعلومات الطبية للمريض</value>
+  </data>
+  <data name="See reservations, today's list, the board and history reports" xml:space="preserve">
+    <value>عرض الحجوزات وقائمة اليوم واللوحة وتقارير السجل</value>
+  </data>
+  <data name="Create, edit and cancel reservations; change their status" xml:space="preserve">
+    <value>إنشاء الحجوزات وتعديلها وإلغاؤها؛ تغيير حالتها</value>
+  </data>
+  <data name="Open the waiting queue" xml:space="preserve">
+    <value>فتح طابور الانتظار</value>
+  </data>
+  <data name="See every doctor's queue, not only their own" xml:space="preserve">
+    <value>عرض طابور كل طبيب، وليس طابوره فقط</value>
+  </data>
+  <data name="Check patients in" xml:space="preserve">
+    <value>تسجيل حضور المرضى</value>
+  </data>
+  <data name="Start a consultation from a reservation" xml:space="preserve">
+    <value>بدء كشف من حجز</value>
+  </data>
+  <data name="Set a price different from the treatment type's price" xml:space="preserve">
+    <value>تحديد سعر مختلف عن سعر نوع العلاج</value>
+  </data>
+  <data name="Set a visit to Completed outside the consultation screen" xml:space="preserve">
+    <value>تحديد الزيارة كمكتملة من خارج شاشة الكشف</value>
+  </data>
+  <data name="Change the status of any doctor's reservation, not only their own" xml:space="preserve">
+    <value>تغيير حالة حجز أي طبيب، وليس حجوزاته فقط</value>
+  </data>
+  <data name="Change a cancelled or no-show reservation's status (reopen it)" xml:space="preserve">
+    <value>تغيير حالة حجز ملغى أو لم يحضر (إعادة فتحه)</value>
+  </data>
+  <data name="See medical records, prescriptions and their files; print prescriptions" xml:space="preserve">
+    <value>عرض السجلات الطبية والروشتات وملفاتها؛ طباعة الروشتات</value>
+  </data>
+  <data name="Write medical records, treatments and prescriptions; upload prescription files; complete consultations" xml:space="preserve">
+    <value>كتابة السجلات الطبية والعلاجات والروشتات؛ رفع ملفات الروشتات؛ إنهاء الكشوفات</value>
+  </data>
+  <data name="Lock medical records" xml:space="preserve">
+    <value>قفل السجلات الطبية</value>
+  </data>
+  <data name="Open, write and complete consultations for another doctor" xml:space="preserve">
+    <value>فتح كشوفات طبيب آخر وكتابتها وإنهاؤها</value>
+  </data>
+  <data name="Search the medicines list" xml:space="preserve">
+    <value>البحث في قائمة الأدوية</value>
+  </data>
+  <data name="See lab requests and results; print request slips" xml:space="preserve">
+    <value>عرض طلبات التحاليل ونتائجها؛ طباعة أوراق الطلب</value>
+  </data>
+  <data name="Request analyses, update their status and upload results" xml:space="preserve">
+    <value>طلب التحاليل وتحديث حالتها ورفع النتائج</value>
+  </data>
+  <data name="Delete analysis and prescription files" xml:space="preserve">
+    <value>حذف ملفات التحاليل والروشتات</value>
+  </data>
+  <data name="See the follow-up list" xml:space="preserve">
+    <value>عرض قائمة المتابعات</value>
+  </data>
+  <data name="Book and dismiss follow-ups" xml:space="preserve">
+    <value>حجز المتابعات وتجاهلها</value>
+  </data>
+  <data name="See and book follow-ups for every doctor" xml:space="preserve">
+    <value>عرض المتابعات وحجزها لكل الأطباء</value>
+  </data>
+  <data name="See packages, enrollments and weekly follow-ups" xml:space="preserve">
+    <value>عرض الباقات والاشتراكات والمتابعات الأسبوعية</value>
+  </data>
+  <data name="Enroll patients; record, edit and delete weekly follow-ups" xml:space="preserve">
+    <value>اشتراك المرضى؛ تسجيل المتابعات الأسبوعية وتعديلها وحذفها</value>
+  </data>
+  <data name="Create and deactivate nutrition packages" xml:space="preserve">
+    <value>إنشاء باقات التغذية وإيقافها</value>
+  </data>
+  <data name="See patient payment summaries, the payment audit and unpaid visits" xml:space="preserve">
+    <value>عرض ملخصات مدفوعات المرضى ومراجعة المدفوعات والزيارات غير المدفوعة</value>
+  </data>
+  <data name="Collect payments" xml:space="preserve">
+    <value>تحصيل المدفوعات</value>
+  </data>
+  <data name="Cancel payments and change amounts" xml:space="preserve">
+    <value>إلغاء المدفوعات وتغيير المبالغ</value>
+  </data>
+  <data name="Open the payment report" xml:space="preserve">
+    <value>فتح تقرير المدفوعات</value>
+  </data>
+  <data name="Choose any dates in the payment report (others see today only)" xml:space="preserve">
+    <value>اختيار أي تواريخ في تقرير المدفوعات (يرى الآخرون اليوم فقط)</value>
+  </data>
+  <data name="See every doctor's payments in the report (others see their own)" xml:space="preserve">
+    <value>عرض مدفوعات كل الأطباء في التقرير (يرى الآخرون مدفوعاتهم)</value>
+  </data>
+  <data name="See the full payment dashboard and its details" xml:space="preserve">
+    <value>عرض لوحة المدفوعات الكاملة وتفاصيلها</value>
+  </data>
+  <data name="Run payment maintenance (recalculate statuses, backfill)" xml:space="preserve">
+    <value>تشغيل صيانة المدفوعات (إعادة حساب الحالات والاستكمال)</value>
+  </data>
+  <data name="Write off a visit's balance, and undo write-offs (with a reason; audited)" xml:space="preserve">
+    <value>إعفاء رصيد الزيارة والتراجع عن الإعفاءات (مع سبب؛ يُسجَّل)</value>
+  </data>
+  <data name="Set their own calendar: mode, step, working periods, breaks and slots" xml:space="preserve">
+    <value>ضبط جدولهم: الطريقة والفاصل وفترات العمل والاستراحات والمواعيد</value>
+  </data>
+  <data name="Set any doctor's calendar" xml:space="preserve">
+    <value>ضبط جدول أي طبيب</value>
+  </data>
+  <data name="Manage clinics and their agreements" xml:space="preserve">
+    <value>إدارة العيادات واتفاقياتها</value>
+  </data>
+  <data name="Manage patient sources" xml:space="preserve">
+    <value>إدارة مصادر المرضى</value>
+  </data>
+  <data name="Manage analysis, treatment, injection and vitamin types" xml:space="preserve">
+    <value>إدارة أنواع التحاليل والعلاج والحقن والفيتامينات</value>
+  </data>
+  <data name="Manage users, their roles and passwords" xml:space="preserve">
+    <value>إدارة المستخدمين وأدوارهم وكلمات مرورهم</value>
+  </data>
 </root>

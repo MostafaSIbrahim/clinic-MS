@@ -196,6 +196,11 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         screens['Catalogue: treatment types'] = '/Lookups/Catalogue?kind=Treatment';
         screens['Catalogue: injection types'] = '/Lookups/Catalogue?kind=Injection';
         screens['Catalogue: add a treatment type'] = '/Lookups/EditCatalogueItem?kind=Treatment';
+        // M5b: users and permission groups (as admin, at the three widths).
+        screens['Users'] = '/Users';
+        screens['Add user'] = '/Users/Create';
+        screens['Permission groups'] = '/PermissionGroups';
+        screens['Permission group'] = '/PermissionGroups/Edit/1';
         await checkA11y(page, 'Patient payments');
         // Icon fonts can add a character to a link's name, so match the end of it.
         const collect = page.locator('main').getByRole('link', { name: /Collect$/ }).first();

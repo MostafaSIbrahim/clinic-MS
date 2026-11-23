@@ -109,6 +109,12 @@ public class UserService : IUserService
          PaginationRequest request)
     {
         var query = _uow.Users.Query();
+        // M5b: find a user by name, phone or email.
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var term = request.Search.Trim();
+            query = query.Where(u => u.FullName.Contains(term) || u.PhoneNumber.Contains(term) || (u.Email != null && u.Email.Contains(term)));
+        }
 
         var totalCount = await query.CountAsync();
 
