@@ -38,6 +38,7 @@
             <ul class="settings-links">
                 @if (canClinics)
                 {
+                    <li><a asp-controller="ClinicProfile" asp-action="Index"><i class="bi bi-card-heading" aria-hidden="true"></i><span><strong>@T["Clinic profile"]</strong><small>@T["The name, address and phones printed on prescriptions and lab slips."]</small></span></a></li>
                     <li><a asp-controller="Clinics" asp-action="Index"><i class="bi bi-hospital" aria-hidden="true"></i><span><strong>@T["Clinics"]</strong><small>@T["Each clinic's details, opening hours and source agreements."]</small></span></a></li>
                 }
                 @if (canSources)

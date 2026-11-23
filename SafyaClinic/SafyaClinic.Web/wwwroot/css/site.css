@@ -1236,6 +1236,12 @@ a.app-kpi:focus-visible {
     color: var(--color-text-muted);
 }
 
+/* M5d: the clinic profile form: its cards one under the other. */
+.clinic-profile-form {
+    display: grid;
+    gap: var(--space-4);
+}
+
 /* M4a: the four weeks of a nutrition enrollment, side by side on wider screens. */
 .enrollment-weeks {
     display: grid;

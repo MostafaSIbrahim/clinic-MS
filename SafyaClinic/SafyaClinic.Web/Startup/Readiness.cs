@@ -58,9 +58,12 @@ public static class Readiness
                 : new("First admin password setting", ReadinessLevel.Ok, "Not present."),
         };
 
-        var clinic = new[] { f.ClinicName, f.ClinicAddress, f.ClinicPhone, f.ClinicEmail };
-        items.Add(clinic.Any(v => string.IsNullOrWhiteSpace(v)) || clinic.Any(v => ExampleValues.Any(e => v!.Contains(e, StringComparison.OrdinalIgnoreCase)))
-            ? new("Clinic details", ReadinessLevel.Warning, "ClinicInfo still has missing or example values; they print on prescriptions and lab slips.")
+        // M5d: the details come from the clinic profile once it is saved (until then from ClinicInfo).
+        // The name, address and phone are needed; the email may be left empty.
+        var required = new[] { f.ClinicName, f.ClinicAddress, f.ClinicPhone };
+        var given = required.Append(f.ClinicEmail).Where(v => !string.IsNullOrWhiteSpace(v));
+        items.Add(required.Any(v => string.IsNullOrWhiteSpace(v)) || given.Any(v => ExampleValues.Any(e => v!.Contains(e, StringComparison.OrdinalIgnoreCase)))
+            ? new("Clinic details", ReadinessLevel.Warning, "The clinic profile has missing or example values; they print on prescriptions and lab slips. Fill it in under Settings → Clinic profile.")
             : new("Clinic details", ReadinessLevel.Ok, $"{f.ClinicName}, {f.ClinicAddress}"));
 
         items.Add(f.PricedVisitTypes > 0
@@ -91,6 +94,7 @@ public static class Readiness
             : Path.Combine(env.ContentRootPath, config["FileStorage:BasePath"] ?? "App_Data/uploads");
         var todaysLog = Path.Combine(appData, "logs", $"safya-{DateTime.Now:yyyyMMdd}.json");
 
+        var profile = await db.ClinicProfiles.AsNoTracking().OrderBy(p => p.Id).FirstOrDefaultAsync();   // M5d
         var priced = await db.TreatmentTypes.CountAsync(t => t.IsActive && t.DefaultCost > 0);
         var admins = await db.UserGroups
             .Where(ug => ug.Group.SystemKey == SystemGroups.AdminRole && ug.User.IsActive)
@@ -101,7 +105,8 @@ public static class Readiness
             CanWrite(keys), Directory.Exists(keys) ? Directory.GetFiles(keys, "*.xml").Length : 0,
             CanWrite(uploads), File.Exists(todaysLog),
             !string.IsNullOrWhiteSpace(config["Seed:AdminPassword"]),
-            config["ClinicInfo:Name"], config["ClinicInfo:Address"], config["ClinicInfo:Phone"], config["ClinicInfo:Email"],
+            profile?.NameEn ?? config["ClinicInfo:Name"], profile is null ? config["ClinicInfo:Address"] : profile.AddressEn,
+            profile is null ? config["ClinicInfo:Phone"] : profile.Phone, profile is null ? config["ClinicInfo:Email"] : profile.Email,
             priced, admins, clock.TimeZone.Id, clock.Now);
     }
 

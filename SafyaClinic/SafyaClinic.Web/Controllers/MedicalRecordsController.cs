@@ -15,7 +15,6 @@ namespace SafyaClinic.Web.Controllers
     {
         private readonly IPatientRecordService _recordService;
         private readonly IAnalysisService _analysisService;
-        private readonly IConfiguration _config;
         private readonly IFileStorage _files;
         private readonly IReservationService _reservationService;
         private readonly IPaymentService _paymentService;
@@ -23,14 +22,12 @@ namespace SafyaClinic.Web.Controllers
         public MedicalRecordsController(
             IPatientRecordService recordService,
             IAnalysisService analysisService,
-            IConfiguration config,
             IFileStorage files,
             IReservationService reservationService,
             IPaymentService paymentService)
         {
             _recordService = recordService;
             _analysisService = analysisService;
-            _config = config;
             _files = files;
             _reservationService = reservationService;
             _paymentService = paymentService;
@@ -378,11 +375,7 @@ namespace SafyaClinic.Web.Controllers
 
             ViewBag.PaperSize = paperSize;
             ViewBag.Design = design;
-            ViewBag.ClinicName = _config["ClinicInfo:Name"] ?? "Clinic";
-            ViewBag.ClinicTagline = _config["ClinicInfo:Tagline"];
-            ViewBag.ClinicAddress = _config["ClinicInfo:Address"];
-            ViewBag.ClinicPhone = _config["ClinicInfo:Phone"];
-            ViewBag.ClinicEmail = _config["ClinicInfo:Email"];
+            // M5d: the clinic's details come from the clinic profile, read by the view.
 
             return View(result.Data);
         }

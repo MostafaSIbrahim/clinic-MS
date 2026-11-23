@@ -41,6 +41,7 @@ public static class AuditActions
     public const string EnrollmentStatusChanged = "Enrollment.StatusChanged"; // M4a
     public const string FollowUpEdited = "FollowUp.Edited";    // M4b
     public const string FollowUpDeleted = "FollowUp.Deleted";  // M4b
+    public const string ClinicProfileSaved = "ClinicProfile.Saved";   // M5d
 }
 
 /// <summary>Who is acting and from where — supplied by the web layer.</summary>

@@ -1,5 +1,6 @@
 @model PrescriptionPrintDto
 @inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@inject SafyaClinic.Application.Settings.IClinicProfileService ClinicProfile
 @using System.Globalization
 @{
     ViewData["Title"] = "Print Prescription";
@@ -23,6 +24,7 @@
         : "—";
     string GenderText(string? g) => g is null ? "—" : $"{g} / {Ar(g)}";
 
+    var clinic = await ClinicProfile.GetAsync();
     string paperSize = ViewBag.PaperSize ?? "A4";
     string design = ViewBag.Design ?? "classic";
 
@@ -82,7 +84,9 @@
             padding-bottom: 10px;
             margin-bottom: 16px;
         }
-        .rx-header h2 { font-family: var(--font-heading); color: var(--accent); margin: 0; }
+        .rx-header .print-clinic__name { font-family: var(--font-heading); color: var(--accent); font-size: 1.5rem; font-weight: 600; }
+        .print-clinic__line { font-size: .875em; color: var(--bs-secondary-color, #6c757d); }
+        .print-clinic__ar { margin-inline-start: .5em; }
         .design-minimal .rx-header { border-bottom: 1px solid var(--accent); }
         .rx-symbol {
             font-family: var(--font-heading);
@@ -162,12 +166,9 @@
     <div class="sheet design-@design">
         <div class="rx-header">
             <div>
-                @* Branding: retain the configured clinic name, address and contact details below the logo. *@
+                @* M5d: the clinic's details come from the clinic profile (Settings), in English and Arabic. *@
                 @await Html.PartialAsync("_ClinicLogo", "clinic-logo--print")
-                <h2>@ViewBag.ClinicName</h2>
-                <div class="small text-muted">@ViewBag.ClinicTagline</div>
-                <div class="small text-muted">@ViewBag.ClinicAddress</div>
-                <div class="small text-muted">@ViewBag.ClinicPhone @(ViewBag.ClinicEmail != null ? $"• {ViewBag.ClinicEmail}" : "")</div>
+                <partial name="_PrintClinicDetails" model="clinic" />
             </div>
             <div class="text-end">
                 <div class="rx-symbol">℞</div>
@@ -241,6 +242,10 @@
 
         <div class="rx-footer">
             <span>@Bi("Prescription #{0}", Model.Id)</span>
+            @if (!string.IsNullOrWhiteSpace(clinic.LicenceLine))
+            {
+                <span dir="auto">@clinic.LicenceLine</span>
+            }
             <span>@Bi("This prescription is valid only when signed by the prescribing physician.")</span>
         </div>
     </div>

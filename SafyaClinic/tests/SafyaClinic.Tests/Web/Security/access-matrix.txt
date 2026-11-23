@@ -22,6 +22,8 @@ Auth.ChangePassword POST: signed-in
 Auth.Login GET: anyone
 Auth.Login POST: anyone
 Auth.Logout POST: signed-in
+ClinicProfile.Index GET: Admin ClinicAdmin
+ClinicProfile.Index POST: Admin ClinicAdmin
 Clinics.Create GET: Admin ClinicAdmin
 Clinics.Create POST: Admin ClinicAdmin
 Clinics.Delete POST: Admin ClinicAdmin
