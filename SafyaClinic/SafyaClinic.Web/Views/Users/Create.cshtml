@@ -1,79 +1,55 @@
 @model CreateUserRequest
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using Microsoft.AspNetCore.Mvc.Rendering
 @{
-    ViewData["Title"] = "Add User";
-    // F4d: new users join permission groups and get a clinician type.
-    var allGroups = ViewBag.AllGroups as IEnumerable<PermissionGroupSummary>
-        ?? Enumerable.Empty<PermissionGroupSummary>();
+    // M5b: add a user. Shared fields, English and Arabic. Rules unchanged (F4): password rules, groups, clinician type.
+    ViewData["Title"] = T["Add user"].Value;
+    var allGroups = ViewBag.AllGroups as IEnumerable<PermissionGroupSummary> ?? Enumerable.Empty<PermissionGroupSummary>();
+    var clinicianTypes = Enum.GetValues<SafyaClinic.Domain.Enums.ClinicianType>()
+        .Select(t => new SelectListItem(T[Labels.Humanize(t.ToString())].Value, t.ToString(), t == Model.ClinicianType)).ToList();
 }
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Add user"]</h1>
+        <p class="text-muted mb-0">@T["They sign in with their phone number and must choose their own password the first time."]</p>
+    </div>
+</div>
 
-<div class="card" style="max-width:700px;">
-    <div class="card-header"><i class="bi bi-person-plus me-2"></i>Add System User</div>
+<div class="card record-form-card">
     <div class="card-body">
         <form asp-action="Create" method="post">
             @Html.AntiForgeryToken()
-            @* Show errors for every submitted field. *@
-            <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert"></div>
+            <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
 
             <div class="row g-3">
-                <div class="col-md-6">
-                    <label asp-for="FullName" class="form-label">Full Name *</label>
-                    <input asp-for="FullName" class="form-control" required />
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="PhoneNumber" class="form-label">Phone Number *</label>
-                    <input asp-for="PhoneNumber" class="form-control" required />
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Email" class="form-label">Email</label>
-                    <input asp-for="Email" type="email" class="form-control" />
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Specialization" class="form-label">Specialization</label>
-                    <input asp-for="Specialization" class="form-control" placeholder="e.g. Internal Medicine, Nutrition" />
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="Password" class="form-label">Password *</label>
-                    <input asp-for="Password" type="password" class="form-control" autocomplete="new-password"
-                           minlength="10" required aria-describedby="passwordHelp" />
-                    <div id="passwordHelp" class="form-text">At least 10 characters.</div>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="ConfirmPassword" class="form-label">Confirm password *</label>
-                    <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" required />
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="LicenseNumber" class="form-label">License Number</label>
-                    <input asp-for="LicenseNumber" class="form-control" />
-                </div>
-
-                <div class="col-md-6">
-                    <label asp-for="ClinicianType" class="form-label">Clinician type</label>
-                    <select asp-for="ClinicianType" asp-items="Html.GetEnumSelectList<SafyaClinic.Domain.Enums.ClinicianType>()" class="form-select"
-                            aria-describedby="clinicianHelp"></select>
-                    <div id="clinicianHelp" class="form-text">Doctors and nutritionists appear in doctor pickers and queues.</div>
-                </div>
-
-                <div class="col-12">
-                    <fieldset>
-                        <legend class="form-label fs-6">Permission groups</legend>
-                        <div class="d-flex flex-wrap gap-3">
-                            @foreach (var g in allGroups)
-                            {
-                                <div class="form-check">
-                                    <input type="checkbox" name="GroupIds" value="@g.Id" class="form-check-input" id="group_@g.Id"
-                                           checked="@(Model.GroupIds?.Contains(g.Id) == true)" />
-                                    <label class="form-check-label" for="group_@g.Id">@g.Name</label>
-                                </div>
-                            }
-                        </div>
-                        <div class="form-text">What the user may see and do. You can change this later on the Users page.</div>
-                    </fieldset>
-                </div>
+                <div class="col-md-6"><app-field asp-for="FullName" label="@T["Full name"].Value" required="true" /></div>
+                <div class="col-md-6"><app-field asp-for="PhoneNumber" label="@T["Phone number"].Value" type="tel" required="true" /></div>
+                <div class="col-md-6"><app-field asp-for="Email" label="@T["Email"].Value" type="email" /></div>
+                <div class="col-md-6"><app-field asp-for="Specialization" label="@T["Specialization"].Value" hint="@T["For example internal medicine or nutrition."].Value" /></div>
+                <div class="col-md-6"><app-field asp-for="Password" label="@T["Temporary password"].Value" type="password" required="true" hint="@T["At least 10 characters."].Value" /></div>
+                <div class="col-md-6"><app-field asp-for="ConfirmPassword" label="@T["Confirm password"].Value" type="password" required="true" /></div>
+                <div class="col-md-6"><app-field asp-for="LicenseNumber" label="@T["Licence number"].Value" hint="@T["Printed on prescriptions."].Value" /></div>
+                <div class="col-md-6"><app-field asp-for="ClinicianType" label="@T["Clinician type"].Value" type="select" asp-items="clinicianTypes" hint="@T["Doctors and nutritionists appear in doctor lists and queues."].Value" /></div>
             </div>
 
-            <div class="mt-4">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Create User</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+            <fieldset class="mt-3">
+                <legend class="h6">@T["Permission Groups"]</legend>
+                <div class="d-flex flex-wrap gap-3">
+                    @foreach (var g in allGroups)
+                    {
+                        <div class="form-check">
+                            <input type="checkbox" name="GroupIds" value="@g.Id" class="form-check-input" id="group_@g.Id"
+                                   checked="@(Model.GroupIds?.Contains(g.Id) == true)" />
+                            <label class="form-check-label" for="group_@g.Id">@T[g.Name]</label>
+                        </div>
+                    }
+                </div>
+                <div class="form-text">@T["What the user may see and do. You can change this later on the Users page."]</div>
+            </fieldset>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">@T["Create user"]</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">@T["Cancel"]</a>
             </div>
         </form>
     </div>

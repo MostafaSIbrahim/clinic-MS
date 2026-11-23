@@ -1,156 +1,137 @@
 @model SafyaClinic.Web.Models.PermissionGroupEditModel
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
+    // M5b: one permission group: details, permissions by area (with their codes), members. Shared layout, English
+    // and Arabic. Rules unchanged (F4): built-in names are fixed, Administrators have every permission.
     var group = Model.Group;
-    ViewData["Title"] = group.Name;
+    ViewData["Title"] = T[group.Name].Value;
     var memberIds = group.Members.Select(m => m.UserId).ToHashSet();
+    var choices = Model.UserChoices.Where(u => !memberIds.Contains(u.Id)).ToList();
 }
 <div class="page-toolbar">
     <div>
-        <h1>
-            @group.Name
+        <h1 dir="auto">
+            @T[group.Name]
             @if (group.IsBuiltIn)
             {
-                <span class="badge bg-secondary align-middle fs-6 ms-1">Built-in</span>
+                <span class="app-status app-status--booked align-middle ms-1">@T["Built-in"]</span>
             }
         </h1>
         <p class="text-muted mb-0">
-            @if (group.IsAdministrators)
-            {
-                @:Administrators always have every permission.
-            }
-            else if (group.IsBuiltIn)
-            {
-                @:A built-in group. You can change what it may do and who is in it.
-            }
-            else
-            {
-                @:Choose what members of this group may do, and who they are.
-            }
+            @(group.IsAdministrators ? T["Administrators always have every permission."]
+                : group.IsBuiltIn ? T["A built-in group. You can change what it may do and who is in it."]
+                : T["Choose what members of this group may do, and who they are."])
         </p>
     </div>
-    <div class="page-actions"><a asp-action="Index" class="btn btn-outline-secondary">Back to groups</a></div>
+    <div class="page-actions"><a asp-action="Index" class="btn btn-outline-secondary">@T["Back to groups"]</a></div>
 </div>
 
 <form asp-action="Edit" asp-route-id="@group.Id" method="post">
     @Html.AntiForgeryToken()
-    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
-    <div class="row g-4">
+    <div asp-validation-summary="All" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
+    <div class="row g-3">
         <div class="col-12 col-lg-4">
-            <div class="card">
-                <div class="card-header"><h2 class="h5 mb-0">Details</h2></div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label asp-for="Name" class="form-label"></label>
-                        @if (group.IsBuiltIn)
-                        {
-                            <input asp-for="Name" class="form-control" readonly />
-                            <div class="form-text">Built-in group names can't be changed.</div>
-                        }
-                        else
-                        {
-                            <input asp-for="Name" class="form-control" maxlength="100" required />
-                        }
+            <app-card id="group-details" title="@T["Details"].Value" level="2" icon="bi-people">
+                @if (group.IsBuiltIn)
+                {
+                    <div class="app-field">
+                        <label for="Name" class="form-label">@T["Group name"]</label>
+                        <input asp-for="Name" class="form-control" readonly aria-describedby="name-hint" />
+                        <div id="name-hint" class="form-text">@T["Built-in group names can't be changed."]</div>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="Description" class="form-label"></label>
-                        <textarea asp-for="Description" class="form-control" maxlength="300" rows="3"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Save group</button>
-                </div>
-            </div>
+                }
+                else
+                {
+                    <app-field asp-for="Name" label="@T["Group name"].Value" required="true" />
+                }
+                <app-field asp-for="Description" label="@T["Description"].Value" type="textarea" rows="3" />
+                <button type="submit" class="btn btn-primary w-100">@T["Save group"]</button>
+            </app-card>
         </div>
         <div class="col-12 col-lg-8">
-            <div class="card">
-                <div class="card-header"><h2 class="h5 mb-0">Permissions</h2></div>
-                <div class="card-body">
-                    @foreach (var area in PermissionCatalogue.All.GroupBy(p => p.Area))
-                    {
-                        <fieldset class="mb-3">
-                            <legend class="h6">@area.Key</legend>
-                            @foreach (var p in area)
-                            {
-                                var id = "perm-" + p.Code.Replace(".", "-");
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="PermissionCodes" value="@p.Code" id="@id"
-                                           checked="@Model.Selected.Contains(p.Code)" disabled="@group.IsAdministrators" />
-                                    <label class="form-check-label" for="@id">
-                                        @p.Description
-                                        @if (p.IsSensitive)
-                                        {
-                                            <span class="badge bg-warning text-dark ms-1">Sensitive</span>
-                                        }
-                                        <span class="text-muted small ms-1">@p.Code</span>
-                                    </label>
-                                </div>
-                            }
-                        </fieldset>
-                    }
-                </div>
-            </div>
+            <app-card id="group-permissions" title="@T["Permissions"].Value" level="2" icon="bi-shield-check">
+                @foreach (var area in PermissionCatalogue.All.GroupBy(p => p.Area))
+                {
+                    <fieldset class="mb-3">
+                        <legend class="h6">@T[area.Key]</legend>
+                        @foreach (var p in area)
+                        {
+                            var id = "perm-" + p.Code.Replace(".", "-");
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="PermissionCodes" value="@p.Code" id="@id"
+                                       checked="@Model.Selected.Contains(p.Code)" disabled="@group.IsAdministrators" />
+                                <label class="form-check-label" for="@id">
+                                    @T[p.Description]
+                                    @if (p.IsSensitive)
+                                    {
+                                        <span class="app-status app-status--due ms-1">@T["Sensitive"]</span>
+                                    }
+                                    <span class="text-muted small ms-1" dir="ltr">@p.Code</span>
+                                </label>
+                            </div>
+                        }
+                    </fieldset>
+                }
+            </app-card>
         </div>
     </div>
 </form>
 
-<div class="row g-4 mt-1">
+<div class="row g-3 mt-1">
     <div class="col-12 col-lg-8">
-        <div class="card">
-            <div class="card-header"><h2 class="h5 mb-0">Members (@group.Members.Count)</h2></div>
-            <div class="card-body">
-                @if (group.Members.Count == 0)
-                {
-                    <p class="text-muted">No members yet.</p>
-                }
-                else
-                {
-                    <ul class="list-unstyled mb-3">
-                        @foreach (var m in group.Members)
-                        {
-                            <li class="d-flex align-items-center gap-2 py-1">
-                                <span>@m.FullName</span>
-                                @if (!m.IsActive)
-                                {
-                                    <span class="badge bg-secondary">Inactive</span>
-                                }
-                                <form asp-action="RemoveMember" asp-route-id="@group.Id" method="post" class="ms-auto"
-                                          data-confirm="Remove this member from the group?">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="userId" value="@m.UserId" />
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
-                                    </form>
-                            </li>
-                        }
-                    </ul>
-                }
-
-                <form asp-action="AddMember" asp-route-id="@group.Id" method="post" class="d-flex gap-2">
-                        @Html.AntiForgeryToken()
-                        <label for="addMemberUser" class="visually-hidden">User</label>
-                        <select id="addMemberUser" name="userId" class="form-select" required>
-                            <option value="">Choose a user…</option>
-                            @foreach (var u in Model.UserChoices.Where(u => !memberIds.Contains(u.Id)))
+        <app-card id="group-members" title="@T["Members ({0})", group.Members.Count].Value" level="2" icon="bi-person-lines-fill">
+            @if (group.Members.Count == 0)
+            {
+                <p class="text-muted">@T["No members yet."]</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-3">
+                    @foreach (var m in group.Members)
+                    {
+                        <li class="d-flex align-items-center gap-2 py-1">
+                            <span dir="auto">@m.FullName</span>
+                            @if (!m.IsActive)
                             {
-                                <option value="@u.Id">@u.FullName</option>
+                                <span class="app-status app-status--cancelled">@T["Inactive"]</span>
                             }
-                        </select>
-                        <button type="submit" class="btn btn-outline-primary text-nowrap">Add member</button>
-                    </form>
-            </div>
-        </div>
+                            <form asp-action="RemoveMember" asp-route-id="@group.Id" method="post" class="ms-auto"
+                                  data-confirm="@T["Remove {0} from {1}?", m.FullName, T[group.Name].Value]">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="userId" value="@m.UserId" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Remove"]<span class="visually-hidden"> @m.FullName</span></button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            }
+            @if (choices.Any())
+            {
+                <form asp-action="AddMember" asp-route-id="@group.Id" method="post" class="d-flex gap-2">
+                    @Html.AntiForgeryToken()
+                    <label for="addMemberUser" class="visually-hidden">@T["User"]</label>
+                    <select id="addMemberUser" name="userId" class="form-select" required>
+                        <option value="">@T["Choose a user…"]</option>
+                        @foreach (var u in choices)
+                        {
+                            <option value="@u.Id">@u.FullName</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary text-nowrap">@T["Add member"]</button>
+                </form>
+            }
+        </app-card>
     </div>
     @if (!group.IsBuiltIn)
     {
         <div class="col-12 col-lg-4">
-            <div class="card border-danger">
-                <div class="card-header"><h2 class="h5 mb-0">Delete group</h2></div>
-                <div class="card-body">
-                    <p class="small text-muted">Members lose the permissions this group gives them. Their other groups are not affected.</p>
-                    <form asp-action="Delete" asp-route-id="@group.Id" method="post"
-                          data-confirm="Delete this group?">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-outline-danger w-100">Delete group</button>
-                    </form>
-                </div>
-            </div>
+            <app-card id="group-delete" title="@T["Delete group"].Value" level="2" icon="bi-trash">
+                <p class="small text-muted">@T["Members lose the permissions this group gives them. Their other groups are not affected."]</p>
+                <form asp-action="Delete" asp-route-id="@group.Id" method="post" data-confirm="@T["Delete the group {0}?", group.Name]">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-danger w-100">@T["Delete group"]</button>
+                </form>
+            </app-card>
         </div>
     }
 </div>

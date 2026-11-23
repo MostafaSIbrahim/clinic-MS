@@ -1,47 +1,48 @@
 @model IReadOnlyList<PermissionGroupSummary>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
-    ViewData["Title"] = "Permission Groups";
+    // M5b: permission groups. Shared layout, a table that becomes cards on phones, English and Arabic. Rules unchanged (F4).
+    ViewData["Title"] = T["Permission Groups"].Value;
 }
 <div class="page-toolbar">
     <div>
-        <h1>Permission Groups</h1>
-        <p class="text-muted mb-0">What each group of users may see and do. A user's access is everything their groups allow.</p>
+        <h1>@T["Permission Groups"]</h1>
+        <p class="text-muted mb-0">@T["What each group of users may see and do. A user's access is everything their groups allow."]</p>
     </div>
     <div class="page-actions">
-        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>New group</a>
-        <a asp-controller="Users" asp-action="Index" class="btn btn-outline-secondary">Users</a>
+        <a asp-controller="Users" asp-action="Index" class="btn btn-outline-secondary">@T["Users"]</a>
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> @T["New group"]</a>
     </div>
 </div>
-<div class="card">
-    <div class="table-responsive" tabindex="0" role="region" aria-label="Permission groups">
-        <table class="table align-middle mb-0">
-            <thead>
-                <tr>
-                    <th scope="col">Group</th>
-                    <th scope="col">Description</th>
-                    <th scope="col" class="text-end">Permissions</th>
-                    <th scope="col" class="text-end">Members</th>
-                    <th scope="col"><span class="visually-hidden">Actions</span></th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var g in Model)
-            {
-                <tr>
-                    <th scope="row">
-                        @g.Name
-                        @if (g.SystemKey is not null)
-                        {
-                            <span class="badge bg-secondary ms-1">Built-in</span>
-                        }
-                    </th>
-                    <td class="clinical-text">@(g.Description ?? "—")</td>
-                    <td class="text-end">@g.PermissionCount</td>
-                    <td class="text-end">@g.MemberCount</td>
-                    <td class="text-end"><a asp-action="Edit" asp-route-id="@g.Id" class="btn btn-sm btn-outline-primary">Open</a></td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    </div>
-</div>
+
+<app-table caption="@T["Permission Groups"].Value" caption-hidden="true" stack="true">
+    <thead>
+        <tr>
+            <th scope="col">@T["Group"]</th>
+            <th scope="col">@T["Description"]</th>
+            <th scope="col" class="app-table__num">@T["Permissions"]</th>
+            <th scope="col" class="app-table__num">@T["Members"]</th>
+            <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var g in Model)
+        {
+            <tr>
+                <th scope="row" data-label="@T["Group"]" dir="auto">
+                    @T[g.Name]
+                    @if (g.SystemKey is not null)
+                    {
+                        <span class="app-status app-status--booked ms-1">@T["Built-in"]</span>
+                    }
+                </th>
+                <td data-label="@T["Description"]" class="clinical-text" dir="auto">@(g.Description is { } d ? T[d].Value : "—")</td>
+                <td data-label="@T["Permissions"]" class="app-table__num">@g.PermissionCount</td>
+                <td data-label="@T["Members"]" class="app-table__num">@g.MemberCount</td>
+                <td class="app-table__actions">
+                    <a asp-action="Edit" asp-route-id="@g.Id" class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @T[g.Name]</span></a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</app-table>
