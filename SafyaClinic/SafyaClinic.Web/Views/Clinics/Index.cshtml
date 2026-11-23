@@ -1,57 +1,69 @@
 @model IEnumerable<ClinicDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
 @{
-    ViewData["Title"] = "Clinics";
+    // M5c: clinics. Shared layout, a table that becomes cards on phones, English and Arabic. Rules unchanged.
+    ViewData["Title"] = T["Clinics"].Value;
+    var none = new EmptyStateModel(T["No clinics yet."].Value, Icon: "bi-hospital", ActionText: T["New clinic"].Value, ActionUrl: Url.Action("Create"));
 }
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-hospital me-2"></i>Clinics</span>
-        <a asp-action="Create" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Clinic</a>
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Clinics"]</h1>
+        <p class="text-muted mb-0">@T["Each clinic has its opening hours and its patient source agreements."]</p>
     </div>
-    <div class="card-body p-0">
-        @if (!Model.Any())
-        {
-            <div class="text-center text-muted py-5">No clinics defined yet.</div>
-        }
-        else
-        {
-            <table class="table table-hover mb-0 align-middle">
-                <thead>
-                    <tr><th>Name</th><th>Address</th><th>Phone</th><th>Source Agreements</th><th>Status</th><th></th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var c in Model)
-                    {
-                        <tr>
-                            <td class="fw-semibold">
-                                <a asp-action="Details" asp-route-id="@c.Id">@c.Name</a>
-                            </td>
-                            <td>@(c.Address ?? "—")</td>
-                            <td>@(c.Phone ?? "—")</td>
-                            <td>@c.Agreements.Count()</td>
-                            <td>
-                                @if (c.IsActive)
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Inactive</span>
-                                }
-                            </td>
-                            <td class="text-nowrap">
-                                <a asp-action="Details" asp-route-id="@c.Id" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a>
-                                <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                                <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline"
-                                      data-confirm="Delete or deactivate this clinic?">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> @T["New clinic"]</a>
     </div>
 </div>
+
+@if (!Model.Any())
+{
+    <partial name="_AppEmpty" model="none" />
+}
+else
+{
+    <app-table caption="@T["Clinics"].Value" caption-hidden="true" stack="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Name"]</th>
+                <th scope="col">@T["Address"]</th>
+                <th scope="col">@T["Phone"]</th>
+                <th scope="col" class="app-table__num">@T["Source agreements"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in Model)
+            {
+                <tr>
+                    <th scope="row" data-label="@T["Name"]" dir="auto"><a asp-action="Details" asp-route-id="@c.Id">@c.Name</a></th>
+                    <td data-label="@T["Address"]" dir="auto">@(c.Address ?? "—")</td>
+                    <td data-label="@T["Phone"]" dir="ltr">@(c.Phone ?? "—")</td>
+                    <td data-label="@T["Source agreements"]" class="app-table__num">@c.Agreements.Count()</td>
+                    <td data-label="@T["Status"]">
+                        @if (c.IsActive)
+                        {
+                            <span class="app-status app-status--completed">@T["Active"]</span>
+                        }
+                        else
+                        {
+                            <span class="app-status app-status--cancelled">@T["Inactive"]</span>
+                        }
+                    </td>
+                    <td class="app-table__actions">
+                        <a asp-action="Details" asp-route-id="@c.Id" class="btn btn-sm btn-outline-primary">@T["Open"]<span class="visually-hidden"> @c.Name</span></a>
+                        <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-outline-secondary">@T["Edit"]<span class="visually-hidden"> @c.Name</span></a>
+                        <form asp-action="Delete" asp-route-id="@c.Id" method="post" class="d-inline"
+                              data-confirm="@T["Delete {0}? If it has bookings or payments, it is made inactive instead.", c.Name]">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Delete {0}", c.Name]</span>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </app-table>
+}

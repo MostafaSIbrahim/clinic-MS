@@ -201,6 +201,13 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         screens['Add user'] = '/Users/Create';
         screens['Permission groups'] = '/PermissionGroups';
         screens['Permission group'] = '/PermissionGroups/Edit/1';
+        // M5c: the Settings home, clinics (the seeded clinic is number 1) and patient sources.
+        screens['Settings'] = '/Lookups';
+        screens['Clinics'] = '/Clinics';
+        screens['Clinic'] = '/Clinics/Details/1';
+        screens['Edit clinic'] = '/Clinics/Edit/1';
+        screens['Patient sources'] = '/PatientSources';
+        screens['Add patient source'] = '/PatientSources/Create';
         await checkA11y(page, 'Patient payments');
         // Icon fonts can add a character to a link's name, so match the end of it.
         const collect = page.locator('main').getByRole('link', { name: /Collect$/ }).first();

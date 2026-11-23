@@ -1,54 +1,69 @@
 @model IEnumerable<PatientSourceDto>
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@using SafyaClinic.Web.Components
 @{
-    ViewData["Title"] = "Patient Sources";
+    // M5c: patient sources. Shared layout, a table that becomes cards on phones, English and Arabic.
+    ViewData["Title"] = T["Patient Sources"].Value;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var none = new EmptyStateModel(T["No patient sources yet."].Value, Icon: "bi-signpost-split", ActionText: T["New source"].Value, ActionUrl: Url.Action("Create"));
 }
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-signpost-split me-2"></i>Patient Sources</span>
-        <a asp-action="Create" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>New Source</a>
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Patient Sources"]</h1>
+        <p class="text-muted mb-0">@T["Where patients come from. A source's deduction applies to a patient's first-visit payment, unless the clinic has its own agreement."]</p>
     </div>
-    <div class="card-body p-0">
-        @if (!Model.Any())
-        {
-            <div class="text-center text-muted py-5">No patient sources defined yet.</div>
-        }
-        else
-        {
-            <table class="table table-hover mb-0 align-middle">
-                <thead>
-                    <tr><th>Name</th><th>Description</th><th>Default Deduction %</th><th>Patients</th><th>Status</th><th></th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var s in Model)
-                    {
-                        <tr>
-                            <td class="fw-semibold">@s.Name</td>
-                            <td>@(s.Description ?? "—")</td>
-                            <td>@s.DefaultDeductionPercentage.ToString("0.##")%</td>
-                            <td>@s.PatientCount</td>
-                            <td>
-                                @if (s.IsActive)
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Inactive</span>
-                                }
-                            </td>
-                            <td class="text-nowrap">
-                                <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                                <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline"
-                                      data-confirm="Delete or deactivate this source?">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
+    <div class="page-actions">
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> @T["New source"]</a>
     </div>
 </div>
+
+@if (!Model.Any())
+{
+    <partial name="_AppEmpty" model="none" />
+}
+else
+{
+    <app-table caption="@T["Patient Sources"].Value" caption-hidden="true" stack="true">
+        <thead>
+            <tr>
+                <th scope="col">@T["Name"]</th>
+                <th scope="col">@T["Description"]</th>
+                <th scope="col" class="app-table__num">@T["Default deduction"]</th>
+                <th scope="col" class="app-table__num">@T["Patients"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in Model)
+            {
+                <tr>
+                    <th scope="row" data-label="@T["Name"]" dir="auto">@s.Name</th>
+                    <td data-label="@T["Description"]" dir="auto">@(s.Description ?? "—")</td>
+                    <td data-label="@T["Default deduction"]" class="app-table__num">@s.DefaultDeductionPercentage.ToString("0.##", inv)%</td>
+                    <td data-label="@T["Patients"]" class="app-table__num">@s.PatientCount</td>
+                    <td data-label="@T["Status"]">
+                        @if (s.IsActive)
+                        {
+                            <span class="app-status app-status--completed">@T["Active"]</span>
+                        }
+                        else
+                        {
+                            <span class="app-status app-status--cancelled">@T["Inactive"]</span>
+                        }
+                    </td>
+                    <td class="app-table__actions">
+                        <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-outline-primary">@T["Edit"]<span class="visually-hidden"> @s.Name</span></a>
+                        <form asp-action="Delete" asp-route-id="@s.Id" method="post" class="d-inline"
+                              data-confirm="@T["Delete {0}? If patients or payments use it, it is made inactive instead.", s.Name]">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Delete {0}", s.Name]</span>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </app-table>
+}

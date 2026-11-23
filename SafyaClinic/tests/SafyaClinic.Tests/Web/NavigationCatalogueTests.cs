@@ -19,7 +19,7 @@ public class NavigationCatalogueTests
 
     [Theory]
     [InlineData(SystemGroups.AdminRole,
-        "Dashboard|Patients|Appointments|Reservations|Doctor Queues|Follow-ups|My schedule|Doctor schedules|Analysis|Nutrition|Payment Dashboard|Payment Reports|Users|Permission Groups|Lookups|Patient Sources|Clinics")]
+        "Dashboard|Patients|Appointments|Reservations|Doctor Queues|Follow-ups|My schedule|Doctor schedules|Analysis|Nutrition|Payment Dashboard|Payment Reports|Users|Permission Groups|Settings|Patient Sources|Clinics")]
     [InlineData(SystemGroups.DoctorRole,
         "Dashboard|Patients|Appointments|Reservations|My Queue|Follow-ups|My schedule|Analysis|Payment Reports")]
     [InlineData(SystemGroups.NutritionistRole,

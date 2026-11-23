@@ -2,18 +2,32 @@
 @inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @using SafyaClinic.Application.Scheduling
 @{
+    // M5c: one clinic: opening hours (P1) and patient source agreements. Shared layout, English and Arabic.
     ViewData["Title"] = Model.Name;
     var sources = ViewBag.Sources as IEnumerable<PatientSourceDto> ?? Enumerable.Empty<PatientSourceDto>();
     var agreedSourceIds = Model.Agreements.Select(a => a.PatientSourceId).ToHashSet();
     var openingHours = (ViewBag.OpeningHours as IEnumerable<OpeningPeriodDto> ?? Enumerable.Empty<OpeningPeriodDto>()).ToLookup(p => p.Day);
 }
 
-<div class="mb-3 d-flex justify-content-between align-items-center">
+<div class="page-toolbar">
     <div>
-        <h4 class="mb-0">@Model.Name</h4>
-        <small class="text-muted">@(Model.Address ?? "No address on file") @(Model.Phone != null ? $" • {Model.Phone}" : "")</small>
+        <h1 dir="auto">@Model.Name</h1>
+        <p class="text-muted mb-0">
+            <span dir="auto">@(Model.Address ?? T["No address on file"].Value)</span>
+            @if (Model.Phone != null)
+            {
+                <span> · </span><span dir="ltr">@Model.Phone</span>
+            }
+            @if (!Model.IsActive)
+            {
+                <span class="app-status app-status--cancelled ms-1">@T["Inactive"]</span>
+            }
+        </p>
     </div>
-    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Edit Clinic</a>
+    <div class="page-actions">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">@T["Edit clinic"]</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">@T["All clinics"]</a>
+    </div>
 </div>
 
 @* P1: opening hours. Bookable times come from these in the pilot's appointments screen. *@
@@ -39,67 +53,72 @@
     }
 </app-card>
 
-<div class="card mb-4 mt-4">
-    <div class="card-header"><i class="bi bi-percent me-2"></i>Patient Source Deduction Agreements</div>
-    <div class="card-body">
-        <p class="text-muted small">
-            Each row defines how much is deducted from a patient's payment on their <strong>first visit</strong>
-            when they came from that source and were treated at this clinic. If a source has no row here,
-            the source's default deduction % is used instead.
-        </p>
+<app-card id="source-agreements" title="@T["Patient source agreements"].Value" level="2" icon="bi-percent">
+    <p class="text-muted small">@T["How much is deducted from a patient's payment on their first visit when they came from that source and were treated at this clinic. A source without a row here uses its default deduction."]</p>
 
-        <table class="table table-sm align-middle mb-4">
-            <thead><tr><th>Source</th><th>Deduction %</th><th>Notes</th><th></th></tr></thead>
+    @if (!Model.Agreements.Any())
+    {
+        <p class="text-muted">@T["No agreements yet: every source uses its default deduction."]</p>
+    }
+    else
+    {
+        <app-table caption="@T["Patient source agreements"].Value" caption-hidden="true" stack="true">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Source"]</th>
+                    <th scope="col" class="app-table__num">@T["Deduction %"]</th>
+                    <th scope="col">@T["Notes"]</th>
+                    <th scope="col" class="app-table__actions"><span class="visually-hidden">@T["Actions"]</span></th>
+                </tr>
+            </thead>
             <tbody>
                 @foreach (var a in Model.Agreements)
                 {
                     <tr>
-                        <td>@a.PatientSourceName</td>
-                        <td class="fw-semibold">@a.DeductionPercentage.ToString("0.##")%</td>
-                        <td>@(a.Notes ?? "—")</td>
-                        <td>
+                        <th scope="row" data-label="@T["Source"]" dir="auto">@a.PatientSourceName</th>
+                        <td data-label="@T["Deduction %"]" class="app-table__num fw-semibold">@a.DeductionPercentage.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)%</td>
+                        <td data-label="@T["Notes"]" dir="auto">@(a.Notes ?? "—")</td>
+                        <td class="app-table__actions">
                             <form asp-action="RemoveAgreement" method="post" class="d-inline"
-                                  data-confirm="Remove this agreement? The source default % will apply instead.">
+                                  data-confirm="@T["Remove the agreement with {0}? The source's default deduction will apply instead.", a.PatientSourceName]">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="agreementId" value="@a.Id" />
                                 <input type="hidden" name="clinicId" value="@Model.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Remove the agreement with {0}", a.PatientSourceName]</span>
+                                </button>
                             </form>
                         </td>
                     </tr>
                 }
-                @if (!Model.Agreements.Any())
-                {
-                    <tr><td colspan="4" class="text-center text-muted py-3">No custom agreements yet — all sources use their default %.</td></tr>
-                }
             </tbody>
-        </table>
+        </app-table>
+    }
 
-        <h6 class="text-muted text-uppercase small mb-2">Add / Update Agreement</h6>
-        <form asp-action="SaveAgreement" method="post" class="row g-2 align-items-end">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="ClinicId" value="@Model.Id" />
-            <div class="col-md-4">
-                <label class="form-label">Patient Source</label>
-                <select name="PatientSourceId" class="form-select" required>
-                    <option value="">— Select Source —</option>
-                    @foreach (var s in sources)
-                    {
-                        <option value="@s.Id">@s.Name (default @s.DefaultDeductionPercentage.ToString("0.##")%)</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Deduction %</label>
-                <input type="number" name="DeductionPercentage" step="0.01" min="0" max="100" class="form-control" required />
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Notes</label>
-                <input type="text" name="Notes" class="form-control" />
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-lg me-1"></i>Save</button>
-            </div>
-        </form>
-    </div>
-</div>
+    <h3 class="h6 mt-3">@T["Add or change an agreement"]</h3>
+    <form asp-action="SaveAgreement" method="post" class="row g-2 align-items-end">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ClinicId" value="@Model.Id" />
+        <div class="col-md-4">
+            <label for="agreement-source" class="form-label">@T["Patient source"]</label>
+            <select id="agreement-source" name="PatientSourceId" class="form-select" required>
+                <option value="">@T["Choose a source"]</option>
+                @foreach (var s in sources)
+                {
+                    <option value="@s.Id">@T["{0} (default {1}%)", s.Name, s.DefaultDeductionPercentage.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)]</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <label for="agreement-percent" class="form-label">@T["Deduction %"]</label>
+            <input type="number" id="agreement-percent" name="DeductionPercentage" step="0.01" min="0" max="100" class="form-control" required />
+        </div>
+        <div class="col-6 col-md-3">
+            <label for="agreement-notes" class="form-label">@T["Notes"]</label>
+            <input type="text" id="agreement-notes" name="Notes" class="form-control" dir="auto" />
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">@T["Save"]</button>
+        </div>
+    </form>
+</app-card>
