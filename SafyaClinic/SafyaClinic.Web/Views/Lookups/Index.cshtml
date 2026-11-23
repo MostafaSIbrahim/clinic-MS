@@ -1,78 +1,61 @@
-﻿@{
-    ViewData["Title"] = "System Lookups Management";
+@using SafyaClinic.Application.Catalogue
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@{
+    // M5c: the Settings home. Links grouped by what they set up, each shown only to people who may use it.
+    ViewData["Title"] = T["Settings"].Value;
+    var canUsers = await Can.HasAsync(Permissions.Users.Manage);
+    var canClinics = await Can.HasAsync(Permissions.Settings.Clinics);
+    var canSources = await Can.HasAsync(Permissions.Settings.PatientSources);
+    var canLookups = await Can.HasAsync(Permissions.Settings.Lookups);
+    var catalogues = new (CatalogueKind Kind, string Title, string Text, string Icon)[]
+    {
+        (CatalogueKind.Treatment, "Treatment types", "Visit and procedure types, with their price and length.", "bi-bandaid"),
+        (CatalogueKind.Analysis, "Analysis types", "Lab tests that doctors can request.", "bi-journal-medical"),
+        (CatalogueKind.Injection, "Injection types", "Injections used in nutrition packages and plans.", "bi-eyedropper"),
+        (CatalogueKind.Vitamin, "Vitamin types", "Vitamins used in nutrition packages and plans.", "bi-capsule"),
+    };
 }
-
-<div class="container-fluid py-4">
-    <h2 class="mb-4 text-primary"><i class="bi me-2 bi-sliders"></i>System Lookup Management</h2>
-    <p class="text-muted">Select a lookup category to add or manage reference data across the application.</p>
-
-    <div class="row g-4 mt-2">
-        @* F4d: user and group administration, shown only to those who may manage users. *@
-        @if (await Can.HasAsync(Permissions.Users.Manage))
-        {
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 shadow-sm border-0 text-center p-3">
-                <div class="card-body">
-                    <i class="bi bi-person-gear display-4 text-primary mb-3" aria-hidden="true"></i>
-                    <h5 class="card-title">Users</h5>
-                    <p class="card-text text-muted">Manage system users and their permission groups.</p>
-                    <a asp-controller="Users" asp-action="Index" class="btn btn-outline-primary w-100">Manage</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 shadow-sm border-0 text-center p-3">
-                <div class="card-body">
-                    <i class="bi bi-shield-lock display-4 text-primary mb-3" aria-hidden="true"></i>
-                    <h5 class="card-title">Permission Groups</h5>
-                    <p class="card-text text-muted">Choose what each group of users may do.</p>
-                    <a asp-controller="PermissionGroups" asp-action="Index" class="btn btn-outline-primary w-100">Manage</a>
-                </div>
-            </div>
-        </div>
-        }
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 shadow-sm border-0 text-center p-3">
-                <div class="card-body">
-                    <i class="bi bi-journal-medical display-4 text-info mb-3"></i>
-                    <h5 class="card-title">Analysis Types</h5>
-                    <p class="card-text text-muted">Manage types for laboratory and medical analyses.</p>
-                    <a asp-action="AnalysisTypes" class="btn btn-outline-info w-100">Manage</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 shadow-sm border-0 text-center p-3">
-                <div class="card-body">
-                    <i class="bi bi-bandaid display-4 text-success mb-3"></i>
-                    <h5 class="card-title">Treatment Types</h5>
-                    <p class="card-text text-muted">Configure categories of medical procedures and treatments.</p>
-                    <a asp-action="TreatmentTypes" class="btn btn-outline-success w-100">Manage</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 shadow-sm border-0 text-center p-3">
-                <div class="card-body">
-                    <i class="bi bi-eyedropper display-4 text-warning mb-3" aria-hidden="true"></i>
-                    <h5 class="card-title">Injection Types</h5>
-                    <p class="card-text text-muted">Define available nutrition and therapeutic injection types.</p>
-                    <a asp-action="InjectionTypes" class="btn btn-outline-warning w-100">Manage</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-3">
-            <div class="card h-100 shadow-sm border-0 text-center p-3">
-                <div class="card-body">
-                    <i class="bi bi-capsule display-4 text-danger mb-3"></i>
-                    <h5 class="card-title">Vitamin Types</h5>
-                    <p class="card-text text-muted">Manage catalog of vitamin supplements and types.</p>
-                    <a asp-action="VitaminTypes" class="btn btn-outline-danger w-100">Manage</a>
-                </div>
-            </div>
-        </div>
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Settings"]</h1>
+        <p class="text-muted mb-0">@T["Set up who uses the system, the clinics and the lists used across it."]</p>
     </div>
+</div>
+
+<div class="settings-groups">
+    @if (canUsers)
+    {
+        <app-card title="@T["People"].Value" level="2" icon="bi-people">
+            <ul class="settings-links">
+                <li><a asp-controller="Users" asp-action="Index"><i class="bi bi-person-gear" aria-hidden="true"></i><span><strong>@T["Users"]</strong><small>@T["Add users, reset passwords and choose their groups."]</small></span></a></li>
+                <li><a asp-controller="PermissionGroups" asp-action="Index"><i class="bi bi-shield-lock" aria-hidden="true"></i><span><strong>@T["Permission Groups"]</strong><small>@T["Choose what each group of users may do."]</small></span></a></li>
+            </ul>
+        </app-card>
+    }
+    @if (canClinics || canSources)
+    {
+        <app-card title="@T["Clinic"].Value" level="2" icon="bi-hospital">
+            <ul class="settings-links">
+                @if (canClinics)
+                {
+                    <li><a asp-controller="Clinics" asp-action="Index"><i class="bi bi-hospital" aria-hidden="true"></i><span><strong>@T["Clinics"]</strong><small>@T["Each clinic's details, opening hours and source agreements."]</small></span></a></li>
+                }
+                @if (canSources)
+                {
+                    <li><a asp-controller="PatientSources" asp-action="Index"><i class="bi bi-diagram-3" aria-hidden="true"></i><span><strong>@T["Patient Sources"]</strong><small>@T["Where patients come from, and the default deduction for each."]</small></span></a></li>
+                }
+            </ul>
+        </app-card>
+    }
+    @if (canLookups)
+    {
+        <app-card title="@T["Catalogues"].Value" level="2" icon="bi-list-ul">
+            <ul class="settings-links">
+                @foreach (var c in catalogues)
+                {
+                    <li><a asp-action="Catalogue" asp-route-kind="@c.Kind"><i class="bi @c.Icon" aria-hidden="true"></i><span><strong>@T[c.Title]</strong><small>@T[c.Text]</small></span></a></li>
+                }
+            </ul>
+        </app-card>
+    }
 </div>

@@ -121,13 +121,16 @@ public class PatientSourceService : IPatientSourceService
             .Query()
             .Where(p => p.PatientSourceId == id)
             .AnyAsync();
-        if (hasPaymentHistory)
+        // M5c: patients who came from this source keep it too (deleting would clear it from their records,
+        // and their first-visit deduction would then use no source).
+        var hasPatients = await _uow.Patients.Query().AnyAsync(p => p.PatientSourceId == id);
+        if (hasPaymentHistory || hasPatients)
         {
             source.IsActive = false;
             source.UpdatedAt = DateTime.UtcNow;
             _uow.PatientSources.Update(source);
             await _uow.SaveChangesAsync();
-            return ServiceResult.Success("Source has payment history, so it was deactivated instead of deleted.");
+            return ServiceResult.Success("This source is used by patients or payments, so it was made inactive instead of deleted.");
         }
 
         _uow.PatientSources.Delete(source);

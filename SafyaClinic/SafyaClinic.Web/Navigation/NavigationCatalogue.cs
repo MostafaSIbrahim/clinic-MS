@@ -57,7 +57,7 @@ public static class NavigationCatalogue
         {
             new Entry("Users", "bi-person-gear", "Users", "Index", Permissions.Users.Manage),
             new Entry("Permission Groups", "bi-shield-lock", "PermissionGroups", "Index", Permissions.Users.Manage),
-            new Entry("Lookups", "bi-sliders", "Lookups", "Index", Permissions.Settings.Lookups),
+            new Entry("Settings", "bi-sliders", "Lookups", "Index", Permissions.Settings.Lookups),
             new Entry("Patient Sources", "bi-diagram-3", "PatientSources", "Index", Permissions.Settings.PatientSources),
             new Entry("Clinics", "bi-hospital", "Clinics", "Index", Permissions.Settings.Clinics),
         }),

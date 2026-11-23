@@ -1,33 +1,26 @@
 @model CreatePatientSourceRequest
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
 @{
-    ViewData["Title"] = "New Patient Source";
+    // M5c: new patient source. Shared fields, English and Arabic. Rules unchanged.
+    ViewData["Title"] = T["New patient source"].Value;
 }
+<div class="page-toolbar">
+    <div><h1>@T["New patient source"]</h1></div>
+</div>
 
-<div class="card" style="max-width:600px;">
-    <div class="card-header"><i class="bi bi-signpost-split me-2"></i>New Patient Source</div>
+<div class="card record-form-card">
     <div class="card-body">
-        <form asp-action="Create" method="post">
+        <form method="post">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
-
-            <div class="mb-3">
-                <label asp-for="Name" class="form-label">Name *</label>
-                <input asp-for="Name" class="form-control" required placeholder="e.g. Vezeeta, Instagram, Marketing Campaign" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
+            <app-field asp-for="Name" label="@T["Name"].Value" required="true" hint="@T["For example a booking website, social media or a campaign."].Value" />
+            <app-field asp-for="Description" label="@T["Description"].Value" type="textarea" rows="2" />
+            <app-field asp-for="DefaultDeductionPercentage" label="@T["Default deduction %"].Value" type="number" required="true"
+                       hint="@T["Taken from a patient's first-visit payment when the clinic has no agreement of its own."].Value" />
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">@T["Create source"]</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">@T["Cancel"]</a>
             </div>
-            <div class="mb-3">
-                <label asp-for="Description" class="form-label">Description</label>
-                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
-            </div>
-            <div class="mb-3">
-                <label asp-for="DefaultDeductionPercentage" class="form-label">Default Deduction % *</label>
-                <input asp-for="DefaultDeductionPercentage" type="number" step="0.01" min="0" max="100" class="form-control" required />
-                <small class="text-muted">
-                    Applied to the patient's first-visit payment when no clinic-specific agreement exists.
-                </small>
-            </div>
-
-            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Create</button>
-            <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
         </form>
     </div>
 </div>

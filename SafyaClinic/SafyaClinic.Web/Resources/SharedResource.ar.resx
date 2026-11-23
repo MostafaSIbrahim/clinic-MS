@@ -2475,4 +2475,133 @@
   <data name="Manage users, their roles and passwords" xml:space="preserve">
     <value>إدارة المستخدمين وأدوارهم وكلمات مرورهم</value>
   </data>
+  <data name="Active (offered when booking)" xml:space="preserve">
+    <value>نشطة (تظهر عند الحجز)</value>
+  </data>
+  <data name="Active (offered when registering patients)" xml:space="preserve">
+    <value>نشط (يظهر عند تسجيل المرضى)</value>
+  </data>
+  <data name="Add or change an agreement" xml:space="preserve">
+    <value>إضافة اتفاق أو تعديله</value>
+  </data>
+  <data name="Add users, reset passwords and choose their groups." xml:space="preserve">
+    <value>إضافة المستخدمين وإعادة تعيين كلمات المرور واختيار مجموعاتهم.</value>
+  </data>
+  <data name="Address" xml:space="preserve">
+    <value>العنوان</value>
+  </data>
+  <data name="All clinics" xml:space="preserve">
+    <value>كل العيادات</value>
+  </data>
+  <data name="Choose a source" xml:space="preserve">
+    <value>اختر مصدرًا</value>
+  </data>
+  <data name="Choose what each group of users may do." xml:space="preserve">
+    <value>اختر ما يُسمح لكل مجموعة من المستخدمين بفعله.</value>
+  </data>
+  <data name="Create clinic" xml:space="preserve">
+    <value>إنشاء العيادة</value>
+  </data>
+  <data name="Create source" xml:space="preserve">
+    <value>إنشاء المصدر</value>
+  </data>
+  <data name="Deduction %" xml:space="preserve">
+    <value>نسبة الخصم %</value>
+  </data>
+  <data name="Default deduction" xml:space="preserve">
+    <value>الخصم الافتراضي</value>
+  </data>
+  <data name="Default deduction %" xml:space="preserve">
+    <value>نسبة الخصم الافتراضية %</value>
+  </data>
+  <data name="Delete {0}? If it has bookings or payments, it is made inactive instead." xml:space="preserve">
+    <value>حذف {0}؟ إذا كانت لها حجوزات أو مدفوعات فسيتم إيقافها بدلًا من حذفها.</value>
+  </data>
+  <data name="Delete {0}? If patients or payments use it, it is made inactive instead." xml:space="preserve">
+    <value>حذف {0}؟ إذا كان مستخدمًا لمرضى أو مدفوعات فسيتم إيقافه بدلًا من حذفه.</value>
+  </data>
+  <data name="Each clinic has its opening hours and its patient source agreements." xml:space="preserve">
+    <value>لكل عيادة مواعيد عملها واتفاقاتها مع مصادر المرضى.</value>
+  </data>
+  <data name="Each clinic's details, opening hours and source agreements." xml:space="preserve">
+    <value>بيانات كل عيادة ومواعيد عملها واتفاقات المصادر.</value>
+  </data>
+  <data name="Edit clinic" xml:space="preserve">
+    <value>تعديل العيادة</value>
+  </data>
+  <data name="Edit patient source" xml:space="preserve">
+    <value>تعديل مصدر المرضى</value>
+  </data>
+  <data name="For example a booking website, social media or a campaign." xml:space="preserve">
+    <value>مثل موقع حجز أو وسائل التواصل الاجتماعي أو حملة إعلانية.</value>
+  </data>
+  <data name="How much is deducted from a patient's payment on their first visit when they came from that source and were treated at this clinic. A source without a row here uses its default deduction." xml:space="preserve">
+    <value>النسبة التي تُخصم من دفعة المريض في زيارته الأولى إذا جاء من هذا المصدر وعولج في هذه العيادة. المصدر الذي ليس له صف هنا يُطبَّق عليه خصمه الافتراضي.</value>
+  </data>
+  <data name="Injections used in nutrition packages and plans." xml:space="preserve">
+    <value>الحقن المستخدمة في باقات وخطط التغذية.</value>
+  </data>
+  <data name="Lab tests that doctors can request." xml:space="preserve">
+    <value>التحاليل التي يمكن للأطباء طلبها.</value>
+  </data>
+  <data name="New clinic" xml:space="preserve">
+    <value>عيادة جديدة</value>
+  </data>
+  <data name="New patient source" xml:space="preserve">
+    <value>مصدر مرضى جديد</value>
+  </data>
+  <data name="New source" xml:space="preserve">
+    <value>مصدر جديد</value>
+  </data>
+  <data name="No address on file" xml:space="preserve">
+    <value>لا يوجد عنوان مسجل</value>
+  </data>
+  <data name="No agreements yet: every source uses its default deduction." xml:space="preserve">
+    <value>لا توجد اتفاقات بعد: كل مصدر يُطبَّق عليه خصمه الافتراضي.</value>
+  </data>
+  <data name="No clinics yet." xml:space="preserve">
+    <value>لا توجد عيادات بعد.</value>
+  </data>
+  <data name="No patient sources yet." xml:space="preserve">
+    <value>لا توجد مصادر مرضى بعد.</value>
+  </data>
+  <data name="Patient source agreements" xml:space="preserve">
+    <value>اتفاقات مصادر المرضى</value>
+  </data>
+  <data name="People" xml:space="preserve">
+    <value>الأشخاص</value>
+  </data>
+  <data name="Remove the agreement with {0}" xml:space="preserve">
+    <value>إزالة الاتفاق مع {0}</value>
+  </data>
+  <data name="Remove the agreement with {0}? The source's default deduction will apply instead." xml:space="preserve">
+    <value>إزالة الاتفاق مع {0}؟ سيُطبَّق الخصم الافتراضي للمصدر بدلًا منه.</value>
+  </data>
+  <data name="Set up who uses the system, the clinics and the lists used across it." xml:space="preserve">
+    <value>إعداد مستخدمي النظام والعيادات والقوائم المستخدمة فيه.</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>الإعدادات</value>
+  </data>
+  <data name="Source agreements" xml:space="preserve">
+    <value>اتفاقات المصادر</value>
+  </data>
+  <data name="Taken from a patient's first-visit payment when the clinic has no agreement of its own." xml:space="preserve">
+    <value>تُخصم من دفعة الزيارة الأولى للمريض إذا لم يكن للعيادة اتفاق خاص بها.</value>
+  </data>
+  <data name="Visit and procedure types, with their price and length." xml:space="preserve">
+    <value>أنواع الزيارات والإجراءات بأسعارها ومدتها.</value>
+  </data>
+  <data name="Vitamins used in nutrition packages and plans." xml:space="preserve">
+    <value>الفيتامينات المستخدمة في باقات وخطط التغذية.</value>
+  </data>
+  <data name="Where patients come from, and the default deduction for each." xml:space="preserve">
+    <value>من أين يأتي المرضى، والخصم الافتراضي لكل مصدر.</value>
+  </data>
+  <data name="Where patients come from. A source's deduction applies to a patient's first-visit payment, unless the clinic has its own agreement." xml:space="preserve">
+    <value>من أين يأتي المرضى. يُطبَّق خصم المصدر على دفعة الزيارة الأولى للمريض، ما لم يكن للعيادة اتفاق خاص بها.</value>
+  </data>
+  <data name="{0} (default {1}%)" xml:space="preserve">
+    <value>{0} (الافتراضي {1}%)</value>
+  </data>
 </root>
