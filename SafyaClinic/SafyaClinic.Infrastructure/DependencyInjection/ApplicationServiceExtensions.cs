@@ -25,6 +25,9 @@ public static class ApplicationServiceExtensions
         services.AddScoped<INutritionService, NutritionService>();
         services.AddScoped<SafyaClinic.Application.Catalogue.ICatalogueService, SafyaClinic.Application.Catalogue.CatalogueService>();   // M5a
         services.AddScoped<IPatientSourceService, PatientSourceService>();
+        services.AddScoped<SafyaClinic.Application.Settings.IClinicProfileService, SafyaClinic.Application.Settings.ClinicProfileService>();   // M5d
+        services.Configure<SafyaClinic.Application.Settings.ClinicInfoOptions>(
+            configuration.GetSection(SafyaClinic.Application.Settings.ClinicInfoOptions.SectionName));
         services.AddScoped<IClinicService, ClinicService>();
         services.AddScoped<IClinicHoursService, ClinicHoursService>();   // P1
         services.AddScoped<IDoctorScheduleService, DoctorScheduleService>();   // P1

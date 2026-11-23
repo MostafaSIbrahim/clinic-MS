@@ -94,6 +94,7 @@ public class UnitOfWork : IUnitOfWork
     private IRepository<WeeklyFollowUpLabResult>? _weeklyFollowUpLabResults;
     private IRepository<WeeklyAdministeredItem>? _weeklyAdministeredItems;
     private IRepository<EnrollmentPlannedItem>? _enrollmentPlannedItems;   // M4d
+    private IRepository<ClinicProfile>? _clinicProfiles;   // M5d
 
     public UnitOfWork(SafyaDbContext context) => _context = context;
 
@@ -140,6 +141,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<WeeklyFollowUpLabResult> WeeklyFollowUpLabResults => _weeklyFollowUpLabResults ??= new GenericRepository<WeeklyFollowUpLabResult>(_context);
     public IRepository<WeeklyAdministeredItem> WeeklyAdministeredItems => _weeklyAdministeredItems ??= new GenericRepository<WeeklyAdministeredItem>(_context);
     public IRepository<EnrollmentPlannedItem> EnrollmentPlannedItems => _enrollmentPlannedItems ??= new GenericRepository<EnrollmentPlannedItem>(_context);
+    public IRepository<ClinicProfile> ClinicProfiles => _clinicProfiles ??= new GenericRepository<ClinicProfile>(_context);   // M5d
 
     // ── Persistence ───────────────────────────────────────────
 

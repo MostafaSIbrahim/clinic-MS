@@ -1,5 +1,6 @@
 @model IEnumerable<MedicalAnalysisDto>
 @inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@inject SafyaClinic.Application.Settings.IClinicProfileService ClinicProfile
 @using System.Globalization
 @{
     // M3c: the lab request slip is bilingual whatever the language of the person printing, like the prescription
@@ -23,6 +24,7 @@
             $"<span lang=\"en\">{System.Net.WebUtility.HtmlEncode(english)}</span> <span class=\"slip-ar\" lang=\"ar\" dir=\"rtl\">{System.Net.WebUtility.HtmlEncode(Ar(english))}</span>");
     string GenderText(string? g) => g is null ? "—" : $"{g} / {Ar(g)}";
     var requested = Clock.ToClinicTime(DateTime.SpecifyKind(first.RequestDate, DateTimeKind.Utc)).ToString("dd MMM yyyy", inv);
+    var clinic = await ClinicProfile.GetAsync();   // M5d
     var printed = Clock.Now.ToString("dd MMM yyyy, HH:mm", inv);
     var phone = patient?.Phones.FirstOrDefault(p => p.IsPrimary)?.PhoneNumber ?? patient?.Phones.FirstOrDefault()?.PhoneNumber;
 }
@@ -41,6 +43,10 @@
         body { padding: 30px; }
         .slip-ar { color: #444; font-size: .9em; margin-inline-start: .35em; }
         .slip-details dt { font-weight: 600; }
+        .print-clinic { margin-bottom: .5rem; }
+        .print-clinic__name { font-weight: 600; font-size: 1.1rem; }
+        .print-clinic__line { font-size: .875em; color: #555; }
+        .print-clinic__ar { margin-inline-start: .5em; }
         @@media print {
             .no-print { display: none !important; }
             body { padding: 0; }
@@ -64,6 +70,8 @@
         <div class="border-bottom pb-2 mb-3">
             @* Branding: the logo identifies the clinic; the heading identifies the document. *@
             @await Html.PartialAsync("_ClinicLogo", "clinic-logo--print")
+            @* M5d: the clinic's name, address and phones from the clinic profile. *@
+            <partial name="_PrintClinicDetails" model="clinic" />
             <h1 class="h4 mb-0">@Bi("Laboratory analysis request")</h1>
             <small class="text-muted">@Bi("Printed") @printed</small>
         </div>

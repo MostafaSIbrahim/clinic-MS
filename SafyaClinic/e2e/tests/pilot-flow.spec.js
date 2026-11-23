@@ -208,6 +208,8 @@ test('pilot visit: book, check in, consult, prescribe, complete, collect, write 
         screens['Edit clinic'] = '/Clinics/Edit/1';
         screens['Patient sources'] = '/PatientSources';
         screens['Add patient source'] = '/PatientSources/Create';
+        // M5d: the clinic profile.
+        screens['Clinic profile'] = '/ClinicProfile';
         await checkA11y(page, 'Patient payments');
         // Icon fonts can add a character to a link's name, so match the end of it.
         const collect = page.locator('main').getByRole('link', { name: /Collect$/ }).first();

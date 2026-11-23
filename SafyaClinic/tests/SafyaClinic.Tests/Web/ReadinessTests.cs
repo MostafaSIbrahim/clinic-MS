@@ -45,4 +45,9 @@ public class ReadinessTests
     [InlineData("", "info@safya.clinic")]
     public void Example_or_missing_clinic_details_are_flagged(string address, string email) =>
         Assert.Equal(ReadinessLevel.Warning, LevelOf(Ready() with { ClinicAddress = address, ClinicEmail = email }, "Clinic details"));
+
+    // M5d: the email may be left empty in the clinic profile.
+    [Fact]
+    public void An_empty_clinic_email_is_fine() =>
+        Assert.Equal(ReadinessLevel.Ok, LevelOf(Ready() with { ClinicEmail = null }, "Clinic details"));
 }

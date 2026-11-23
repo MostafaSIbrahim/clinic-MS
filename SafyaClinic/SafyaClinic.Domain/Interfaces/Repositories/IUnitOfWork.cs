@@ -84,6 +84,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<WeeklyFollowUpLabResult> WeeklyFollowUpLabResults { get; }
     IRepository<WeeklyAdministeredItem> WeeklyAdministeredItems { get; }
     IRepository<EnrollmentPlannedItem> EnrollmentPlannedItems { get; }   // M4d
+    IRepository<ClinicProfile> ClinicProfiles { get; }   // M5d
 
     // ── Persistence ───────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

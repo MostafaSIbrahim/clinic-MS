@@ -2604,4 +2604,55 @@
   <data name="{0} (default {1}%)" xml:space="preserve">
     <value>{0} (الافتراضي {1}%)</value>
   </data>
+  <data name="Address in Arabic" xml:space="preserve">
+    <value>العنوان بالعربية</value>
+  </data>
+  <data name="Address in English" xml:space="preserve">
+    <value>العنوان بالإنجليزية</value>
+  </data>
+  <data name="Clinic profile" xml:space="preserve">
+    <value>بيانات العيادة</value>
+  </data>
+  <data name="Contact and registration" xml:space="preserve">
+    <value>التواصل والترخيص</value>
+  </data>
+  <data name="For example the clinic's specialties." xml:space="preserve">
+    <value>مثل تخصصات العيادة.</value>
+  </data>
+  <data name="Licence or registration" xml:space="preserve">
+    <value>الترخيص أو السجل</value>
+  </data>
+  <data name="Name and address" xml:space="preserve">
+    <value>الاسم والعنوان</value>
+  </data>
+  <data name="Name in Arabic" xml:space="preserve">
+    <value>الاسم بالعربية</value>
+  </data>
+  <data name="Name in English" xml:space="preserve">
+    <value>الاسم بالإنجليزية</value>
+  </data>
+  <data name="Not saved yet: printouts use the starting values from the server settings. Check them and save." xml:space="preserve">
+    <value>لم تُحفظ بعد: المطبوعات تستخدم القيم المبدئية من إعدادات الخادم. راجعها ثم احفظ.</value>
+  </data>
+  <data name="Printed at the foot of prescriptions, for example the clinic's licence number." xml:space="preserve">
+    <value>يُطبع أسفل الروشتات، مثل رقم ترخيص العيادة.</value>
+  </data>
+  <data name="Printed at the top of prescriptions and lab slips. Bilingual printouts show the English and the Arabic side by side." xml:space="preserve">
+    <value>تُطبع أعلى الروشتات وطلبات التحاليل. المطبوعات ثنائية اللغة تعرض الإنجليزية والعربية جنبًا إلى جنب.</value>
+  </data>
+  <data name="Save profile" xml:space="preserve">
+    <value>حفظ البيانات</value>
+  </data>
+  <data name="Second phone" xml:space="preserve">
+    <value>هاتف آخر</value>
+  </data>
+  <data name="Tagline in Arabic" xml:space="preserve">
+    <value>الشعار بالعربية</value>
+  </data>
+  <data name="Tagline in English" xml:space="preserve">
+    <value>الشعار بالإنجليزية</value>
+  </data>
+  <data name="The name, address and phones printed on prescriptions and lab slips." xml:space="preserve">
+    <value>الاسم والعنوان والهواتف المطبوعة على الروشتات وطلبات التحاليل.</value>
+  </data>
 </root>

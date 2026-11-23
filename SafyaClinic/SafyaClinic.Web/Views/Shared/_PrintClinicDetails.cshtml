@@ -1,0 +1,26 @@
+@model SafyaClinic.Application.Settings.ClinicProfileDto
+@*
+    M5d: the clinic's details at the top of a printout, from the clinic profile. Each line shows the English and,
+    when filled in, the Arabic, whatever the language of the person printing.
+*@
+@{
+    void Line(string css, string? en, string? ar)
+    {
+        if (string.IsNullOrWhiteSpace(en) && string.IsNullOrWhiteSpace(ar)) return;
+        <div class="@css">
+            @if (!string.IsNullOrWhiteSpace(en)) { <span lang="en" dir="ltr">@en</span> }
+            @if (!string.IsNullOrWhiteSpace(ar)) { <span class="print-clinic__ar" lang="ar" dir="rtl">@ar</span> }
+        </div>
+    }
+    var contacts = Model.Phones.ToList();
+    if (!string.IsNullOrWhiteSpace(Model.Email)) contacts.Add(Model.Email!);
+}
+<div class="print-clinic">
+    @{ Line("print-clinic__name", Model.NameEn, Model.NameAr); }
+    @{ Line("print-clinic__line", Model.TaglineEn, Model.TaglineAr); }
+    @{ Line("print-clinic__line", Model.AddressEn, Model.AddressAr); }
+    @if (contacts.Count > 0)
+    {
+        <div class="print-clinic__line" dir="ltr">@string.Join(" · ", contacts)</div>
+    }
+</div>

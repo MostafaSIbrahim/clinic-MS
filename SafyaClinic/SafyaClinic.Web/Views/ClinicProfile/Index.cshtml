@@ -1,0 +1,55 @@
+@model SafyaClinic.Application.Settings.ClinicProfileForm
+@inject Microsoft.Extensions.Localization.IStringLocalizer<SafyaClinic.Web.SharedResource> T
+@{
+    // M5d: the clinic's details printed on prescriptions and lab slips, in English and Arabic.
+    ViewData["Title"] = T["Clinic profile"].Value;
+    var profile = ViewBag.Profile as SafyaClinic.Application.Settings.ClinicProfileDto;
+}
+<div class="page-toolbar">
+    <div>
+        <h1>@T["Clinic profile"]</h1>
+        <p class="text-muted mb-0">@T["Printed at the top of prescriptions and lab slips. Bilingual printouts show the English and the Arabic side by side."]</p>
+    </div>
+</div>
+
+@if (profile is { IsSaved: false })
+{
+    <div class="alert alert-warning" role="status">
+        <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+        @T["Not saved yet: printouts use the starting values from the server settings. Check them and save."]
+    </div>
+}
+
+<form method="post" class="clinic-profile-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2" role="alert" tabindex="-1"></div>
+
+    <app-card title="@T["Name and address"].Value" level="2" icon="bi-hospital">
+        <div class="row">
+            <div class="col-md-6"><app-field asp-for="NameEn" label="@T["Name in English"].Value" required="true" /></div>
+            <div class="col-md-6" dir="rtl" lang="ar"><app-field asp-for="NameAr" label="@T["Name in Arabic"].Value" /></div>
+            <div class="col-md-6"><app-field asp-for="TaglineEn" label="@T["Tagline in English"].Value" hint="@T["For example the clinic's specialties."].Value" /></div>
+            <div class="col-md-6" dir="rtl" lang="ar"><app-field asp-for="TaglineAr" label="@T["Tagline in Arabic"].Value" /></div>
+            <div class="col-md-6"><app-field asp-for="AddressEn" label="@T["Address in English"].Value" type="textarea" rows="2" required="true" /></div>
+            <div class="col-md-6" dir="rtl" lang="ar"><app-field asp-for="AddressAr" label="@T["Address in Arabic"].Value" type="textarea" rows="2" /></div>
+        </div>
+    </app-card>
+
+    <app-card title="@T["Contact and registration"].Value" level="2" icon="bi-telephone">
+        <div class="row">
+            <div class="col-md-6"><app-field asp-for="Phone" label="@T["Phone"].Value" type="tel" required="true" /></div>
+            <div class="col-md-6"><app-field asp-for="SecondPhone" label="@T["Second phone"].Value" type="tel" /></div>
+            <div class="col-md-6"><app-field asp-for="Email" label="@T["Email"].Value" type="email" /></div>
+            <div class="col-md-6"><app-field asp-for="LicenceLine" label="@T["Licence or registration"].Value" hint="@T["Printed at the foot of prescriptions, for example the clinic's licence number."].Value" /></div>
+        </div>
+    </app-card>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">@T["Save profile"]</button>
+        <a asp-controller="Clinics" asp-action="Index" class="btn btn-outline-secondary">@T["Cancel"]</a>
+    </div>
+</form>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}
